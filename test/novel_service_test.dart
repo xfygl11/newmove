@@ -20,9 +20,12 @@ void main() {
       revisionDao: db.chapterRevisionDao,
       agents: NovelAgents(adapter: LlmProviderAdapter()),
     );
+    final projectId = await db.projectDao.insertProject(
+      ProjectsCompanion.insert(name: '测试项目'),
+    );
     bookId = await db.novelDao.insertBook(
       NovelBooksCompanion.insert(
-        projectId: 1,
+        projectId: projectId,
         title: '测试书',
         premise: Value('少年在末世觉醒治愈能力'),
         world: Value('病毒爆发后的废土'),

@@ -11,8 +11,11 @@ void main() {
 
   setUp(() async {
     db = AppDatabase(NativeDatabase.memory());
+    final projectId = await db.projectDao.insertProject(
+      ProjectsCompanion.insert(name: '测试项目'),
+    );
     bookId = await db.novelDao.insertBook(
-      NovelBooksCompanion.insert(projectId: 1, title: '测试书'),
+      NovelBooksCompanion.insert(projectId: projectId, title: '测试书'),
     );
   });
 
