@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/settings/app_settings.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
 import '../shot/shot_providers.dart';
@@ -29,10 +30,23 @@ class _TaskPageState extends ConsumerState<TaskPage> with WidgetsBindingObserver
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // 断点续跑：进入任务中心立即补一轮 + 周期轮询（10s，页面退出即停）。
+    // 断点续跑：进入任务中心立即补一轮 + 周期轮询（间隔可配，页面退出即停）。
     _pollAllActive();
+    _rescheduleTimer();
+    // 设置变化时重排定时器（pollIntervalSec 变更后下一周期生效）。
+    ref.listenManual(appSettingsProvider, (prev, next) {
+      if (prev?.pollIntervalSec != next.pollIntervalSec) {
+        _rescheduleTimer();
+      }
+    }, fireImmediately: false);
+  }
+
+  /// 按设置里的轮询间隔（重）建周期定时器。
+  void _rescheduleTimer() {
+    _pollTimer?.cancel();
+    final interval = ref.read(appSettingsProvider).pollIntervalSec;
     _pollTimer = Timer.periodic(
-      const Duration(seconds: 10),
+      Duration(seconds: interval),
       (_) => _pollAllActive(),
     );
   }

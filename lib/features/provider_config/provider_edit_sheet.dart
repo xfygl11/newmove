@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/providers.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
+import 'model_fetcher.dart';
 import 'provider_models.dart';
 
 /// 打开供应商编辑 Sheet。[group] 仅新建时传入；[existing] 编辑时传入。
@@ -44,6 +45,7 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
 
   bool _saving = false;
   bool _testing = false;
+  bool _fetching = false;
 
   bool get _isEdit => widget.existing != null;
 
@@ -97,12 +99,23 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    // 保留全部有 id 的模型（未勾选的也存，勾选态是配置的一部分）；
+    // 但至少要有一个已勾选模型，否则生成链路无可用模型。
     final validModels = _models
         .where((m) => m.id.trim().isNotEmpty)
-        .map((m) => ProviderModel(id: m.id.trim(), label: m.label.trim().isEmpty ? m.id.trim() : m.label.trim()))
+        .map(
+          (m) => m.copyWith(
+            id: m.id.trim(),
+            label: m.label.trim().isEmpty ? m.id.trim() : m.label.trim(),
+          ),
+        )
         .toList();
     if (validModels.isEmpty) {
       _showMessage('请至少添加一个模型');
+      return;
+    }
+    if (!validModels.any((m) => m.enabled)) {
+      _showMessage('请至少勾选启用一个模型');
       return;
     }
     // 新建时 API Key 必填。
@@ -209,6 +222,47 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
     }
   }
 
+  /// 一键获取模型（docs/02 §4.1.1）：拉取 /models 并合并进列表，
+  /// 同 id 保留勾选态，新模型默认不勾选。
+  Future<void> _fetchModels() async {
+    final baseUrl = _baseUrl.text.trim();
+    if (baseUrl.isEmpty) {
+      _showMessage('请先填写 Base URL');
+      return;
+    }
+    // 编辑时若未填新 Key，则读取已存 Key。
+    var apiKey = _apiKey.text.trim();
+    if (apiKey.isEmpty && _isEdit) {
+      apiKey = await ref.read(secureKeyStoreProvider).readKey(widget.existing!.id) ?? '';
+    }
+    if (apiKey.isEmpty) {
+      _showMessage('请填写 API Key');
+      return;
+    }
+
+    setState(() => _fetching = true);
+    try {
+      final fetched = await ModelFetcher().fetch(
+        baseUrl: baseUrl,
+        apiKey: apiKey,
+        protocol: _protocol.text.trim(),
+        group: _group,
+      );
+      if (fetched.isEmpty) {
+        _showMessage('未获取到模型');
+        return;
+      }
+      setState(() {
+        _models = ModelFetcher.mergeFetched(existing: _models, fetched: fetched);
+      });
+      _showMessage('已获取 ${fetched.length} 个模型，请勾选启用');
+    } catch (e) {
+      _showMessage('获取失败：$e');
+    } finally {
+      if (mounted) setState(() => _fetching = false);
+    }
+  }
+
   void _showMessage(String text) {
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -287,7 +341,28 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
                 },
               ),
               const SizedBox(height: 16),
-              Text('模型列表', style: Theme.of(context).textTheme.titleSmall),
+              Row(
+                children: [
+                  Text('模型列表', style: Theme.of(context).textTheme.titleSmall),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _fetching ? null : _fetchModels,
+                    icon: _fetching
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.cloud_download_outlined, size: 18),
+                    label: const Text('获取模型'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '勾选启用的模型才会出现在生成页；也可手动输入模型 ID。',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               const SizedBox(height: 8),
               for (var i = 0; i < _models.length; i++)
                 _ModelRow(
@@ -300,7 +375,9 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
                 ),
               TextButton.icon(
                 onPressed: () => setState(
-                  () => _models.add(const ProviderModel(id: '', label: '')),
+                  () => _models.add(
+                    const ProviderModel(id: '', label: '', enabled: false),
+                  ),
                 ),
                 icon: const Icon(Icons.add),
                 label: const Text('添加模型'),
@@ -368,6 +445,15 @@ class _ModelRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
+          // 勾选态：是否启用进生成链路（docs/02 §4.1.2）。
+          SizedBox(
+            width: 40,
+            child: Checkbox(
+              value: model.enabled,
+              onChanged: (v) =>
+                  onChanged(model.copyWith(enabled: v ?? false)),
+            ),
+          ),
           Expanded(
             child: TextFormField(
               initialValue: model.id,
@@ -376,7 +462,7 @@ class _ModelRow extends StatelessWidget {
                 hintText: 'deepseek-chat',
                 isDense: true,
               ),
-              onChanged: (v) => onChanged(ProviderModel(id: v, label: model.label)),
+              onChanged: (v) => onChanged(model.copyWith(id: v)),
             ),
           ),
           const SizedBox(width: 8),
@@ -388,7 +474,7 @@ class _ModelRow extends StatelessWidget {
                 hintText: 'DeepSeek Chat',
                 isDense: true,
               ),
-              onChanged: (v) => onChanged(ProviderModel(id: model.id, label: v)),
+              onChanged: (v) => onChanged(model.copyWith(label: v)),
             ),
           ),
           IconButton(

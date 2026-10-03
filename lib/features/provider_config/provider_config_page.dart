@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/settings/app_settings.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
 import '../project/project_providers.dart';
@@ -9,7 +10,7 @@ import 'provider_config_providers.dart';
 import 'provider_edit_sheet.dart';
 import 'provider_models.dart';
 
-/// 设置页：模型供应商配置 + 数据备份（M7 T8.1）。
+/// 设置页：通用设置 + 模型供应商配置 + 数据备份（M7 T8.1 / T9.3）。
 class ProviderConfigPage extends ConsumerWidget {
   const ProviderConfigPage({super.key});
 
@@ -21,6 +22,7 @@ class ProviderConfigPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
         children: [
+          const _GeneralSection(),
           const _BackupSection(),
           const SizedBox(height: 8),
           const Padding(
@@ -47,6 +49,50 @@ class ProviderConfigPage extends ConsumerWidget {
                 ],
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 通用设置区块（借鉴 Toonflow general 面板：开关型偏好，本地有实效项）。
+class _GeneralSection extends ConsumerWidget {
+  const _GeneralSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(appSettingsProvider);
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.timelapse),
+            title: const Text('视频任务轮询间隔'),
+            subtitle: const Text('任务中心自动刷新视频生成状态的频率'),
+            trailing: SegmentedButton<int>(
+              selected: {settings.pollIntervalSec},
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: 10, label: Text('10s')),
+                ButtonSegment(value: 30, label: Text('30s')),
+                ButtonSegment(value: 60, label: Text('60s')),
+              ],
+              onSelectionChanged: (s) => ref
+                  .read(appSettingsProvider.notifier)
+                  .update(settings.copyWith(pollIntervalSec: s.first)),
+            ),
+          ),
+          const Divider(height: 1),
+          SwitchListTile(
+            secondary: const Icon(Icons.help_outline),
+            title: const Text('生成前确认'),
+            subtitle: const Text('提交图片/视频生成前弹出确认框'),
+            value: settings.confirmBeforeGenerate,
+            onChanged: (v) => ref
+                .read(appSettingsProvider.notifier)
+                .update(settings.copyWith(confirmBeforeGenerate: v)),
           ),
         ],
       ),

@@ -24,7 +24,10 @@ final activeLlmProvider = FutureProvider<ActiveLlm?>((ref) async {
   final providers = await ref.watch(providerDaoProvider).listByGroup('llm');
   for (final p in providers) {
     final key = await ref.watch(secureKeyStoreProvider).readKey(p.id);
-    final models = ProviderModelCodec.decode(p.models);
+    // 只使用勾选启用的模型（docs/02 §4.1.2）。
+    final models = ProviderModelCodec.decode(
+      p.models,
+    ).where((m) => m.enabled).toList();
     if (key != null && key.isNotEmpty && models.isNotEmpty) {
       return ActiveLlm(provider: p, apiKey: key, model: models.first);
     }

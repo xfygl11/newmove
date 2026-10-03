@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../agent/active_image.dart';
 import '../../agent/active_video.dart';
+import '../../core/settings/app_settings.dart';
 import '../../data/app_database.dart';
 import '../asset/asset_providers.dart';
 import '../provider_config/provider_models.dart';
@@ -242,26 +243,29 @@ class _ShotDetailPageState extends ConsumerState<ShotDetailPage>
       );
       return;
     }
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('确认生成'),
-        content: Text(
-          '将生成本镜分镜图（${refsHint(shot)}），供应商 ${image.provider.label} / 模型 ${image.modelId}。',
+    // 「生成前确认」开关关闭时直接提交（设置页 T9.3）。
+    if (ref.read(appSettingsProvider).confirmBeforeGenerate) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('确认生成'),
+          content: Text(
+            '将生成本镜分镜图（${refsHint(shot)}），供应商 ${image.provider.label} / 模型 ${image.modelId}。',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('开始生成'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('开始生成'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
+      );
+      if (ok != true) return;
+    }
 
     setState(() => _generating = true);
     try {
@@ -371,28 +375,31 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
       );
       return;
     }
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('确认生成视频'),
-        content: Text(
-          '将为本镜头生成视频（${_durationSec.round()}s · $_ratio · $_resolution'
-          '${_generateAudio ? ' · 含音频' : ''}），'
-          '供应商 ${video.provider.label} / 模型 ${_modelId ?? video.modelId}。',
+    // 「生成前确认」开关关闭时直接提交（设置页 T9.3）。
+    if (ref.read(appSettingsProvider).confirmBeforeGenerate) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('确认生成视频'),
+          content: Text(
+            '将为本镜头生成视频（${_durationSec.round()}s · $_ratio · $_resolution'
+            '${_generateAudio ? ' · 含音频' : ''}），'
+            '供应商 ${video.provider.label} / 模型 ${_modelId ?? video.modelId}。',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('开始生成'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('开始生成'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
+      );
+      if (ok != true) return;
+    }
 
     setState(() => _submitting = true);
     try {
@@ -484,9 +491,12 @@ class _ParamCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // models 落库为 JSON 字符串，展示前解码。
-    final models =
-        video == null ? const <ProviderModel>[] : ProviderModelCodec.decode(video!.provider.models);
+    // models 落库为 JSON 字符串，展示前解码；只展示勾选启用的模型。
+    final models = video == null
+        ? const <ProviderModel>[]
+        : ProviderModelCodec.decode(
+            video!.provider.models,
+          ).where((m) => m.enabled).toList();
 
     return Card(
       child: Padding(

@@ -304,3 +304,29 @@ skills/
 ```
 
 > 这些文件内容从 Toonflow 对应文件提炼而来，去除画布/节点相关，保留纯方法论，作为各 Agent 的系统提示词组成部分。
+
+### 6.1 Toonflow 方法论吸收记录（M7 后增强）
+
+对照 Toonflow `packages/skills/workflow/`（SKILL.md PART A + references + methods）逐项吸收，落地到本项目 skills：
+
+| Toonflow 来源 | 要点 | 落地位置 |
+|---|---|---|
+| `storyDevelopment.md` §1 事实/提案/未知三分法 + §2 故事命题 | 已证事实保留出处；创作补充单列为提案；「什么样的人必须完成什么、受什么阻碍、失败失去什么」 | `novel/planning.md`（命题工作句）、`adaptation/screen_adaptation.md`（提案标注） |
+| `screenAdaptation.md` §1 原文依据映射表 + §2 场景任务链 + §3 心理变化反查 + §4 信息差三关系 | 每处视听表达映射回原文；每场「目标→阻碍→行动→反应→策略调整→结果」；「终于明白」类结论须找到触发证据；观众先知/角色先知/同时得知 | `adaptation/screen_adaptation.md`（增强） |
+| PART A A2 节拍账本 + A3 时长预算（自然语速、串行相加、并行重叠） | 全量登记不筛减；E## 可溯源；单段上限按模型路由 | `skeleton/beat_parsing.md`（已有，补充排序禁改条款） |
+| PART A A4 出镜状态 9 类词表 | 角色时间轴状态；场景锚点/机位/前中后景；道具段首位置/段末状态/禁止项 | `skeleton/asset_states.md`（已有） |
+| `assets.md` 四视角参考板 | 头部特写 + 正面全身 + 右侧 90° 全身 + 背面全身；不裁头/截身/切脚；基础态入场 | `asset/asset_design.md`（增强：基础态与变体判定） |
+| `visualDesign.md` 事实/约束/提案分层 + 行为需求先行 | 先分清已有事实与设计提案；造型从行为需求倒推；同场轮廓/明度区分 | `asset/asset_design.md`（新增设计步骤节） |
+| `colorAndLight.md` 本色/受光/后期三层分离 | 资产本色写进锚点；环境受光写进场景状态；综合色调只进片段风格段 | `shot/storyboard.md`（风格约束写入规则） |
+| PART A A5 站位 5 块自包含信息 | 世界坐标+画面坐标+光源+道具位置+段末状态，不写「延续上一段」 | `shot/storyboard.md`（blocking 规则增强） |
+| PART A A6 表演层 | 情绪=行为副产品；微表情须有 E## 依据与 trigger；只写可见表演通道 | `shot/storyboard.md`（表演规则增强） |
+| PART A A7 段间衔接三条件 | 主体不同 / 景别差 ≥2 档 / 角度差 ≥90° | `shot/continuity.md`（已有） |
+| PART A A11/A12 校验与交付 | 结构校验（E## 完整、段号连续）、稳定性预检、穿帮自查 | `shot/continuity.md`（新增校验节） |
+
+不引入：canvas/SKILL.md（画布工具手册，与本地 App 无关）；节点编排相关内容（App 为固定管线，非自由画布）。
+
+### 6.2 Skill 加载方式
+
+- 各 Agent 构造系统提示词时经 `SkillLoader.load(relativePath)` 读取（`lib/agent/skill_loader.dart`），路径常量集中在各 `*_agents.dart`。
+- skills 为纯方法论 + 输出 JSON Schema，不含业务数据；用户数据（剧本/资产/节拍）一律走 user 消息注入。
+- 新增 skill 文件后需同步 `pubspec.yaml` assets 声明（按目录声明）。
