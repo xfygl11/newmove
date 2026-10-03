@@ -39,12 +39,48 @@ jobs:
       - name: Test
         run: flutter test
 
-      - name: Build debug APK
+      # T8.4：仓库 Secret 里有签名材料（KEYSTORE_BASE64 等）时构建
+      # 签名 release APK 并开启混淆；否则退回 debug APK，CI 永远可绿。
+      - name: Decode signing keystore
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.jks
+            cat > android/key.properties <<EOF
+          storeFile=upload-keystore.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::未配置签名 Secret（KEYSTORE_BASE64/KEYSTORE_PASSWORD/KEY_ALIAS/KEY_PASSWORD），本次构建 debug APK"
+          fi
+
+      - name: Build release APK (signed)
+        if: steps.keystore.outputs.signed == 'true'
+        run: flutter build apk --release
+
+      - name: Build debug APK (fallback)
+        if: steps.keystore.outputs.signed != 'true'
         run: flutter build apk --debug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: app-apk
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
           retention-days: 14
+
+      - name: Cleanup keystore
+        if: always()
+        run: rm -f android/app/upload-keystore.jks android/key.properties

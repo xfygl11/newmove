@@ -21,13 +21,16 @@ class TaskPage extends ConsumerStatefulWidget {
   ConsumerState<TaskPage> createState() => _TaskPageState();
 }
 
-class _TaskPageState extends ConsumerState<TaskPage> {
+class _TaskPageState extends ConsumerState<TaskPage> with WidgetsBindingObserver {
   Timer? _pollTimer;
+  bool _polling = false;
 
   @override
   void initState() {
     super.initState();
-    // 断点续跑：进入任务中心即拉起周期轮询（10s 一次，页面退出即停）。
+    WidgetsBinding.instance.addObserver(this);
+    // 断点续跑：进入任务中心立即补一轮 + 周期轮询（10s，页面退出即停）。
+    _pollAllActive();
     _pollTimer = Timer.periodic(
       const Duration(seconds: 10),
       (_) => _pollAllActive(),
@@ -36,20 +39,36 @@ class _TaskPageState extends ConsumerState<TaskPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pollTimer?.cancel();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 回前台立即补一轮轮询（后台期间错过的状态在此追回）。
+    if (state == AppLifecycleState.resumed) {
+      _pollAllActive();
+    }
+  }
+
   /// 轮询所有活跃视频任务一次（逐个 try，单个失败不影响其余）。
   Future<void> _pollAllActive() async {
-    final dao = ref.read(videoTaskDaoProvider);
-    final active = await dao.listActive();
-    for (final task in active) {
-      try {
-        await ref.read(shotServiceProvider).pollVideoTask(task.id);
-      } catch (_) {
-        // 单任务轮询异常忽略，下个周期重试。
+    // 防重入：上一轮未结束时不再叠加。
+    if (_polling) return;
+    _polling = true;
+    try {
+      final dao = ref.read(videoTaskDaoProvider);
+      final active = await dao.listActive();
+      for (final task in active) {
+        try {
+          await ref.read(shotServiceProvider).pollVideoTask(task.id);
+        } catch (_) {
+          // 单任务轮询异常忽略，下个周期重试。
+        }
       }
+    } finally {
+      _polling = false;
     }
   }
 

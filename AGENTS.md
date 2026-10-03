@@ -131,7 +131,8 @@ lib/
 - 每次改动后做最小验证：`flutter analyze` 无新增错误，涉及数据层改动跑 `dart test`（如已建测试）。
 - **禁止为了通过检查而写无关测试或跳过类型检查**；只报告实际完成的验证。
 - 涉及 AI 调用的功能，用「配置临时供应商 + 手动冒烟」验证连通与解析，不 mock 掉真实协议边界。
-- 构建产物：`flutter build apk --debug` 能通过；发布前走 Release 签名流程。
+- **APK 构建一律走 GitHub Actions CI（push 后在 Actions 产出/下载 APK），禁止在本地构建**：本地环境约 358 MiB 内存 + 2 CPU，跑 `flutter build apk` 会失败或拖垮机器。本地验证只做 `flutter analyze` + `flutter test`。
+- 发布前 Release 签名流程也在 CI 完成（签名材料走仓库 Secret：`KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD`）。
 
 ---
 

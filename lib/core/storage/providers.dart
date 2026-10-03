@@ -16,6 +16,7 @@ import '../../data/daos/shot_frame_dao.dart';
 import '../../data/daos/truth_file_dao.dart';
 import '../../data/daos/video_task_dao.dart';
 import 'asset_file_store.dart';
+import 'backup_service.dart';
 import 'secure_key_store.dart';
 import 'shot_file_store.dart';
 import 'video_file_store.dart';
@@ -97,4 +98,8 @@ final shotFileStoreProvider = Provider<ShotFileStore>(
 
 final videoFileStoreProvider = Provider<VideoFileStore>(
   (ref) => VideoFileStore(),
+);
+
+final backupServiceProvider = Provider<BackupService>(
+  (ref) => BackupService(db: ref.watch(databaseProvider)),
 );

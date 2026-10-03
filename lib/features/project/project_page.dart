@@ -1,7 +1,9 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
@@ -19,6 +21,11 @@ class ProjectPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('小说动漫工坊'),
         actions: [
+          IconButton(
+            tooltip: '从备份导入',
+            onPressed: () => _importBackup(context, ref),
+            icon: const Icon(Icons.restore),
+          ),
           IconButton(
             tooltip: '新建项目',
             onPressed: () => _showCreateDialog(context, ref),
@@ -69,19 +76,84 @@ class ProjectPage extends ConsumerWidget {
       builder: (_) => const _CreateProjectDialog(),
     );
   }
+
+  /// 从 zip 备份导入项目。
+  Future<void> _importBackup(BuildContext context, WidgetRef ref) async {
+    final picked = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['zip'],
+    );
+    if (picked.isEmpty || picked.single.path == null) return;
+    try {
+      final newId = await ref
+          .read(backupServiceProvider)
+          .importProject(picked.single.path!);
+      // 令项目列表刷新。
+      ref.invalidate(projectListProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('导入成功，已创建新项目（id $newId）')),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导入失败：$e')));
+      }
+    }
+  }
 }
 
-class _ProjectCard extends StatelessWidget {
+class _ProjectCard extends ConsumerWidget {
   const _ProjectCard({required this.project});
 
   final Project project;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.push('/novel/${project.id}'),
+        onLongPress: () async {
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('导出备份'),
+              content: Text('将项目「${project.name}」的全部数据与媒体导出为 zip？'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('取消'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: const Text('导出'),
+                ),
+              ],
+            ),
+          );
+          if (confirmed == true && context.mounted) {
+            try {
+              final path = await ref
+                  .read(backupServiceProvider)
+                  .exportProject(project.id);
+              if (!context.mounted) return;
+              await SharePlus.instance.share(
+                ShareParams(
+                  files: [XFile(path)],
+                  text: '项目「${project.name}」备份',
+                ),
+              );
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('导出失败：$e')));
+              }
+            }
+          }
+        },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
