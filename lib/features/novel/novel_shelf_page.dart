@@ -155,9 +155,18 @@ class _BookHeader extends StatelessWidget {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: TextButton(
-        onPressed: () => context.push('/novel/${book.projectId}/settings'),
-        child: const Text('设定'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextButton(
+            onPressed: () => context.push('/script/${book.projectId}'),
+            child: const Text('剧本'),
+          ),
+          TextButton(
+            onPressed: () => context.push('/novel/${book.projectId}/settings'),
+            child: const Text('设定'),
+          ),
+        ],
       ),
     );
   }

@@ -5,6 +5,9 @@ import 'daos/chapter_revision_dao.dart';
 import 'daos/novel_dao.dart';
 import 'daos/project_dao.dart';
 import 'daos/provider_dao.dart';
+import 'daos/scene_dao.dart';
+import 'daos/script_dao.dart';
+import 'daos/script_revision_dao.dart';
 import 'daos/truth_file_dao.dart';
 import 'tables/tables.dart';
 
@@ -19,6 +22,7 @@ part 'app_database.g.dart';
     ChapterRevisions,
     TruthFiles,
     Scripts,
+    ScriptRevisions,
     Scenes,
     Beats,
     Assets,
@@ -32,6 +36,9 @@ part 'app_database.g.dart';
     NovelDao,
     ChapterRevisionDao,
     TruthFileDao,
+    ScriptDao,
+    SceneDao,
+    ScriptRevisionDao,
     ProviderDao,
   ],
 )
@@ -43,12 +50,20 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
       await m.createAll();
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        // M2：场次补充对白与声音，新增剧本版本快照表。
+        await m.addColumn(scenes, scenes.dialogue);
+        await m.addColumn(scenes, scenes.sound);
+        await m.createTable(scriptRevisions);
+      }
     },
     beforeOpen: (details) async {
       // SQLite 默认关闭外键，这里显式开启以约束 1:N 引用。

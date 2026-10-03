@@ -99,6 +99,10 @@ class Scenes extends Table {
   TextColumn get startState => text().nullable()();
   TextColumn get endState => text().nullable()();
   TextColumn get transition => text().nullable()();
+  // JSON 数组：[{speaker, type, text}]，type ∈ 对白/OS/VO。
+  TextColumn get dialogue => text().withDefault(const Constant('[]'))();
+  // JSON 对象：{ music: [...], sfx: [...] }。
+  TextColumn get sound => text().withDefault(const Constant('{}'))();
 }
 
 /// 原子节拍（借鉴 Toonflow A2）。
@@ -226,6 +230,16 @@ class ChapterRevisions extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get chapterId => integer().references(Chapters, #id)();
   IntColumn get revision => integer()();
+  TextColumn get content => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// 剧本版本快照：每次重新改编前保存旧内容，支持回溯。
+@DataClassName('ScriptRevision')
+class ScriptRevisions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get scriptId => integer().references(Scripts, #id)();
+  IntColumn get version => integer()();
   TextColumn get content => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }

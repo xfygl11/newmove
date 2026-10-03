@@ -6,6 +6,10 @@ import 'features/novel/novel_shelf_page.dart';
 import 'features/novel/setting_workshop_page.dart';
 import 'features/project/project_page.dart';
 import 'features/provider_config/provider_config_page.dart';
+import 'features/script/scene_edit_page.dart';
+import 'features/script/script_detail_page.dart';
+import 'features/script/script_page.dart';
+import 'features/script/script_versions_page.dart';
 import 'features/task/task_page.dart';
 
 /// 根路由：三 Tab（项目 / 任务 / 设置），分支各自维护导航栈。
@@ -53,6 +57,34 @@ final GoRouter appRouter = GoRouter(
       path: '/novel/:projectId/settings',
       builder: (_, state) => SettingWorkshopPage(
         projectId: int.parse(state.pathParameters['projectId']!),
+      ),
+    ),
+    // 剧本模块：小说改编为分场剧本（对齐 docs/05 4.4 流程即导航）。
+    GoRoute(
+      path: '/script/:projectId',
+      builder: (_, state) => ScriptPage(
+        projectId: int.parse(state.pathParameters['projectId']!),
+      ),
+    ),
+    GoRoute(
+      path: '/script/:projectId/script/:scriptId',
+      builder: (_, state) => ScriptDetailPage(
+        projectId: int.parse(state.pathParameters['projectId']!),
+        scriptId: int.parse(state.pathParameters['scriptId']!),
+      ),
+    ),
+    GoRoute(
+      path: '/script/:projectId/script/:scriptId/versions',
+      builder: (_, state) => ScriptVersionsPage(
+        projectId: int.parse(state.pathParameters['projectId']!),
+        scriptId: int.parse(state.pathParameters['scriptId']!),
+      ),
+    ),
+    GoRoute(
+      path: '/script/:projectId/script/:scriptId/scene/:sceneId',
+      builder: (_, state) => SceneEditPage(
+        projectId: int.parse(state.pathParameters['projectId']!),
+        sceneId: int.parse(state.pathParameters['sceneId']!),
       ),
     ),
   ],

@@ -3042,6 +3042,360 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
   }
 }
 
+class $ScriptRevisionsTable extends ScriptRevisions
+    with TableInfo<$ScriptRevisionsTable, ScriptRevision> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ScriptRevisionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _scriptIdMeta = const VerificationMeta(
+    'scriptId',
+  );
+  @override
+  late final GeneratedColumn<int> scriptId = GeneratedColumn<int>(
+    'script_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES scripts (id)',
+    ),
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    scriptId,
+    version,
+    content,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'script_revisions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ScriptRevision> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('script_id')) {
+      context.handle(
+        _scriptIdMeta,
+        scriptId.isAcceptableOrUnknown(data['script_id']!, _scriptIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scriptIdMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_versionMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ScriptRevision map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ScriptRevision(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      scriptId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}script_id'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ScriptRevisionsTable createAlias(String alias) {
+    return $ScriptRevisionsTable(attachedDatabase, alias);
+  }
+}
+
+class ScriptRevision extends DataClass implements Insertable<ScriptRevision> {
+  final int id;
+  final int scriptId;
+  final int version;
+  final String? content;
+  final DateTime createdAt;
+  const ScriptRevision({
+    required this.id,
+    required this.scriptId,
+    required this.version,
+    this.content,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['script_id'] = Variable<int>(scriptId);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || content != null) {
+      map['content'] = Variable<String>(content);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ScriptRevisionsCompanion toCompanion(bool nullToAbsent) {
+    return ScriptRevisionsCompanion(
+      id: Value(id),
+      scriptId: Value(scriptId),
+      version: Value(version),
+      content: content == null && nullToAbsent
+          ? const Value.absent()
+          : Value(content),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ScriptRevision.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ScriptRevision(
+      id: serializer.fromJson<int>(json['id']),
+      scriptId: serializer.fromJson<int>(json['scriptId']),
+      version: serializer.fromJson<int>(json['version']),
+      content: serializer.fromJson<String?>(json['content']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'scriptId': serializer.toJson<int>(scriptId),
+      'version': serializer.toJson<int>(version),
+      'content': serializer.toJson<String?>(content),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ScriptRevision copyWith({
+    int? id,
+    int? scriptId,
+    int? version,
+    Value<String?> content = const Value.absent(),
+    DateTime? createdAt,
+  }) => ScriptRevision(
+    id: id ?? this.id,
+    scriptId: scriptId ?? this.scriptId,
+    version: version ?? this.version,
+    content: content.present ? content.value : this.content,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ScriptRevision copyWithCompanion(ScriptRevisionsCompanion data) {
+    return ScriptRevision(
+      id: data.id.present ? data.id.value : this.id,
+      scriptId: data.scriptId.present ? data.scriptId.value : this.scriptId,
+      version: data.version.present ? data.version.value : this.version,
+      content: data.content.present ? data.content.value : this.content,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScriptRevision(')
+          ..write('id: $id, ')
+          ..write('scriptId: $scriptId, ')
+          ..write('version: $version, ')
+          ..write('content: $content, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, scriptId, version, content, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ScriptRevision &&
+          other.id == this.id &&
+          other.scriptId == this.scriptId &&
+          other.version == this.version &&
+          other.content == this.content &&
+          other.createdAt == this.createdAt);
+}
+
+class ScriptRevisionsCompanion extends UpdateCompanion<ScriptRevision> {
+  final Value<int> id;
+  final Value<int> scriptId;
+  final Value<int> version;
+  final Value<String?> content;
+  final Value<DateTime> createdAt;
+  const ScriptRevisionsCompanion({
+    this.id = const Value.absent(),
+    this.scriptId = const Value.absent(),
+    this.version = const Value.absent(),
+    this.content = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  ScriptRevisionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int scriptId,
+    required int version,
+    this.content = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : scriptId = Value(scriptId),
+       version = Value(version);
+  static Insertable<ScriptRevision> custom({
+    Expression<int>? id,
+    Expression<int>? scriptId,
+    Expression<int>? version,
+    Expression<String>? content,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (scriptId != null) 'script_id': scriptId,
+      if (version != null) 'version': version,
+      if (content != null) 'content': content,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  ScriptRevisionsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? scriptId,
+    Value<int>? version,
+    Value<String?>? content,
+    Value<DateTime>? createdAt,
+  }) {
+    return ScriptRevisionsCompanion(
+      id: id ?? this.id,
+      scriptId: scriptId ?? this.scriptId,
+      version: version ?? this.version,
+      content: content ?? this.content,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (scriptId.present) {
+      map['script_id'] = Variable<int>(scriptId.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScriptRevisionsCompanion(')
+          ..write('id: $id, ')
+          ..write('scriptId: $scriptId, ')
+          ..write('version: $version, ')
+          ..write('content: $content, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ScenesTable extends Scenes with TableInfo<$ScenesTable, Scene> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -3169,6 +3523,28 @@ class $ScenesTable extends Scenes with TableInfo<$ScenesTable, Scene> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _dialogueMeta = const VerificationMeta(
+    'dialogue',
+  );
+  @override
+  late final GeneratedColumn<String> dialogue = GeneratedColumn<String>(
+    'dialogue',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _soundMeta = const VerificationMeta('sound');
+  @override
+  late final GeneratedColumn<String> sound = GeneratedColumn<String>(
+    'sound',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3182,6 +3558,8 @@ class $ScenesTable extends Scenes with TableInfo<$ScenesTable, Scene> {
     startState,
     endState,
     transition,
+    dialogue,
+    sound,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3266,6 +3644,18 @@ class $ScenesTable extends Scenes with TableInfo<$ScenesTable, Scene> {
         transition.isAcceptableOrUnknown(data['transition']!, _transitionMeta),
       );
     }
+    if (data.containsKey('dialogue')) {
+      context.handle(
+        _dialogueMeta,
+        dialogue.isAcceptableOrUnknown(data['dialogue']!, _dialogueMeta),
+      );
+    }
+    if (data.containsKey('sound')) {
+      context.handle(
+        _soundMeta,
+        sound.isAcceptableOrUnknown(data['sound']!, _soundMeta),
+      );
+    }
     return context;
   }
 
@@ -3319,6 +3709,14 @@ class $ScenesTable extends Scenes with TableInfo<$ScenesTable, Scene> {
         DriftSqlType.string,
         data['${effectivePrefix}transition'],
       ),
+      dialogue: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}dialogue'],
+      )!,
+      sound: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sound'],
+      )!,
     );
   }
 
@@ -3340,6 +3738,8 @@ class Scene extends DataClass implements Insertable<Scene> {
   final String? startState;
   final String? endState;
   final String? transition;
+  final String dialogue;
+  final String sound;
   const Scene({
     required this.id,
     required this.scriptId,
@@ -3352,6 +3752,8 @@ class Scene extends DataClass implements Insertable<Scene> {
     this.startState,
     this.endState,
     this.transition,
+    required this.dialogue,
+    required this.sound,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3375,6 +3777,8 @@ class Scene extends DataClass implements Insertable<Scene> {
     if (!nullToAbsent || transition != null) {
       map['transition'] = Variable<String>(transition);
     }
+    map['dialogue'] = Variable<String>(dialogue);
+    map['sound'] = Variable<String>(sound);
     return map;
   }
 
@@ -3399,6 +3803,8 @@ class Scene extends DataClass implements Insertable<Scene> {
       transition: transition == null && nullToAbsent
           ? const Value.absent()
           : Value(transition),
+      dialogue: Value(dialogue),
+      sound: Value(sound),
     );
   }
 
@@ -3419,6 +3825,8 @@ class Scene extends DataClass implements Insertable<Scene> {
       startState: serializer.fromJson<String?>(json['startState']),
       endState: serializer.fromJson<String?>(json['endState']),
       transition: serializer.fromJson<String?>(json['transition']),
+      dialogue: serializer.fromJson<String>(json['dialogue']),
+      sound: serializer.fromJson<String>(json['sound']),
     );
   }
   @override
@@ -3436,6 +3844,8 @@ class Scene extends DataClass implements Insertable<Scene> {
       'startState': serializer.toJson<String?>(startState),
       'endState': serializer.toJson<String?>(endState),
       'transition': serializer.toJson<String?>(transition),
+      'dialogue': serializer.toJson<String>(dialogue),
+      'sound': serializer.toJson<String>(sound),
     };
   }
 
@@ -3451,6 +3861,8 @@ class Scene extends DataClass implements Insertable<Scene> {
     Value<String?> startState = const Value.absent(),
     Value<String?> endState = const Value.absent(),
     Value<String?> transition = const Value.absent(),
+    String? dialogue,
+    String? sound,
   }) => Scene(
     id: id ?? this.id,
     scriptId: scriptId ?? this.scriptId,
@@ -3463,6 +3875,8 @@ class Scene extends DataClass implements Insertable<Scene> {
     startState: startState.present ? startState.value : this.startState,
     endState: endState.present ? endState.value : this.endState,
     transition: transition.present ? transition.value : this.transition,
+    dialogue: dialogue ?? this.dialogue,
+    sound: sound ?? this.sound,
   );
   Scene copyWithCompanion(ScenesCompanion data) {
     return Scene(
@@ -3483,6 +3897,8 @@ class Scene extends DataClass implements Insertable<Scene> {
       transition: data.transition.present
           ? data.transition.value
           : this.transition,
+      dialogue: data.dialogue.present ? data.dialogue.value : this.dialogue,
+      sound: data.sound.present ? data.sound.value : this.sound,
     );
   }
 
@@ -3499,7 +3915,9 @@ class Scene extends DataClass implements Insertable<Scene> {
           ..write('action: $action, ')
           ..write('startState: $startState, ')
           ..write('endState: $endState, ')
-          ..write('transition: $transition')
+          ..write('transition: $transition, ')
+          ..write('dialogue: $dialogue, ')
+          ..write('sound: $sound')
           ..write(')'))
         .toString();
   }
@@ -3517,6 +3935,8 @@ class Scene extends DataClass implements Insertable<Scene> {
     startState,
     endState,
     transition,
+    dialogue,
+    sound,
   );
   @override
   bool operator ==(Object other) =>
@@ -3532,7 +3952,9 @@ class Scene extends DataClass implements Insertable<Scene> {
           other.action == this.action &&
           other.startState == this.startState &&
           other.endState == this.endState &&
-          other.transition == this.transition);
+          other.transition == this.transition &&
+          other.dialogue == this.dialogue &&
+          other.sound == this.sound);
 }
 
 class ScenesCompanion extends UpdateCompanion<Scene> {
@@ -3547,6 +3969,8 @@ class ScenesCompanion extends UpdateCompanion<Scene> {
   final Value<String?> startState;
   final Value<String?> endState;
   final Value<String?> transition;
+  final Value<String> dialogue;
+  final Value<String> sound;
   const ScenesCompanion({
     this.id = const Value.absent(),
     this.scriptId = const Value.absent(),
@@ -3559,6 +3983,8 @@ class ScenesCompanion extends UpdateCompanion<Scene> {
     this.startState = const Value.absent(),
     this.endState = const Value.absent(),
     this.transition = const Value.absent(),
+    this.dialogue = const Value.absent(),
+    this.sound = const Value.absent(),
   });
   ScenesCompanion.insert({
     this.id = const Value.absent(),
@@ -3572,6 +3998,8 @@ class ScenesCompanion extends UpdateCompanion<Scene> {
     this.startState = const Value.absent(),
     this.endState = const Value.absent(),
     this.transition = const Value.absent(),
+    this.dialogue = const Value.absent(),
+    this.sound = const Value.absent(),
   }) : scriptId = Value(scriptId),
        seq = Value(seq),
        location = Value(location),
@@ -3588,6 +4016,8 @@ class ScenesCompanion extends UpdateCompanion<Scene> {
     Expression<String>? startState,
     Expression<String>? endState,
     Expression<String>? transition,
+    Expression<String>? dialogue,
+    Expression<String>? sound,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3601,6 +4031,8 @@ class ScenesCompanion extends UpdateCompanion<Scene> {
       if (startState != null) 'start_state': startState,
       if (endState != null) 'end_state': endState,
       if (transition != null) 'transition': transition,
+      if (dialogue != null) 'dialogue': dialogue,
+      if (sound != null) 'sound': sound,
     });
   }
 
@@ -3616,6 +4048,8 @@ class ScenesCompanion extends UpdateCompanion<Scene> {
     Value<String?>? startState,
     Value<String?>? endState,
     Value<String?>? transition,
+    Value<String>? dialogue,
+    Value<String>? sound,
   }) {
     return ScenesCompanion(
       id: id ?? this.id,
@@ -3629,6 +4063,8 @@ class ScenesCompanion extends UpdateCompanion<Scene> {
       startState: startState ?? this.startState,
       endState: endState ?? this.endState,
       transition: transition ?? this.transition,
+      dialogue: dialogue ?? this.dialogue,
+      sound: sound ?? this.sound,
     );
   }
 
@@ -3668,6 +4104,12 @@ class ScenesCompanion extends UpdateCompanion<Scene> {
     if (transition.present) {
       map['transition'] = Variable<String>(transition.value);
     }
+    if (dialogue.present) {
+      map['dialogue'] = Variable<String>(dialogue.value);
+    }
+    if (sound.present) {
+      map['sound'] = Variable<String>(sound.value);
+    }
     return map;
   }
 
@@ -3684,7 +4126,9 @@ class ScenesCompanion extends UpdateCompanion<Scene> {
           ..write('action: $action, ')
           ..write('startState: $startState, ')
           ..write('endState: $endState, ')
-          ..write('transition: $transition')
+          ..write('transition: $transition, ')
+          ..write('dialogue: $dialogue, ')
+          ..write('sound: $sound')
           ..write(')'))
         .toString();
   }
@@ -7181,6 +7625,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $TruthFilesTable truthFiles = $TruthFilesTable(this);
   late final $ScriptsTable scripts = $ScriptsTable(this);
+  late final $ScriptRevisionsTable scriptRevisions = $ScriptRevisionsTable(
+    this,
+  );
   late final $ScenesTable scenes = $ScenesTable(this);
   late final $BeatsTable beats = $BeatsTable(this);
   late final $AssetsTable assets = $AssetsTable(this);
@@ -7196,6 +7643,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this as AppDatabase,
   );
   late final TruthFileDao truthFileDao = TruthFileDao(this as AppDatabase);
+  late final ScriptDao scriptDao = ScriptDao(this as AppDatabase);
+  late final SceneDao sceneDao = SceneDao(this as AppDatabase);
+  late final ScriptRevisionDao scriptRevisionDao = ScriptRevisionDao(
+    this as AppDatabase,
+  );
   late final ProviderDao providerDao = ProviderDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -7208,6 +7660,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     chapterRevisions,
     truthFiles,
     scripts,
+    scriptRevisions,
     scenes,
     beats,
     assets,
@@ -9448,6 +9901,26 @@ final class $$ScriptsTableReferences
     );
   }
 
+  static MultiTypedResultKey<$ScriptRevisionsTable, List<ScriptRevision>>
+  _scriptRevisionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.scriptRevisions,
+    aliasName: 'scripts__id__script_revisions__script_id',
+  );
+
+  $$ScriptRevisionsTableProcessedTableManager get scriptRevisionsRefs {
+    final manager = $$ScriptRevisionsTableTableManager(
+      $_db,
+      $_db.scriptRevisions,
+    ).filter((f) => f.scriptId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _scriptRevisionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$ScenesTable, List<Scene>> _scenesRefsTable(
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
@@ -9581,6 +10054,31 @@ class $$ScriptsTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> scriptRevisionsRefs(
+    Expression<bool> Function($$ScriptRevisionsTableFilterComposer f) f,
+  ) {
+    final $$ScriptRevisionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.scriptRevisions,
+      getReferencedColumn: (t) => t.scriptId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ScriptRevisionsTableFilterComposer(
+            $db: $db,
+            $table: $db.scriptRevisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 
   Expression<bool> scenesRefs(
@@ -9800,6 +10298,31 @@ class $$ScriptsTableAnnotationComposer
     return composer;
   }
 
+  Expression<T> scriptRevisionsRefs<T extends Object>(
+    Expression<T> Function($$ScriptRevisionsTableAnnotationComposer a) f,
+  ) {
+    final $$ScriptRevisionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.scriptRevisions,
+      getReferencedColumn: (t) => t.scriptId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ScriptRevisionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.scriptRevisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> scenesRefs<T extends Object>(
     Expression<T> Function($$ScenesTableAnnotationComposer a) f,
   ) {
@@ -9891,6 +10414,7 @@ class $$ScriptsTableTableManager
           Script,
           PrefetchHooks Function({
             bool bookId,
+            bool scriptRevisionsRefs,
             bool scenesRefs,
             bool assetsRefs,
             bool shotsRefs,
@@ -9966,6 +10490,7 @@ class $$ScriptsTableTableManager
           prefetchHooksCallback:
               ({
                 bookId = false,
+                scriptRevisionsRefs = false,
                 scenesRefs = false,
                 assetsRefs = false,
                 shotsRefs = false,
@@ -9973,6 +10498,7 @@ class $$ScriptsTableTableManager
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
+                    if (scriptRevisionsRefs) db.scriptRevisions,
                     if (scenesRefs) db.scenes,
                     if (assetsRefs) db.assets,
                     if (shotsRefs) db.shots,
@@ -10009,6 +10535,27 @@ class $$ScriptsTableTableManager
                       },
                   getPrefetchedDataCallback: (items) async {
                     return [
+                      if (scriptRevisionsRefs)
+                        await $_getPrefetchedData<
+                          Script,
+                          $ScriptsTable,
+                          ScriptRevision
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ScriptsTableReferences
+                              ._scriptRevisionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ScriptsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).scriptRevisionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.scriptId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (scenesRefs)
                         await $_getPrefetchedData<Script, $ScriptsTable, Scene>(
                           currentTable: table,
@@ -10078,10 +10625,327 @@ typedef $$ScriptsTableProcessedTableManager =
       Script,
       PrefetchHooks Function({
         bool bookId,
+        bool scriptRevisionsRefs,
         bool scenesRefs,
         bool assetsRefs,
         bool shotsRefs,
       })
+    >;
+typedef $$ScriptRevisionsTableCreateCompanionBuilder =
+    ScriptRevisionsCompanion Function({
+      Value<int> id,
+      required int scriptId,
+      required int version,
+      Value<String?> content,
+      Value<DateTime> createdAt,
+    });
+typedef $$ScriptRevisionsTableUpdateCompanionBuilder =
+    ScriptRevisionsCompanion Function({
+      Value<int> id,
+      Value<int> scriptId,
+      Value<int> version,
+      Value<String?> content,
+      Value<DateTime> createdAt,
+    });
+
+final class $$ScriptRevisionsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $ScriptRevisionsTable, ScriptRevision> {
+  $$ScriptRevisionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ScriptsTable _scriptIdTable(_$AppDatabase db) =>
+      db.scripts.createAlias('script_revisions__script_id__scripts__id');
+
+  $$ScriptsTableProcessedTableManager get scriptId {
+    final $_column = $_itemColumn<int>('script_id')!;
+
+    final manager = $$ScriptsTableTableManager(
+      $_db,
+      $_db.scripts,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_scriptIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ScriptRevisionsTableFilterComposer
+    extends Composer<_$AppDatabase, $ScriptRevisionsTable> {
+  $$ScriptRevisionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ScriptsTableFilterComposer get scriptId {
+    final $$ScriptsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.scriptId,
+      referencedTable: $db.scripts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ScriptsTableFilterComposer(
+            $db: $db,
+            $table: $db.scripts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ScriptRevisionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ScriptRevisionsTable> {
+  $$ScriptRevisionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ScriptsTableOrderingComposer get scriptId {
+    final $$ScriptsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.scriptId,
+      referencedTable: $db.scripts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ScriptsTableOrderingComposer(
+            $db: $db,
+            $table: $db.scripts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ScriptRevisionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ScriptRevisionsTable> {
+  $$ScriptRevisionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ScriptsTableAnnotationComposer get scriptId {
+    final $$ScriptsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.scriptId,
+      referencedTable: $db.scripts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ScriptsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.scripts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ScriptRevisionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ScriptRevisionsTable,
+          ScriptRevision,
+          $$ScriptRevisionsTableFilterComposer,
+          $$ScriptRevisionsTableOrderingComposer,
+          $$ScriptRevisionsTableAnnotationComposer,
+          $$ScriptRevisionsTableCreateCompanionBuilder,
+          $$ScriptRevisionsTableUpdateCompanionBuilder,
+          (ScriptRevision, $$ScriptRevisionsTableReferences),
+          ScriptRevision,
+          PrefetchHooks Function({bool scriptId})
+        > {
+  $$ScriptRevisionsTableTableManager(
+    _$AppDatabase db,
+    $ScriptRevisionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ScriptRevisionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ScriptRevisionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ScriptRevisionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> scriptId = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> content = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ScriptRevisionsCompanion(
+                id: id,
+                scriptId: scriptId,
+                version: version,
+                content: content,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int scriptId,
+                required int version,
+                Value<String?> content = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ScriptRevisionsCompanion.insert(
+                id: id,
+                scriptId: scriptId,
+                version: version,
+                content: content,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ScriptRevisionsTable, ScriptRevision>(table),
+                  $$ScriptRevisionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({scriptId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (scriptId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.scriptId,
+                        referencedTable: $$ScriptRevisionsTableReferences
+                            ._scriptIdTable(db),
+                        referencedColumn: $$ScriptRevisionsTableReferences
+                            ._scriptIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ScriptRevisionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ScriptRevisionsTable,
+      ScriptRevision,
+      $$ScriptRevisionsTableFilterComposer,
+      $$ScriptRevisionsTableOrderingComposer,
+      $$ScriptRevisionsTableAnnotationComposer,
+      $$ScriptRevisionsTableCreateCompanionBuilder,
+      $$ScriptRevisionsTableUpdateCompanionBuilder,
+      (ScriptRevision, $$ScriptRevisionsTableReferences),
+      ScriptRevision,
+      PrefetchHooks Function({bool scriptId})
     >;
 typedef $$ScenesTableCreateCompanionBuilder = ScenesCompanion Function({
   Value<int> id,
@@ -10095,6 +10959,8 @@ typedef $$ScenesTableCreateCompanionBuilder = ScenesCompanion Function({
   Value<String?> startState,
   Value<String?> endState,
   Value<String?> transition,
+  Value<String> dialogue,
+  Value<String> sound,
 });
 typedef $$ScenesTableUpdateCompanionBuilder = ScenesCompanion Function({
   Value<int> id,
@@ -10108,6 +10974,8 @@ typedef $$ScenesTableUpdateCompanionBuilder = ScenesCompanion Function({
   Value<String?> startState,
   Value<String?> endState,
   Value<String?> transition,
+  Value<String> dialogue,
+  Value<String> sound,
 });
 
 final class $$ScenesTableReferences
@@ -10207,6 +11075,16 @@ class $$ScenesTableFilterComposer
 
   ColumnFilters<String> get transition => $composableBuilder(
     column: $table.transition,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dialogue => $composableBuilder(
+    column: $table.dialogue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sound => $composableBuilder(
+    column: $table.sound,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10318,6 +11196,16 @@ class $$ScenesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get dialogue => $composableBuilder(
+    column: $table.dialogue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sound => $composableBuilder(
+    column: $table.sound,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$ScriptsTableOrderingComposer get scriptId {
     final $$ScriptsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -10386,6 +11274,12 @@ class $$ScenesTableAnnotationComposer
     column: $table.transition,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get dialogue =>
+      $composableBuilder(column: $table.dialogue, builder: (column) => column);
+
+  GeneratedColumn<String> get sound =>
+      $composableBuilder(column: $table.sound, builder: (column) => column);
 
   $$ScriptsTableAnnotationComposer get scriptId {
     final $$ScriptsTableAnnotationComposer composer = $composerBuilder(
@@ -10475,6 +11369,8 @@ class $$ScenesTableTableManager
                 Value<String?> startState = const Value.absent(),
                 Value<String?> endState = const Value.absent(),
                 Value<String?> transition = const Value.absent(),
+                Value<String> dialogue = const Value.absent(),
+                Value<String> sound = const Value.absent(),
               }) => ScenesCompanion(
                 id: id,
                 scriptId: scriptId,
@@ -10487,6 +11383,8 @@ class $$ScenesTableTableManager
                 startState: startState,
                 endState: endState,
                 transition: transition,
+                dialogue: dialogue,
+                sound: sound,
               ),
           createCompanionCallback:
               ({
@@ -10501,6 +11399,8 @@ class $$ScenesTableTableManager
                 Value<String?> startState = const Value.absent(),
                 Value<String?> endState = const Value.absent(),
                 Value<String?> transition = const Value.absent(),
+                Value<String> dialogue = const Value.absent(),
+                Value<String> sound = const Value.absent(),
               }) => ScenesCompanion.insert(
                 id: id,
                 scriptId: scriptId,
@@ -10513,6 +11413,8 @@ class $$ScenesTableTableManager
                 startState: startState,
                 endState: endState,
                 transition: transition,
+                dialogue: dialogue,
+                sound: sound,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -13260,6 +14162,8 @@ class $AppDatabaseManager {
       $$TruthFilesTableTableManager(_db, _db.truthFiles);
   $$ScriptsTableTableManager get scripts =>
       $$ScriptsTableTableManager(_db, _db.scripts);
+  $$ScriptRevisionsTableTableManager get scriptRevisions =>
+      $$ScriptRevisionsTableTableManager(_db, _db.scriptRevisions);
   $$ScenesTableTableManager get scenes =>
       $$ScenesTableTableManager(_db, _db.scenes);
   $$BeatsTableTableManager get beats =>

@@ -5,6 +5,9 @@ import '../../data/daos/chapter_revision_dao.dart';
 import '../../data/daos/novel_dao.dart';
 import '../../data/daos/project_dao.dart';
 import '../../data/daos/provider_dao.dart';
+import '../../data/daos/scene_dao.dart';
+import '../../data/daos/script_dao.dart';
+import '../../data/daos/script_revision_dao.dart';
 import '../../data/daos/truth_file_dao.dart';
 import 'secure_key_store.dart';
 
@@ -33,6 +36,18 @@ final truthFileDaoProvider = Provider<TruthFileDao>(
 
 final chapterRevisionDaoProvider = Provider<ChapterRevisionDao>(
   (ref) => ref.watch(databaseProvider).chapterRevisionDao,
+);
+
+final scriptDaoProvider = Provider<ScriptDao>(
+  (ref) => ref.watch(databaseProvider).scriptDao,
+);
+
+final sceneDaoProvider = Provider<SceneDao>(
+  (ref) => ref.watch(databaseProvider).sceneDao,
+);
+
+final scriptRevisionDaoProvider = Provider<ScriptRevisionDao>(
+  (ref) => ref.watch(databaseProvider).scriptRevisionDao,
 );
 
 final secureKeyStoreProvider = Provider<SecureKeyStore>(
