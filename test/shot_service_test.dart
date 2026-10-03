@@ -499,11 +499,12 @@ void main() {
       expect(params.resolution, '720p');
       expect(params.generateAudio, isTrue);
 
-      // A9 提示词：Target duration 用参数值 8s（镜头 durationMs 为 6s）。
+      // A9.2 提示词：Target duration 用参数值 8s（镜头 durationMs 为 6s）。
       expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('Target duration: 8s'));
       expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('Timeline:'));
-      // G01 单帧：有帧行、无 HARD CUT。
-      expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('00:00-00:06'));
+      // G01 单帧：时间块头部（0:00-0:06）+ 连续自然语言描述；无 HARD CUT。
+      expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('【0:00-0:06】'));
+      expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('同期对白「快走」'));
       expect(fakeVideoAdapter.lastSubmitPrompts.single, isNot(contains('HARD CUT')));
       expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('Immutable locks:'));
 

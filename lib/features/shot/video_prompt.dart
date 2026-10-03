@@ -102,27 +102,87 @@ class VideoPromptBuilder {
 
     buf.writeln('Target duration: ${targetSec}s');
 
-    // Timeline：按帧列出时间轴；多帧时帧间 HARD CUT。
+    // Timeline：A9.2.1「时间块 + 连续自然语言」——每帧一个时间块，
+    // 把主体/景别/角度/运镜/站位/表演/对白组织成一段成片式画面描述，
+    // 不拆「镜头N | 主体 | 表演」之类的子标题（docs/03 §6.3 差距①）。
     buf.writeln('Timeline:');
     for (var i = 0; i < frames.length; i++) {
       final f = frames[i];
-      final parts = [
-        f.timeRange,
-        '镜头${f.seq}',
-        [f.subject, f.shotSize, f.angle].where((p) => p.isNotEmpty).join('·'),
-        f.camera.isEmpty ? '固定' : f.camera,
-        f.performance,
-        if (f.dialogue != null && f.dialogue!.isNotEmpty) f.dialogue!,
-      ];
-      buf.writeln('- ${parts.where((p) => p.isNotEmpty).join(' | ')}');
-      if (i < frames.length - 1) buf.writeln('- HARD CUT');
+      buf.writeln();
+      buf.writeln('【${_normalizeTimeRange(f.timeRange, frames, i)}】');
+      buf.writeln(_naturalTimelineBlock(f));
+      if (frames.length > 1 && i < frames.length - 1) {
+        buf.writeln('（${f.timeRange} 结束，HARD CUT）');
+      }
+    }
+    if (frames.isEmpty) {
+      // 无帧数据时退回 Objective 底稿描述，保证 Timeline 非空。
+      buf.writeln();
+      buf.writeln('【0:00-0:${targetSec.toString().padLeft(2, '0')}】');
+      buf.writeln(shot.prompt.isEmpty ? '完成本段画面事件。' : shot.prompt);
     }
 
     buf.writeln('Visual direction: $artStyle');
     buf.writeln('Audio direction: 同期对白与环境音，不加 BGM 与后期字幕');
-    buf.writeln('Preserve: 不新增、不删除、不替换、不改顺序剧情事件');
-    buf.writeln('Avoid: 不叠化、不闪白、不甩镜，无水印');
+    buf.writeln('Preserve: 不新增、不删除、不替换、不改顺序剧情事件；'
+        '人物位置与道具持有状态保持本段开头登记');
+    buf.writeln('Avoid: 不叠化、不闪白、不甩镜，无水印，'
+        '不出现画面外的角色');
 
     return buf.toString();
+  }
+
+  /// 把帧字段拼成一段连续自然语言的画面描述（A9.2.1 Timeline 写法）。
+  ///
+  /// 只组织 ShotFrame 已落库的信息，不编造剧情；空字段自然跳过。
+  String _naturalTimelineBlock(ShotFrame f) {
+    final parts = <String>[];
+
+    // 景别 + 角度 + 主体：画面的观察方式。
+    final view = [
+      if (f.shotSize.isNotEmpty) f.shotSize,
+      if (f.angle.isNotEmpty) f.angle,
+    ].join('，');
+    if (view.isNotEmpty) {
+      parts.add(
+        f.subject.isNotEmpty ? '画面为$view，主体是${f.subject}' : '画面为$view',
+      );
+    } else if (f.subject.isNotEmpty) {
+      parts.add('主体是${f.subject}');
+    }
+
+    // 站位：世界坐标 + 画面位置（自包含，不写「延续上一段」）。
+    if (f.blocking.isNotEmpty) parts.add(f.blocking);
+
+    // 运镜：仅在与固定不同时写出（固定是默认，不必声明）。
+    final camera = f.camera.trim();
+    if (camera.isNotEmpty && camera != '固定') {
+      parts.add('镜头$camera');
+    }
+
+    // 表演：可见行为。
+    if (f.performance.isNotEmpty) parts.add(f.performance);
+
+    // 台词原文直接嵌在动作发生位置（A9.2.1：不在 Timeline 后重复）。
+    final dialogue = f.dialogue?.trim() ?? '';
+    if (dialogue.isNotEmpty) {
+      parts.add('同期对白「$dialogue」');
+    }
+
+    return '${parts.join('；')}。';
+  }
+
+  /// 时间块头部：帧的 timeRange 形如 00:00-00:06，转为 Toonflow 2.5
+  /// 风格 0:00-0:06；解析失败时原样返回。
+  String _normalizeTimeRange(String timeRange, List<ShotFrame> frames, int i) {
+    final m = RegExp(r'(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})').firstMatch(timeRange);
+    if (m == null) return timeRange;
+    String fmt(int group, int g2) {
+      final min = int.parse(m.group(group)!);
+      final sec = int.parse(m.group(g2)!);
+      return '$min:${sec.toString().padLeft(2, '0')}';
+    }
+
+    return '${fmt(1, 2)}-${fmt(3, 4)}';
   }
 }
