@@ -25,7 +25,13 @@ class TruthFileDao extends DatabaseAccessor<AppDatabase> with _$TruthFileDaoMixi
   }
 
   /// 存在则更新（按 bookId+kind 唯一约束），不存在则插入。
-  Future<void> upsert(TruthFilesCompanion entry) {
-    return into(truthFiles).insertOnConflictUpdate(entry);
+  Future<void> upsert(TruthFilesCompanion entry) async {
+    final existing = await findByKind(entry.bookId.value, entry.kind.value);
+    if (existing == null) {
+      await into(truthFiles).insert(entry);
+      return;
+    }
+    await (update(truthFiles)..where((t) => t.id.equals(existing.id)))
+        .write(entry);
   }
 }
