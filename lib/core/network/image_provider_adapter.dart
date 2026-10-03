@@ -86,6 +86,42 @@ class ImageProviderAdapter {
     return _parse(response.data ?? const {});
   }
 
+  /// 多参考图生图：以多张参考底图生成新画面，保持身份一致。
+  ///
+  /// [referencePaths] 按顺序对应提示词中的 {{ref1}}、{{ref2}}…；
+  /// 至少 1 张，超过 16 张时只取前 16（OpenAI gpt-image 上限）。
+  Future<ImageGenerationResult> imageToImageMulti({
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+    required String prompt,
+    required List<String> referencePaths,
+    String size = '1024x1024',
+  }) async {
+    if (referencePaths.isEmpty) {
+      throw ArgumentError.value(referencePaths, 'referencePaths', '至少需要 1 张参考图');
+    }
+    final paths = referencePaths.take(16).toList();
+    final form = FormData.fromMap({
+      'model': model,
+      'prompt': prompt,
+      'n': 1,
+      'size': size,
+      'response_format': 'b64_json',
+      'images': [
+        for (var i = 0; i < paths.length; i++)
+          await MultipartFile.fromFile(paths[i], filename: 'ref_${i + 1}.png'),
+      ],
+    });
+
+    final response = await _dio.post<Map<String, dynamic>>(
+      editsEndpoint(baseUrl),
+      data: form,
+      options: _options(apiKey),
+    );
+    return _parse(response.data ?? const {});
+  }
+
   /// 下载远程图片为本地字节。
   Future<Uint8List> downloadUrl(String url) async {
     final response = await _dio.get<List<int>>(

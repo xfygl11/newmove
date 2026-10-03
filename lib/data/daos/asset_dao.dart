@@ -72,4 +72,13 @@ class AssetDao extends DatabaseAccessor<AppDatabase> with _$AssetDaoMixin {
   Future<int> deleteByScript(int scriptId) {
     return (delete(assets)..where((t) => t.scriptId.equals(scriptId))).go();
   }
+
+  /// 跨剧本查询：进行中的资产任务（任务中心用）。
+  /// 状态取「生成中 / 待验收」。
+  Stream<List<Asset>> watchActive() {
+    return (select(assets)
+          ..where((t) => t.status.isIn(['生成中', '待验收']))
+          ..orderBy([(t) => OrderingTerm.desc(t.id)]))
+        .watch();
+  }
 }

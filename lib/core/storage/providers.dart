@@ -16,6 +16,7 @@ import '../../data/daos/shot_frame_dao.dart';
 import '../../data/daos/truth_file_dao.dart';
 import 'asset_file_store.dart';
 import 'secure_key_store.dart';
+import 'shot_file_store.dart';
 
 /// 数据库单例（应用生命周期内复用）。
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -82,4 +83,8 @@ final secureKeyStoreProvider = Provider<SecureKeyStore>(
 
 final assetFileStoreProvider = Provider<AssetFileStore>(
   (ref) => AssetFileStore(),
+);
+
+final shotFileStoreProvider = Provider<ShotFileStore>(
+  (ref) => ShotFileStore(),
 );

@@ -46,4 +46,12 @@ class AssetRefDao extends DatabaseAccessor<AppDatabase> with _$AssetRefDaoMixin 
   Future<int> deleteByAsset(int assetId) {
     return (delete(assetRefs)..where((t) => t.assetId.equals(assetId))).go();
   }
+
+  /// 跨镜头查询：某资产被哪些镜头引用（任务中心/资产影响面用）。
+  Stream<List<AssetRef>> watchByAsset(int assetId) {
+    return (select(assetRefs)
+          ..where((t) => t.assetId.equals(assetId))
+          ..orderBy([(t) => OrderingTerm.asc(t.order)]))
+        .watch();
+  }
 }

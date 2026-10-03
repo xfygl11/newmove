@@ -43,6 +43,13 @@ class ScriptDetailPage extends ConsumerWidget {
             ),
           ),
           IconButton(
+            icon: const Icon(Icons.movie_filter_outlined),
+            tooltip: '镜头',
+            onPressed: () => context.push(
+              '/script/$projectId/script/$scriptId/shots',
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.history),
             tooltip: '版本历史',
             onPressed: () => context.push(

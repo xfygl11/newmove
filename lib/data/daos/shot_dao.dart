@@ -28,6 +28,10 @@ class ShotDao extends DatabaseAccessor<AppDatabase> with _$ShotDaoMixin {
     return (select(shots)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
+  Stream<Shot?> watch(int id) {
+    return (select(shots)..where((t) => t.id.equals(id))).watchSingleOrNull();
+  }
+
   Future<int> insert(ShotsCompanion entry) {
     return into(shots).insert(entry);
   }
@@ -46,5 +50,17 @@ class ShotDao extends DatabaseAccessor<AppDatabase> with _$ShotDaoMixin {
 
   Future<int> deleteByScript(int scriptId) {
     return (delete(shots)..where((t) => t.scriptId.equals(scriptId))).go();
+  }
+
+  /// 跨剧本查询：进行中的镜头任务（任务中心用）。
+  /// 状态取「生成中 / 待分镜图 / 待验收」。
+  Stream<List<Shot>> watchActive() {
+    return (select(shots)
+          ..where(
+            (t) =>
+                t.status.isIn(['生成中', '待分镜图', '待验收']),
+          )
+          ..orderBy([(t) => OrderingTerm.desc(t.id)]))
+        .watch();
   }
 }

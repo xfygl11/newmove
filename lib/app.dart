@@ -12,6 +12,8 @@ import 'features/script/scene_edit_page.dart';
 import 'features/script/script_detail_page.dart';
 import 'features/script/script_page.dart';
 import 'features/script/script_versions_page.dart';
+import 'features/shot/shot_detail_page.dart';
+import 'features/shot/shot_list_page.dart';
 import 'features/skeleton/skeleton_page.dart';
 import 'features/task/task_page.dart';
 
@@ -110,6 +112,22 @@ final GoRouter appRouter = GoRouter(
         projectId: int.parse(state.pathParameters['projectId']!),
         scriptId: int.parse(state.pathParameters['scriptId']!),
         assetId: int.parse(state.pathParameters['assetId']!),
+      ),
+    ),
+    // 镜头模块：分镜图列表 + 详情（M5）。
+    GoRoute(
+      path: '/script/:projectId/script/:scriptId/shots',
+      builder: (_, state) => ShotListPage(
+        projectId: int.parse(state.pathParameters['projectId']!),
+        scriptId: int.parse(state.pathParameters['scriptId']!),
+      ),
+    ),
+    GoRoute(
+      path: '/script/:projectId/script/:scriptId/shot/:shotId',
+      builder: (_, state) => ShotDetailPage(
+        projectId: int.parse(state.pathParameters['projectId']!),
+        scriptId: int.parse(state.pathParameters['scriptId']!),
+        shotId: int.parse(state.pathParameters['shotId']!),
       ),
     ),
   ],
