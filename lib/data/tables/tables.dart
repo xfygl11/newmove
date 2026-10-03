@@ -160,6 +160,10 @@ class Shots extends Table {
   IntColumn get durationMs => integer().withDefault(const Constant(0))();
   // 全局时间区间，如 00:00-00:12。
   TextColumn get globalTimeRange => text()();
+  // JSON 数组：本段包含的节拍引用 E##。
+  TextColumn get beatRefs => text().withDefault(const Constant('[]'))();
+  // JSON 对象：{ characters: [...], scenes: [...], props: [...] } 的出镜状态。
+  TextColumn get assetStates => text().withDefault(const Constant('{}'))();
   // 景别 / 主体等。
   TextColumn get shotType => text().nullable()();
   IntColumn get sceneId => integer().nullable()();

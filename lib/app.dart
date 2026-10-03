@@ -10,6 +10,7 @@ import 'features/script/scene_edit_page.dart';
 import 'features/script/script_detail_page.dart';
 import 'features/script/script_page.dart';
 import 'features/script/script_versions_page.dart';
+import 'features/skeleton/skeleton_page.dart';
 import 'features/task/task_page.dart';
 
 /// 根路由：三 Tab（项目 / 任务 / 设置），分支各自维护导航栈。
@@ -85,6 +86,13 @@ final GoRouter appRouter = GoRouter(
       builder: (_, state) => SceneEditPage(
         projectId: int.parse(state.pathParameters['projectId']!),
         sceneId: int.parse(state.pathParameters['sceneId']!),
+      ),
+    ),
+    GoRoute(
+      path: '/script/:projectId/script/:scriptId/skeleton',
+      builder: (_, state) => SkeletonPage(
+        projectId: int.parse(state.pathParameters['projectId']!),
+        scriptId: int.parse(state.pathParameters['scriptId']!),
       ),
     ),
   ],

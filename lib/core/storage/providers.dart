@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/app_database.dart';
+import '../../data/daos/beat_dao.dart';
 import '../../data/daos/chapter_revision_dao.dart';
 import '../../data/daos/novel_dao.dart';
 import '../../data/daos/project_dao.dart';
@@ -8,6 +9,8 @@ import '../../data/daos/provider_dao.dart';
 import '../../data/daos/scene_dao.dart';
 import '../../data/daos/script_dao.dart';
 import '../../data/daos/script_revision_dao.dart';
+import '../../data/daos/shot_dao.dart';
+import '../../data/daos/shot_frame_dao.dart';
 import '../../data/daos/truth_file_dao.dart';
 import 'secure_key_store.dart';
 
@@ -48,6 +51,18 @@ final sceneDaoProvider = Provider<SceneDao>(
 
 final scriptRevisionDaoProvider = Provider<ScriptRevisionDao>(
   (ref) => ref.watch(databaseProvider).scriptRevisionDao,
+);
+
+final beatDaoProvider = Provider<BeatDao>(
+  (ref) => ref.watch(databaseProvider).beatDao,
+);
+
+final shotDaoProvider = Provider<ShotDao>(
+  (ref) => ref.watch(databaseProvider).shotDao,
+);
+
+final shotFrameDaoProvider = Provider<ShotFrameDao>(
+  (ref) => ref.watch(databaseProvider).shotFrameDao,
 );
 
 final secureKeyStoreProvider = Provider<SecureKeyStore>(

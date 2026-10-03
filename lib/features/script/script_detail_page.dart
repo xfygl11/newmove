@@ -29,6 +29,13 @@ class ScriptDetailPage extends ConsumerWidget {
         title: Text(scriptAsync.value?.title ?? '剧本详情'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.account_tree_outlined),
+            tooltip: '剧本骨架',
+            onPressed: () => context.push(
+              '/script/$projectId/script/$scriptId/skeleton',
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.history),
             tooltip: '版本历史',
             onPressed: () => context.push(

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'daos/beat_dao.dart';
 import 'daos/chapter_revision_dao.dart';
 import 'daos/novel_dao.dart';
 import 'daos/project_dao.dart';
@@ -8,6 +9,8 @@ import 'daos/provider_dao.dart';
 import 'daos/scene_dao.dart';
 import 'daos/script_dao.dart';
 import 'daos/script_revision_dao.dart';
+import 'daos/shot_dao.dart';
+import 'daos/shot_frame_dao.dart';
 import 'daos/truth_file_dao.dart';
 import 'tables/tables.dart';
 
@@ -39,6 +42,9 @@ part 'app_database.g.dart';
     ScriptDao,
     SceneDao,
     ScriptRevisionDao,
+    BeatDao,
+    ShotDao,
+    ShotFrameDao,
     ProviderDao,
   ],
 )
@@ -50,7 +56,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -63,6 +69,11 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(scenes, scenes.dialogue);
         await m.addColumn(scenes, scenes.sound);
         await m.createTable(scriptRevisions);
+      }
+      if (from < 3) {
+        // M3：片段补充节拍引用与资产出镜状态。
+        await m.addColumn(shots, shots.beatRefs);
+        await m.addColumn(shots, shots.assetStates);
       }
     },
     beforeOpen: (details) async {

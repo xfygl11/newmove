@@ -5464,6 +5464,30 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _beatRefsMeta = const VerificationMeta(
+    'beatRefs',
+  );
+  @override
+  late final GeneratedColumn<String> beatRefs = GeneratedColumn<String>(
+    'beat_refs',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _assetStatesMeta = const VerificationMeta(
+    'assetStates',
+  );
+  @override
+  late final GeneratedColumn<String> assetStates = GeneratedColumn<String>(
+    'asset_states',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
   static const VerificationMeta _shotTypeMeta = const VerificationMeta(
     'shotType',
   );
@@ -5538,6 +5562,8 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
     modelVersion,
     durationMs,
     globalTimeRange,
+    beatRefs,
+    assetStates,
     shotType,
     sceneId,
     prompt,
@@ -5607,6 +5633,21 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
       );
     } else if (isInserting) {
       context.missing(_globalTimeRangeMeta);
+    }
+    if (data.containsKey('beat_refs')) {
+      context.handle(
+        _beatRefsMeta,
+        beatRefs.isAcceptableOrUnknown(data['beat_refs']!, _beatRefsMeta),
+      );
+    }
+    if (data.containsKey('asset_states')) {
+      context.handle(
+        _assetStatesMeta,
+        assetStates.isAcceptableOrUnknown(
+          data['asset_states']!,
+          _assetStatesMeta,
+        ),
+      );
     }
     if (data.containsKey('shot_type')) {
       context.handle(
@@ -5681,6 +5722,14 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
         DriftSqlType.string,
         data['${effectivePrefix}global_time_range'],
       )!,
+      beatRefs: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}beat_refs'],
+      )!,
+      assetStates: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}asset_states'],
+      )!,
       shotType: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}shot_type'],
@@ -5722,6 +5771,8 @@ class Shot extends DataClass implements Insertable<Shot> {
   final String? modelVersion;
   final int durationMs;
   final String globalTimeRange;
+  final String beatRefs;
+  final String assetStates;
   final String? shotType;
   final int? sceneId;
   final String prompt;
@@ -5736,6 +5787,8 @@ class Shot extends DataClass implements Insertable<Shot> {
     this.modelVersion,
     required this.durationMs,
     required this.globalTimeRange,
+    required this.beatRefs,
+    required this.assetStates,
     this.shotType,
     this.sceneId,
     required this.prompt,
@@ -5755,6 +5808,8 @@ class Shot extends DataClass implements Insertable<Shot> {
     }
     map['duration_ms'] = Variable<int>(durationMs);
     map['global_time_range'] = Variable<String>(globalTimeRange);
+    map['beat_refs'] = Variable<String>(beatRefs);
+    map['asset_states'] = Variable<String>(assetStates);
     if (!nullToAbsent || shotType != null) {
       map['shot_type'] = Variable<String>(shotType);
     }
@@ -5781,6 +5836,8 @@ class Shot extends DataClass implements Insertable<Shot> {
           : Value(modelVersion),
       durationMs: Value(durationMs),
       globalTimeRange: Value(globalTimeRange),
+      beatRefs: Value(beatRefs),
+      assetStates: Value(assetStates),
       shotType: shotType == null && nullToAbsent
           ? const Value.absent()
           : Value(shotType),
@@ -5809,6 +5866,8 @@ class Shot extends DataClass implements Insertable<Shot> {
       modelVersion: serializer.fromJson<String?>(json['modelVersion']),
       durationMs: serializer.fromJson<int>(json['durationMs']),
       globalTimeRange: serializer.fromJson<String>(json['globalTimeRange']),
+      beatRefs: serializer.fromJson<String>(json['beatRefs']),
+      assetStates: serializer.fromJson<String>(json['assetStates']),
       shotType: serializer.fromJson<String?>(json['shotType']),
       sceneId: serializer.fromJson<int?>(json['sceneId']),
       prompt: serializer.fromJson<String>(json['prompt']),
@@ -5828,6 +5887,8 @@ class Shot extends DataClass implements Insertable<Shot> {
       'modelVersion': serializer.toJson<String?>(modelVersion),
       'durationMs': serializer.toJson<int>(durationMs),
       'globalTimeRange': serializer.toJson<String>(globalTimeRange),
+      'beatRefs': serializer.toJson<String>(beatRefs),
+      'assetStates': serializer.toJson<String>(assetStates),
       'shotType': serializer.toJson<String?>(shotType),
       'sceneId': serializer.toJson<int?>(sceneId),
       'prompt': serializer.toJson<String>(prompt),
@@ -5845,6 +5906,8 @@ class Shot extends DataClass implements Insertable<Shot> {
     Value<String?> modelVersion = const Value.absent(),
     int? durationMs,
     String? globalTimeRange,
+    String? beatRefs,
+    String? assetStates,
     Value<String?> shotType = const Value.absent(),
     Value<int?> sceneId = const Value.absent(),
     String? prompt,
@@ -5859,6 +5922,8 @@ class Shot extends DataClass implements Insertable<Shot> {
     modelVersion: modelVersion.present ? modelVersion.value : this.modelVersion,
     durationMs: durationMs ?? this.durationMs,
     globalTimeRange: globalTimeRange ?? this.globalTimeRange,
+    beatRefs: beatRefs ?? this.beatRefs,
+    assetStates: assetStates ?? this.assetStates,
     shotType: shotType.present ? shotType.value : this.shotType,
     sceneId: sceneId.present ? sceneId.value : this.sceneId,
     prompt: prompt ?? this.prompt,
@@ -5881,6 +5946,10 @@ class Shot extends DataClass implements Insertable<Shot> {
       globalTimeRange: data.globalTimeRange.present
           ? data.globalTimeRange.value
           : this.globalTimeRange,
+      beatRefs: data.beatRefs.present ? data.beatRefs.value : this.beatRefs,
+      assetStates: data.assetStates.present
+          ? data.assetStates.value
+          : this.assetStates,
       shotType: data.shotType.present ? data.shotType.value : this.shotType,
       sceneId: data.sceneId.present ? data.sceneId.value : this.sceneId,
       prompt: data.prompt.present ? data.prompt.value : this.prompt,
@@ -5904,6 +5973,8 @@ class Shot extends DataClass implements Insertable<Shot> {
           ..write('modelVersion: $modelVersion, ')
           ..write('durationMs: $durationMs, ')
           ..write('globalTimeRange: $globalTimeRange, ')
+          ..write('beatRefs: $beatRefs, ')
+          ..write('assetStates: $assetStates, ')
           ..write('shotType: $shotType, ')
           ..write('sceneId: $sceneId, ')
           ..write('prompt: $prompt, ')
@@ -5923,6 +5994,8 @@ class Shot extends DataClass implements Insertable<Shot> {
     modelVersion,
     durationMs,
     globalTimeRange,
+    beatRefs,
+    assetStates,
     shotType,
     sceneId,
     prompt,
@@ -5941,6 +6014,8 @@ class Shot extends DataClass implements Insertable<Shot> {
           other.modelVersion == this.modelVersion &&
           other.durationMs == this.durationMs &&
           other.globalTimeRange == this.globalTimeRange &&
+          other.beatRefs == this.beatRefs &&
+          other.assetStates == this.assetStates &&
           other.shotType == this.shotType &&
           other.sceneId == this.sceneId &&
           other.prompt == this.prompt &&
@@ -5957,6 +6032,8 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
   final Value<String?> modelVersion;
   final Value<int> durationMs;
   final Value<String> globalTimeRange;
+  final Value<String> beatRefs;
+  final Value<String> assetStates;
   final Value<String?> shotType;
   final Value<int?> sceneId;
   final Value<String> prompt;
@@ -5971,6 +6048,8 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     this.modelVersion = const Value.absent(),
     this.durationMs = const Value.absent(),
     this.globalTimeRange = const Value.absent(),
+    this.beatRefs = const Value.absent(),
+    this.assetStates = const Value.absent(),
     this.shotType = const Value.absent(),
     this.sceneId = const Value.absent(),
     this.prompt = const Value.absent(),
@@ -5986,6 +6065,8 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     this.modelVersion = const Value.absent(),
     this.durationMs = const Value.absent(),
     required String globalTimeRange,
+    this.beatRefs = const Value.absent(),
+    this.assetStates = const Value.absent(),
     this.shotType = const Value.absent(),
     this.sceneId = const Value.absent(),
     this.prompt = const Value.absent(),
@@ -6003,6 +6084,8 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     Expression<String>? modelVersion,
     Expression<int>? durationMs,
     Expression<String>? globalTimeRange,
+    Expression<String>? beatRefs,
+    Expression<String>? assetStates,
     Expression<String>? shotType,
     Expression<int>? sceneId,
     Expression<String>? prompt,
@@ -6018,6 +6101,8 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
       if (modelVersion != null) 'model_version': modelVersion,
       if (durationMs != null) 'duration_ms': durationMs,
       if (globalTimeRange != null) 'global_time_range': globalTimeRange,
+      if (beatRefs != null) 'beat_refs': beatRefs,
+      if (assetStates != null) 'asset_states': assetStates,
       if (shotType != null) 'shot_type': shotType,
       if (sceneId != null) 'scene_id': sceneId,
       if (prompt != null) 'prompt': prompt,
@@ -6035,6 +6120,8 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     Value<String?>? modelVersion,
     Value<int>? durationMs,
     Value<String>? globalTimeRange,
+    Value<String>? beatRefs,
+    Value<String>? assetStates,
     Value<String?>? shotType,
     Value<int?>? sceneId,
     Value<String>? prompt,
@@ -6050,6 +6137,8 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
       modelVersion: modelVersion ?? this.modelVersion,
       durationMs: durationMs ?? this.durationMs,
       globalTimeRange: globalTimeRange ?? this.globalTimeRange,
+      beatRefs: beatRefs ?? this.beatRefs,
+      assetStates: assetStates ?? this.assetStates,
       shotType: shotType ?? this.shotType,
       sceneId: sceneId ?? this.sceneId,
       prompt: prompt ?? this.prompt,
@@ -6083,6 +6172,12 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     if (globalTimeRange.present) {
       map['global_time_range'] = Variable<String>(globalTimeRange.value);
     }
+    if (beatRefs.present) {
+      map['beat_refs'] = Variable<String>(beatRefs.value);
+    }
+    if (assetStates.present) {
+      map['asset_states'] = Variable<String>(assetStates.value);
+    }
     if (shotType.present) {
       map['shot_type'] = Variable<String>(shotType.value);
     }
@@ -6114,6 +6209,8 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
           ..write('modelVersion: $modelVersion, ')
           ..write('durationMs: $durationMs, ')
           ..write('globalTimeRange: $globalTimeRange, ')
+          ..write('beatRefs: $beatRefs, ')
+          ..write('assetStates: $assetStates, ')
           ..write('shotType: $shotType, ')
           ..write('sceneId: $sceneId, ')
           ..write('prompt: $prompt, ')
@@ -7648,6 +7745,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final ScriptRevisionDao scriptRevisionDao = ScriptRevisionDao(
     this as AppDatabase,
   );
+  late final BeatDao beatDao = BeatDao(this as AppDatabase);
+  late final ShotDao shotDao = ShotDao(this as AppDatabase);
+  late final ShotFrameDao shotFrameDao = ShotFrameDao(this as AppDatabase);
   late final ProviderDao providerDao = ProviderDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -12413,6 +12513,8 @@ typedef $$ShotsTableCreateCompanionBuilder = ShotsCompanion Function({
   Value<String?> modelVersion,
   Value<int> durationMs,
   required String globalTimeRange,
+  Value<String> beatRefs,
+  Value<String> assetStates,
   Value<String?> shotType,
   Value<int?> sceneId,
   Value<String> prompt,
@@ -12428,6 +12530,8 @@ typedef $$ShotsTableUpdateCompanionBuilder = ShotsCompanion Function({
   Value<String?> modelVersion,
   Value<int> durationMs,
   Value<String> globalTimeRange,
+  Value<String> beatRefs,
+  Value<String> assetStates,
   Value<String?> shotType,
   Value<int?> sceneId,
   Value<String> prompt,
@@ -12529,6 +12633,16 @@ class $$ShotsTableFilterComposer extends Composer<_$AppDatabase, $ShotsTable> {
 
   ColumnFilters<String> get globalTimeRange => $composableBuilder(
     column: $table.globalTimeRange,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get beatRefs => $composableBuilder(
+    column: $table.beatRefs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get assetStates => $composableBuilder(
+    column: $table.assetStates,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12675,6 +12789,16 @@ class $$ShotsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get beatRefs => $composableBuilder(
+    column: $table.beatRefs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get assetStates => $composableBuilder(
+    column: $table.assetStates,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get shotType => $composableBuilder(
     column: $table.shotType,
     builder: (column) => ColumnOrderings(column),
@@ -12759,6 +12883,14 @@ class $$ShotsTableAnnotationComposer
 
   GeneratedColumn<String> get globalTimeRange => $composableBuilder(
     column: $table.globalTimeRange,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get beatRefs =>
+      $composableBuilder(column: $table.beatRefs, builder: (column) => column);
+
+  GeneratedColumn<String> get assetStates => $composableBuilder(
+    column: $table.assetStates,
     builder: (column) => column,
   );
 
@@ -12897,6 +13029,8 @@ class $$ShotsTableTableManager
                 Value<String?> modelVersion = const Value.absent(),
                 Value<int> durationMs = const Value.absent(),
                 Value<String> globalTimeRange = const Value.absent(),
+                Value<String> beatRefs = const Value.absent(),
+                Value<String> assetStates = const Value.absent(),
                 Value<String?> shotType = const Value.absent(),
                 Value<int?> sceneId = const Value.absent(),
                 Value<String> prompt = const Value.absent(),
@@ -12911,6 +13045,8 @@ class $$ShotsTableTableManager
                 modelVersion: modelVersion,
                 durationMs: durationMs,
                 globalTimeRange: globalTimeRange,
+                beatRefs: beatRefs,
+                assetStates: assetStates,
                 shotType: shotType,
                 sceneId: sceneId,
                 prompt: prompt,
@@ -12927,6 +13063,8 @@ class $$ShotsTableTableManager
                 Value<String?> modelVersion = const Value.absent(),
                 Value<int> durationMs = const Value.absent(),
                 required String globalTimeRange,
+                Value<String> beatRefs = const Value.absent(),
+                Value<String> assetStates = const Value.absent(),
                 Value<String?> shotType = const Value.absent(),
                 Value<int?> sceneId = const Value.absent(),
                 Value<String> prompt = const Value.absent(),
@@ -12941,6 +13079,8 @@ class $$ShotsTableTableManager
                 modelVersion: modelVersion,
                 durationMs: durationMs,
                 globalTimeRange: globalTimeRange,
+                beatRefs: beatRefs,
+                assetStates: assetStates,
                 shotType: shotType,
                 sceneId: sceneId,
                 prompt: prompt,
