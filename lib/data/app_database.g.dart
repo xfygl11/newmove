@@ -570,12 +570,32 @@ class $NovelBooksTable extends NovelBooks
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _worldMeta = const VerificationMeta('world');
+  @override
+  late final GeneratedColumn<String> world = GeneratedColumn<String>(
+    'world',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _premiseMeta = const VerificationMeta(
     'premise',
   );
   @override
   late final GeneratedColumn<String> premise = GeneratedColumn<String>(
     'premise',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _outlineMeta = const VerificationMeta(
+    'outline',
+  );
+  @override
+  late final GeneratedColumn<String> outline = GeneratedColumn<String>(
+    'outline',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -598,7 +618,9 @@ class $NovelBooksTable extends NovelBooks
     title,
     genre,
     styleGuide,
+    world,
     premise,
+    outline,
     status,
   ];
   @override
@@ -644,10 +666,22 @@ class $NovelBooksTable extends NovelBooks
         styleGuide.isAcceptableOrUnknown(data['style_guide']!, _styleGuideMeta),
       );
     }
+    if (data.containsKey('world')) {
+      context.handle(
+        _worldMeta,
+        world.isAcceptableOrUnknown(data['world']!, _worldMeta),
+      );
+    }
     if (data.containsKey('premise')) {
       context.handle(
         _premiseMeta,
         premise.isAcceptableOrUnknown(data['premise']!, _premiseMeta),
+      );
+    }
+    if (data.containsKey('outline')) {
+      context.handle(
+        _outlineMeta,
+        outline.isAcceptableOrUnknown(data['outline']!, _outlineMeta),
       );
     }
     if (data.containsKey('status')) {
@@ -685,9 +719,17 @@ class $NovelBooksTable extends NovelBooks
         DriftSqlType.string,
         data['${effectivePrefix}style_guide'],
       ),
+      world: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}world'],
+      ),
       premise: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}premise'],
+      ),
+      outline: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}outline'],
       ),
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -708,7 +750,9 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
   final String title;
   final String? genre;
   final String? styleGuide;
+  final String? world;
   final String? premise;
+  final String? outline;
   final String status;
   const NovelBook({
     required this.id,
@@ -716,7 +760,9 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
     required this.title,
     this.genre,
     this.styleGuide,
+    this.world,
     this.premise,
+    this.outline,
     required this.status,
   });
   @override
@@ -731,8 +777,14 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
     if (!nullToAbsent || styleGuide != null) {
       map['style_guide'] = Variable<String>(styleGuide);
     }
+    if (!nullToAbsent || world != null) {
+      map['world'] = Variable<String>(world);
+    }
     if (!nullToAbsent || premise != null) {
       map['premise'] = Variable<String>(premise);
+    }
+    if (!nullToAbsent || outline != null) {
+      map['outline'] = Variable<String>(outline);
     }
     map['status'] = Variable<String>(status);
     return map;
@@ -749,9 +801,15 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
       styleGuide: styleGuide == null && nullToAbsent
           ? const Value.absent()
           : Value(styleGuide),
+      world: world == null && nullToAbsent
+          ? const Value.absent()
+          : Value(world),
       premise: premise == null && nullToAbsent
           ? const Value.absent()
           : Value(premise),
+      outline: outline == null && nullToAbsent
+          ? const Value.absent()
+          : Value(outline),
       status: Value(status),
     );
   }
@@ -767,7 +825,9 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
       title: serializer.fromJson<String>(json['title']),
       genre: serializer.fromJson<String?>(json['genre']),
       styleGuide: serializer.fromJson<String?>(json['styleGuide']),
+      world: serializer.fromJson<String?>(json['world']),
       premise: serializer.fromJson<String?>(json['premise']),
+      outline: serializer.fromJson<String?>(json['outline']),
       status: serializer.fromJson<String>(json['status']),
     );
   }
@@ -780,7 +840,9 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
       'title': serializer.toJson<String>(title),
       'genre': serializer.toJson<String?>(genre),
       'styleGuide': serializer.toJson<String?>(styleGuide),
+      'world': serializer.toJson<String?>(world),
       'premise': serializer.toJson<String?>(premise),
+      'outline': serializer.toJson<String?>(outline),
       'status': serializer.toJson<String>(status),
     };
   }
@@ -791,7 +853,9 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
     String? title,
     Value<String?> genre = const Value.absent(),
     Value<String?> styleGuide = const Value.absent(),
+    Value<String?> world = const Value.absent(),
     Value<String?> premise = const Value.absent(),
+    Value<String?> outline = const Value.absent(),
     String? status,
   }) => NovelBook(
     id: id ?? this.id,
@@ -799,7 +863,9 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
     title: title ?? this.title,
     genre: genre.present ? genre.value : this.genre,
     styleGuide: styleGuide.present ? styleGuide.value : this.styleGuide,
+    world: world.present ? world.value : this.world,
     premise: premise.present ? premise.value : this.premise,
+    outline: outline.present ? outline.value : this.outline,
     status: status ?? this.status,
   );
   NovelBook copyWithCompanion(NovelBooksCompanion data) {
@@ -811,7 +877,9 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
       styleGuide: data.styleGuide.present
           ? data.styleGuide.value
           : this.styleGuide,
+      world: data.world.present ? data.world.value : this.world,
       premise: data.premise.present ? data.premise.value : this.premise,
+      outline: data.outline.present ? data.outline.value : this.outline,
       status: data.status.present ? data.status.value : this.status,
     );
   }
@@ -824,15 +892,26 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
           ..write('title: $title, ')
           ..write('genre: $genre, ')
           ..write('styleGuide: $styleGuide, ')
+          ..write('world: $world, ')
           ..write('premise: $premise, ')
+          ..write('outline: $outline, ')
           ..write('status: $status')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, projectId, title, genre, styleGuide, premise, status);
+  int get hashCode => Object.hash(
+    id,
+    projectId,
+    title,
+    genre,
+    styleGuide,
+    world,
+    premise,
+    outline,
+    status,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -842,7 +921,9 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
           other.title == this.title &&
           other.genre == this.genre &&
           other.styleGuide == this.styleGuide &&
+          other.world == this.world &&
           other.premise == this.premise &&
+          other.outline == this.outline &&
           other.status == this.status);
 }
 
@@ -852,7 +933,9 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
   final Value<String> title;
   final Value<String?> genre;
   final Value<String?> styleGuide;
+  final Value<String?> world;
   final Value<String?> premise;
+  final Value<String?> outline;
   final Value<String> status;
   const NovelBooksCompanion({
     this.id = const Value.absent(),
@@ -860,7 +943,9 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     this.title = const Value.absent(),
     this.genre = const Value.absent(),
     this.styleGuide = const Value.absent(),
+    this.world = const Value.absent(),
     this.premise = const Value.absent(),
+    this.outline = const Value.absent(),
     this.status = const Value.absent(),
   });
   NovelBooksCompanion.insert({
@@ -869,7 +954,9 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     required String title,
     this.genre = const Value.absent(),
     this.styleGuide = const Value.absent(),
+    this.world = const Value.absent(),
     this.premise = const Value.absent(),
+    this.outline = const Value.absent(),
     this.status = const Value.absent(),
   }) : projectId = Value(projectId),
        title = Value(title);
@@ -879,7 +966,9 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     Expression<String>? title,
     Expression<String>? genre,
     Expression<String>? styleGuide,
+    Expression<String>? world,
     Expression<String>? premise,
+    Expression<String>? outline,
     Expression<String>? status,
   }) {
     return RawValuesInsertable({
@@ -888,7 +977,9 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
       if (title != null) 'title': title,
       if (genre != null) 'genre': genre,
       if (styleGuide != null) 'style_guide': styleGuide,
+      if (world != null) 'world': world,
       if (premise != null) 'premise': premise,
+      if (outline != null) 'outline': outline,
       if (status != null) 'status': status,
     });
   }
@@ -899,7 +990,9 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     Value<String>? title,
     Value<String?>? genre,
     Value<String?>? styleGuide,
+    Value<String?>? world,
     Value<String?>? premise,
+    Value<String?>? outline,
     Value<String>? status,
   }) {
     return NovelBooksCompanion(
@@ -908,7 +1001,9 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
       title: title ?? this.title,
       genre: genre ?? this.genre,
       styleGuide: styleGuide ?? this.styleGuide,
+      world: world ?? this.world,
       premise: premise ?? this.premise,
+      outline: outline ?? this.outline,
       status: status ?? this.status,
     );
   }
@@ -931,8 +1026,14 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     if (styleGuide.present) {
       map['style_guide'] = Variable<String>(styleGuide.value);
     }
+    if (world.present) {
+      map['world'] = Variable<String>(world.value);
+    }
     if (premise.present) {
       map['premise'] = Variable<String>(premise.value);
+    }
+    if (outline.present) {
+      map['outline'] = Variable<String>(outline.value);
     }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
@@ -948,7 +1049,9 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
           ..write('title: $title, ')
           ..write('genre: $genre, ')
           ..write('styleGuide: $styleGuide, ')
+          ..write('world: $world, ')
           ..write('premise: $premise, ')
+          ..write('outline: $outline, ')
           ..write('status: $status')
           ..write(')'))
         .toString();
@@ -1591,6 +1694,360 @@ class ChaptersCompanion extends UpdateCompanion<Chapter> {
   }
 }
 
+class $ChapterRevisionsTable extends ChapterRevisions
+    with TableInfo<$ChapterRevisionsTable, ChapterRevision> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ChapterRevisionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _chapterIdMeta = const VerificationMeta(
+    'chapterId',
+  );
+  @override
+  late final GeneratedColumn<int> chapterId = GeneratedColumn<int>(
+    'chapter_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES chapters (id)',
+    ),
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    chapterId,
+    revision,
+    content,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'chapter_revisions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ChapterRevision> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('chapter_id')) {
+      context.handle(
+        _chapterIdMeta,
+        chapterId.isAcceptableOrUnknown(data['chapter_id']!, _chapterIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_chapterIdMeta);
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_revisionMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ChapterRevision map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ChapterRevision(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      chapterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}chapter_id'],
+      )!,
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ChapterRevisionsTable createAlias(String alias) {
+    return $ChapterRevisionsTable(attachedDatabase, alias);
+  }
+}
+
+class ChapterRevision extends DataClass implements Insertable<ChapterRevision> {
+  final int id;
+  final int chapterId;
+  final int revision;
+  final String? content;
+  final DateTime createdAt;
+  const ChapterRevision({
+    required this.id,
+    required this.chapterId,
+    required this.revision,
+    this.content,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['chapter_id'] = Variable<int>(chapterId);
+    map['revision'] = Variable<int>(revision);
+    if (!nullToAbsent || content != null) {
+      map['content'] = Variable<String>(content);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ChapterRevisionsCompanion toCompanion(bool nullToAbsent) {
+    return ChapterRevisionsCompanion(
+      id: Value(id),
+      chapterId: Value(chapterId),
+      revision: Value(revision),
+      content: content == null && nullToAbsent
+          ? const Value.absent()
+          : Value(content),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ChapterRevision.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ChapterRevision(
+      id: serializer.fromJson<int>(json['id']),
+      chapterId: serializer.fromJson<int>(json['chapterId']),
+      revision: serializer.fromJson<int>(json['revision']),
+      content: serializer.fromJson<String?>(json['content']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'chapterId': serializer.toJson<int>(chapterId),
+      'revision': serializer.toJson<int>(revision),
+      'content': serializer.toJson<String?>(content),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ChapterRevision copyWith({
+    int? id,
+    int? chapterId,
+    int? revision,
+    Value<String?> content = const Value.absent(),
+    DateTime? createdAt,
+  }) => ChapterRevision(
+    id: id ?? this.id,
+    chapterId: chapterId ?? this.chapterId,
+    revision: revision ?? this.revision,
+    content: content.present ? content.value : this.content,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ChapterRevision copyWithCompanion(ChapterRevisionsCompanion data) {
+    return ChapterRevision(
+      id: data.id.present ? data.id.value : this.id,
+      chapterId: data.chapterId.present ? data.chapterId.value : this.chapterId,
+      revision: data.revision.present ? data.revision.value : this.revision,
+      content: data.content.present ? data.content.value : this.content,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ChapterRevision(')
+          ..write('id: $id, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('revision: $revision, ')
+          ..write('content: $content, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, chapterId, revision, content, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ChapterRevision &&
+          other.id == this.id &&
+          other.chapterId == this.chapterId &&
+          other.revision == this.revision &&
+          other.content == this.content &&
+          other.createdAt == this.createdAt);
+}
+
+class ChapterRevisionsCompanion extends UpdateCompanion<ChapterRevision> {
+  final Value<int> id;
+  final Value<int> chapterId;
+  final Value<int> revision;
+  final Value<String?> content;
+  final Value<DateTime> createdAt;
+  const ChapterRevisionsCompanion({
+    this.id = const Value.absent(),
+    this.chapterId = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.content = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  ChapterRevisionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int chapterId,
+    required int revision,
+    this.content = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : chapterId = Value(chapterId),
+       revision = Value(revision);
+  static Insertable<ChapterRevision> custom({
+    Expression<int>? id,
+    Expression<int>? chapterId,
+    Expression<int>? revision,
+    Expression<String>? content,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (chapterId != null) 'chapter_id': chapterId,
+      if (revision != null) 'revision': revision,
+      if (content != null) 'content': content,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  ChapterRevisionsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? chapterId,
+    Value<int>? revision,
+    Value<String?>? content,
+    Value<DateTime>? createdAt,
+  }) {
+    return ChapterRevisionsCompanion(
+      id: id ?? this.id,
+      chapterId: chapterId ?? this.chapterId,
+      revision: revision ?? this.revision,
+      content: content ?? this.content,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (chapterId.present) {
+      map['chapter_id'] = Variable<int>(chapterId.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ChapterRevisionsCompanion(')
+          ..write('id: $id, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('revision: $revision, ')
+          ..write('content: $content, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $TruthFilesTable extends TruthFiles
     with TableInfo<$TruthFilesTable, TruthFile> {
   @override
@@ -1730,6 +2187,10 @@ class $TruthFilesTable extends TruthFiles
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {bookId, kind},
+  ];
   @override
   TruthFile map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -6715,6 +7176,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ProjectsTable projects = $ProjectsTable(this);
   late final $NovelBooksTable novelBooks = $NovelBooksTable(this);
   late final $ChaptersTable chapters = $ChaptersTable(this);
+  late final $ChapterRevisionsTable chapterRevisions = $ChapterRevisionsTable(
+    this,
+  );
   late final $TruthFilesTable truthFiles = $TruthFilesTable(this);
   late final $ScriptsTable scripts = $ScriptsTable(this);
   late final $ScenesTable scenes = $ScenesTable(this);
@@ -6727,6 +7191,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final ProjectDao projectDao = ProjectDao(this as AppDatabase);
+  late final NovelDao novelDao = NovelDao(this as AppDatabase);
+  late final ChapterRevisionDao chapterRevisionDao = ChapterRevisionDao(
+    this as AppDatabase,
+  );
+  late final TruthFileDao truthFileDao = TruthFileDao(this as AppDatabase);
   late final ProviderDao providerDao = ProviderDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -6736,6 +7205,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     projects,
     novelBooks,
     chapters,
+    chapterRevisions,
     truthFiles,
     scripts,
     scenes,
@@ -7105,7 +7575,9 @@ typedef $$NovelBooksTableCreateCompanionBuilder = NovelBooksCompanion Function({
   required String title,
   Value<String?> genre,
   Value<String?> styleGuide,
+  Value<String?> world,
   Value<String?> premise,
+  Value<String?> outline,
   Value<String> status,
 });
 typedef $$NovelBooksTableUpdateCompanionBuilder = NovelBooksCompanion Function({
@@ -7114,7 +7586,9 @@ typedef $$NovelBooksTableUpdateCompanionBuilder = NovelBooksCompanion Function({
   Value<String> title,
   Value<String?> genre,
   Value<String?> styleGuide,
+  Value<String?> world,
   Value<String?> premise,
+  Value<String?> outline,
   Value<String> status,
 });
 
@@ -7225,8 +7699,18 @@ class $$NovelBooksTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get world => $composableBuilder(
+    column: $table.world,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get premise => $composableBuilder(
     column: $table.premise,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get outline => $composableBuilder(
+    column: $table.outline,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7363,8 +7847,18 @@ class $$NovelBooksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get world => $composableBuilder(
+    column: $table.world,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get premise => $composableBuilder(
     column: $table.premise,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get outline => $composableBuilder(
+    column: $table.outline,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -7420,8 +7914,14 @@ class $$NovelBooksTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get world =>
+      $composableBuilder(column: $table.world, builder: (column) => column);
+
   GeneratedColumn<String> get premise =>
       $composableBuilder(column: $table.premise, builder: (column) => column);
+
+  GeneratedColumn<String> get outline =>
+      $composableBuilder(column: $table.outline, builder: (column) => column);
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
@@ -7563,7 +8063,9 @@ class $$NovelBooksTableTableManager
                 Value<String> title = const Value.absent(),
                 Value<String?> genre = const Value.absent(),
                 Value<String?> styleGuide = const Value.absent(),
+                Value<String?> world = const Value.absent(),
                 Value<String?> premise = const Value.absent(),
+                Value<String?> outline = const Value.absent(),
                 Value<String> status = const Value.absent(),
               }) => NovelBooksCompanion(
                 id: id,
@@ -7571,7 +8073,9 @@ class $$NovelBooksTableTableManager
                 title: title,
                 genre: genre,
                 styleGuide: styleGuide,
+                world: world,
                 premise: premise,
+                outline: outline,
                 status: status,
               ),
           createCompanionCallback:
@@ -7581,7 +8085,9 @@ class $$NovelBooksTableTableManager
                 required String title,
                 Value<String?> genre = const Value.absent(),
                 Value<String?> styleGuide = const Value.absent(),
+                Value<String?> world = const Value.absent(),
                 Value<String?> premise = const Value.absent(),
+                Value<String?> outline = const Value.absent(),
                 Value<String> status = const Value.absent(),
               }) => NovelBooksCompanion.insert(
                 id: id,
@@ -7589,7 +8095,9 @@ class $$NovelBooksTableTableManager
                 title: title,
                 genre: genre,
                 styleGuide: styleGuide,
+                world: world,
                 premise: premise,
+                outline: outline,
                 status: status,
               ),
           withReferenceMapper: (p0) => p0
@@ -7783,6 +8291,26 @@ final class $$ChaptersTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<$ChapterRevisionsTable, List<ChapterRevision>>
+  _chapterRevisionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.chapterRevisions,
+    aliasName: 'chapters__id__chapter_revisions__chapter_id',
+  );
+
+  $$ChapterRevisionsTableProcessedTableManager get chapterRevisionsRefs {
+    final manager = $$ChapterRevisionsTableTableManager(
+      $_db,
+      $_db.chapterRevisions,
+    ).filter((f) => f.chapterId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _chapterRevisionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$ChaptersTableFilterComposer
@@ -7865,6 +8393,31 @@ class $$ChaptersTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> chapterRevisionsRefs(
+    Expression<bool> Function($$ChapterRevisionsTableFilterComposer f) f,
+  ) {
+    final $$ChapterRevisionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.chapterRevisions,
+      getReferencedColumn: (t) => t.chapterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ChapterRevisionsTableFilterComposer(
+            $db: $db,
+            $table: $db.chapterRevisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -8012,6 +8565,31 @@ class $$ChaptersTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> chapterRevisionsRefs<T extends Object>(
+    Expression<T> Function($$ChapterRevisionsTableAnnotationComposer a) f,
+  ) {
+    final $$ChapterRevisionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.chapterRevisions,
+      getReferencedColumn: (t) => t.chapterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ChapterRevisionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.chapterRevisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ChaptersTableTableManager
@@ -8027,7 +8605,7 @@ class $$ChaptersTableTableManager
           $$ChaptersTableUpdateCompanionBuilder,
           (Chapter, $$ChaptersTableReferences),
           Chapter,
-          PrefetchHooks Function({bool bookId})
+          PrefetchHooks Function({bool bookId, bool chapterRevisionsRefs})
         > {
   $$ChaptersTableTableManager(_$AppDatabase db, $ChaptersTable table)
     : super(
@@ -8100,7 +8678,348 @@ class $$ChaptersTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({bookId = false}) {
+          prefetchHooksCallback:
+              ({bookId = false, chapterRevisionsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (chapterRevisionsRefs) db.chapterRevisions,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (bookId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.bookId,
+                            referencedTable: $$ChaptersTableReferences
+                                ._bookIdTable(db),
+                            referencedColumn: $$ChaptersTableReferences
+                                ._bookIdTable(db)
+                                .id,
+                          ) as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (chapterRevisionsRefs)
+                        await $_getPrefetchedData<
+                          Chapter,
+                          $ChaptersTable,
+                          ChapterRevision
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ChaptersTableReferences
+                              ._chapterRevisionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ChaptersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).chapterRevisionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.chapterId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$ChaptersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ChaptersTable,
+      Chapter,
+      $$ChaptersTableFilterComposer,
+      $$ChaptersTableOrderingComposer,
+      $$ChaptersTableAnnotationComposer,
+      $$ChaptersTableCreateCompanionBuilder,
+      $$ChaptersTableUpdateCompanionBuilder,
+      (Chapter, $$ChaptersTableReferences),
+      Chapter,
+      PrefetchHooks Function({bool bookId, bool chapterRevisionsRefs})
+    >;
+typedef $$ChapterRevisionsTableCreateCompanionBuilder =
+    ChapterRevisionsCompanion Function({
+      Value<int> id,
+      required int chapterId,
+      required int revision,
+      Value<String?> content,
+      Value<DateTime> createdAt,
+    });
+typedef $$ChapterRevisionsTableUpdateCompanionBuilder =
+    ChapterRevisionsCompanion Function({
+      Value<int> id,
+      Value<int> chapterId,
+      Value<int> revision,
+      Value<String?> content,
+      Value<DateTime> createdAt,
+    });
+
+final class $$ChapterRevisionsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $ChapterRevisionsTable, ChapterRevision> {
+  $$ChapterRevisionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ChaptersTable _chapterIdTable(_$AppDatabase db) =>
+      db.chapters.createAlias('chapter_revisions__chapter_id__chapters__id');
+
+  $$ChaptersTableProcessedTableManager get chapterId {
+    final $_column = $_itemColumn<int>('chapter_id')!;
+
+    final manager = $$ChaptersTableTableManager(
+      $_db,
+      $_db.chapters,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_chapterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ChapterRevisionsTableFilterComposer
+    extends Composer<_$AppDatabase, $ChapterRevisionsTable> {
+  $$ChapterRevisionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ChaptersTableFilterComposer get chapterId {
+    final $$ChaptersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.chapterId,
+      referencedTable: $db.chapters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ChaptersTableFilterComposer(
+            $db: $db,
+            $table: $db.chapters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ChapterRevisionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ChapterRevisionsTable> {
+  $$ChapterRevisionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ChaptersTableOrderingComposer get chapterId {
+    final $$ChaptersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.chapterId,
+      referencedTable: $db.chapters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ChaptersTableOrderingComposer(
+            $db: $db,
+            $table: $db.chapters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ChapterRevisionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ChapterRevisionsTable> {
+  $$ChapterRevisionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ChaptersTableAnnotationComposer get chapterId {
+    final $$ChaptersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.chapterId,
+      referencedTable: $db.chapters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ChaptersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.chapters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ChapterRevisionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ChapterRevisionsTable,
+          ChapterRevision,
+          $$ChapterRevisionsTableFilterComposer,
+          $$ChapterRevisionsTableOrderingComposer,
+          $$ChapterRevisionsTableAnnotationComposer,
+          $$ChapterRevisionsTableCreateCompanionBuilder,
+          $$ChapterRevisionsTableUpdateCompanionBuilder,
+          (ChapterRevision, $$ChapterRevisionsTableReferences),
+          ChapterRevision,
+          PrefetchHooks Function({bool chapterId})
+        > {
+  $$ChapterRevisionsTableTableManager(
+    _$AppDatabase db,
+    $ChapterRevisionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ChapterRevisionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ChapterRevisionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ChapterRevisionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> chapterId = const Value.absent(),
+                Value<int> revision = const Value.absent(),
+                Value<String?> content = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ChapterRevisionsCompanion(
+                id: id,
+                chapterId: chapterId,
+                revision: revision,
+                content: content,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int chapterId,
+                required int revision,
+                Value<String?> content = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ChapterRevisionsCompanion.insert(
+                id: id,
+                chapterId: chapterId,
+                revision: revision,
+                content: content,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ChapterRevisionsTable, ChapterRevision>(table),
+                  $$ChapterRevisionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({chapterId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -8120,15 +9039,14 @@ class $$ChaptersTableTableManager
                       dynamic
                     >
                   >(state) {
-                    if (bookId) {
+                    if (chapterId) {
                       state = state.withJoin(
                         currentTable: table,
-                        currentColumn: table.bookId,
-                        referencedTable: $$ChaptersTableReferences._bookIdTable(
-                          db,
-                        ),
-                        referencedColumn: $$ChaptersTableReferences
-                            ._bookIdTable(db)
+                        currentColumn: table.chapterId,
+                        referencedTable: $$ChapterRevisionsTableReferences
+                            ._chapterIdTable(db),
+                        referencedColumn: $$ChapterRevisionsTableReferences
+                            ._chapterIdTable(db)
                             .id,
                       ) as T;
                     }
@@ -8144,19 +9062,19 @@ class $$ChaptersTableTableManager
       );
 }
 
-typedef $$ChaptersTableProcessedTableManager =
+typedef $$ChapterRevisionsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $ChaptersTable,
-      Chapter,
-      $$ChaptersTableFilterComposer,
-      $$ChaptersTableOrderingComposer,
-      $$ChaptersTableAnnotationComposer,
-      $$ChaptersTableCreateCompanionBuilder,
-      $$ChaptersTableUpdateCompanionBuilder,
-      (Chapter, $$ChaptersTableReferences),
-      Chapter,
-      PrefetchHooks Function({bool bookId})
+      $ChapterRevisionsTable,
+      ChapterRevision,
+      $$ChapterRevisionsTableFilterComposer,
+      $$ChapterRevisionsTableOrderingComposer,
+      $$ChapterRevisionsTableAnnotationComposer,
+      $$ChapterRevisionsTableCreateCompanionBuilder,
+      $$ChapterRevisionsTableUpdateCompanionBuilder,
+      (ChapterRevision, $$ChapterRevisionsTableReferences),
+      ChapterRevision,
+      PrefetchHooks Function({bool chapterId})
     >;
 typedef $$TruthFilesTableCreateCompanionBuilder = TruthFilesCompanion Function({
   Value<int> id,
@@ -12336,6 +13254,8 @@ class $AppDatabaseManager {
       $$NovelBooksTableTableManager(_db, _db.novelBooks);
   $$ChaptersTableTableManager get chapters =>
       $$ChaptersTableTableManager(_db, _db.chapters);
+  $$ChapterRevisionsTableTableManager get chapterRevisions =>
+      $$ChapterRevisionsTableTableManager(_db, _db.chapterRevisions);
   $$TruthFilesTableTableManager get truthFiles =>
       $$TruthFilesTableTableManager(_db, _db.truthFiles);
   $$ScriptsTableTableManager get scripts =>

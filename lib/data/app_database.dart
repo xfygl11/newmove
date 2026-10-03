@@ -1,8 +1,11 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'daos/chapter_revision_dao.dart';
+import 'daos/novel_dao.dart';
 import 'daos/project_dao.dart';
 import 'daos/provider_dao.dart';
+import 'daos/truth_file_dao.dart';
 import 'tables/tables.dart';
 
 part 'app_database.g.dart';
@@ -13,6 +16,7 @@ part 'app_database.g.dart';
     Projects,
     NovelBooks,
     Chapters,
+    ChapterRevisions,
     TruthFiles,
     Scripts,
     Scenes,
@@ -23,7 +27,13 @@ part 'app_database.g.dart';
     AssetRefs,
     ProviderConfigs,
   ],
-  daos: [ProjectDao, ProviderDao],
+  daos: [
+    ProjectDao,
+    NovelDao,
+    ChapterRevisionDao,
+    TruthFileDao,
+    ProviderDao,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   /// 供测试注入内存数据库。

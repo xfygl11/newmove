@@ -22,8 +22,12 @@ class NovelBooks extends Table {
   TextColumn get title => text().withLength(min: 1, max: 200)();
   TextColumn get genre => text().nullable()();
   TextColumn get styleGuide => text().nullable()();
+  // 世界观描述（静态设定）。
+  TextColumn get world => text().nullable()();
   // 故事命题：谁想要什么，受什么阻碍，失败失去什么。
   TextColumn get premise => text().nullable()();
+  // 大纲（Markdown，逐章目标/事件/结尾）。
+  TextColumn get outline => text().nullable()();
   TextColumn get status => text().withDefault(const Constant('草稿'))();
 }
 
@@ -55,6 +59,11 @@ class TruthFiles extends Table {
   TextColumn get content => text().withDefault(const Constant('{}'))();
   IntColumn get revision => integer().withDefault(const Constant(1))();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {bookId, kind},
+  ];
 }
 
 /// 剧本。
@@ -209,4 +218,14 @@ class ProviderConfigs extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+}
+
+/// 章节版本快照：每次修订前保存旧内容，支持回溯。
+@DataClassName('ChapterRevision')
+class ChapterRevisions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get chapterId => integer().references(Chapters, #id)();
+  IntColumn get revision => integer()();
+  TextColumn get content => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }

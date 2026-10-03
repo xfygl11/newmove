@@ -1,8 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/app_database.dart';
+import '../../data/daos/chapter_revision_dao.dart';
+import '../../data/daos/novel_dao.dart';
 import '../../data/daos/project_dao.dart';
 import '../../data/daos/provider_dao.dart';
+import '../../data/daos/truth_file_dao.dart';
 import 'secure_key_store.dart';
 
 /// 数据库单例（应用生命周期内复用）。
@@ -18,6 +21,18 @@ final projectDaoProvider = Provider<ProjectDao>(
 
 final providerDaoProvider = Provider<ProviderDao>(
   (ref) => ref.watch(databaseProvider).providerDao,
+);
+
+final novelDaoProvider = Provider<NovelDao>(
+  (ref) => ref.watch(databaseProvider).novelDao,
+);
+
+final truthFileDaoProvider = Provider<TruthFileDao>(
+  (ref) => ref.watch(databaseProvider).truthFileDao,
+);
+
+final chapterRevisionDaoProvider = Provider<ChapterRevisionDao>(
+  (ref) => ref.watch(databaseProvider).chapterRevisionDao,
 );
 
 final secureKeyStoreProvider = Provider<SecureKeyStore>(

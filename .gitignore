@@ -33,10 +33,6 @@ migrate_working_dir/
 /build/
 /coverage/
 
-# 本地测试专用（本环境 Dart TLS 无法访问 GitHub release，用系统 SQLite）。
-# CI 与正常网络环境用默认 sqlite3 预编译库，无需此文件。
-/build.yaml
-
 # Symbolication related
 app.*.symbols
 

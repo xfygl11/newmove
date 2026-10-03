@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'features/novel/chapter_editor_page.dart';
+import 'features/novel/novel_shelf_page.dart';
+import 'features/novel/setting_workshop_page.dart';
 import 'features/project/project_page.dart';
 import 'features/provider_config/provider_config_page.dart';
 import 'features/task/task_page.dart';
@@ -32,6 +35,25 @@ final GoRouter appRouter = GoRouter(
           ],
         ),
       ],
+    ),
+    // 小说模块：进入后全屏覆盖底部 TabBar（对齐 docs/05 3.2 流程即导航）。
+    GoRoute(
+      path: '/novel/:projectId',
+      builder: (_, state) => NovelShelfPage(
+        projectId: int.parse(state.pathParameters['projectId']!),
+      ),
+    ),
+    GoRoute(
+      path: '/novel/:projectId/chapter/:chapterId',
+      builder: (_, state) => ChapterEditorPage(
+        chapterId: int.parse(state.pathParameters['chapterId']!),
+      ),
+    ),
+    GoRoute(
+      path: '/novel/:projectId/settings',
+      builder: (_, state) => SettingWorkshopPage(
+        projectId: int.parse(state.pathParameters['projectId']!),
+      ),
     ),
   ],
 );
