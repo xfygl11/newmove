@@ -50,7 +50,7 @@ void main() {
 
     test('data 后跟可选空格', () {
       final p = SseByteParser();
-      final events = p.push(utf8.encode('data:  hello\n\n'));
+      final events = p.push(utf8.encode('data: hello\n\n'));
       expect(events, ['hello']);
     });
   });

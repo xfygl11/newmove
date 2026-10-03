@@ -29,10 +29,16 @@ void main() {
 
     test('按更新时间倒序返回', () async {
       await db.projectDao.insertProject(
-        ProjectsCompanion.insert(name: '旧项目'),
+        ProjectsCompanion.insert(
+          name: '旧项目',
+          updatedAt: Value(DateTime(2026, 1, 1)),
+        ),
       );
       await db.projectDao.insertProject(
-        ProjectsCompanion.insert(name: '新项目'),
+        ProjectsCompanion.insert(
+          name: '新项目',
+          updatedAt: Value(DateTime(2026, 1, 2)),
+        ),
       );
 
       final list = await db.projectDao.listAll();
