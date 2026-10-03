@@ -7,14 +7,18 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newmove/agent/active_image.dart';
 import 'package:newmove/agent/active_llm.dart';
+import 'package:newmove/agent/active_video.dart';
 import 'package:newmove/core/network/image_provider_adapter.dart';
 import 'package:newmove/core/network/llm_provider_adapter.dart';
+import 'package:newmove/core/network/video_provider_adapter.dart';
 import 'package:newmove/core/storage/shot_file_store.dart';
+import 'package:newmove/core/storage/video_file_store.dart';
 import 'package:newmove/data/app_database.dart';
 import 'package:newmove/features/provider_config/provider_models.dart';
 import 'package:newmove/features/shot/shot_agents.dart';
 import 'package:newmove/features/shot/shot_models.dart';
 import 'package:newmove/features/shot/shot_service.dart';
+import 'package:newmove/features/shot/video_prompt.dart';
 
 /// 固定返回分镜草案 JSON：G01 双参考绑定（含 1 个幻觉 stableId），
 /// G02 与 G01 同主体/同景别/同角度，用于 A7 校验断言。
@@ -153,6 +157,74 @@ class _FakeFileStore extends ShotFileStore {
   }
 }
 
+/// 视频适配器 fake：submit 返回固定 taskId，poll 按 nextStatus 剧本推进。
+class _FakeVideoAdapter extends VideoProviderAdapter {
+  _FakeVideoAdapter();
+
+  /// 下一次 poll 返回的状态：running / success / failed。
+  String nextStatus = 'running';
+
+  /// 非 null 时 submit 直接抛错（模拟提交失败回滚）。
+  Object? submitError;
+
+  int submitCount = 0;
+  List<String> lastSubmitPrompts = [];
+
+  @override
+  Future<String> submit({
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+    required String prompt,
+    required int durationSec,
+    required String ratio,
+    required String resolution,
+    List<String> referencePaths = const [],
+    bool generateAudio = false,
+  }) async {
+    if (submitError != null) throw submitError!;
+    submitCount++;
+    lastSubmitPrompts.add(prompt);
+    return 'task_$submitCount';
+  }
+
+  @override
+  Future<VideoTaskSnapshot> poll({
+    required String baseUrl,
+    required String apiKey,
+    required String taskId,
+  }) async {
+    switch (nextStatus) {
+      case 'success':
+        // 返回最小 mp4 字节编 base64 data URI。
+        final b64 = base64Encode(Uint8List.fromList([0, 1, 2, 3]));
+        return VideoTaskSnapshot(
+          taskId: taskId,
+          status: 'success',
+          base64: b64,
+        );
+      case 'failed':
+        return VideoTaskSnapshot(
+          taskId: taskId,
+          status: 'failed',
+          error: '模拟失败',
+        );
+      default:
+        return VideoTaskSnapshot(taskId: taskId, status: 'running');
+    }
+  }
+}
+
+class _FakeVideoFileStore extends VideoFileStore {
+  @override
+  Future<String> save(int shotId, Uint8List bytes) async {
+    final dir = await Directory.systemTemp.createTemp('newmove_video_test');
+    final file = File('${dir.path}/shot_$shotId.mp4');
+    await file.writeAsBytes(bytes);
+    return file.path;
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -160,10 +232,12 @@ void main() {
   late int scriptId;
   late ShotService service;
   late _FakeImageAdapter fakeImageAdapter;
+  late _FakeVideoAdapter fakeVideoAdapter;
 
   setUp(() async {
     db = AppDatabase(NativeDatabase.memory());
     fakeImageAdapter = _FakeImageAdapter();
+    fakeVideoAdapter = _FakeVideoAdapter();
     service = ShotService(
       scriptDao: db.scriptDao,
       sceneDao: db.sceneDao,
@@ -175,7 +249,13 @@ void main() {
       agents: ShotAgents(adapter: _FakeLlmAdapter(_cannedJson)),
       imageAdapter: fakeImageAdapter,
       fileStore: _FakeFileStore(),
+      videoAdapter: fakeVideoAdapter,
+      videoFileStore: _FakeVideoFileStore(),
+      videoTaskDao: db.videoTaskDao,
+      providerDao: db.providerDao,
     );
+    // 测试不经过安全存储，直接注入固定 Key。
+    service.readProviderKey = (_) async => 'k';
 
     final projectId = await db.projectDao.insertProject(
       ProjectsCompanion.insert(name: '测试项目'),
@@ -287,6 +367,24 @@ void main() {
     );
   }
 
+  Future<ActiveVideo> fakeVideo() async {
+    await db.providerDao.upsert(
+      ProviderConfigsCompanion.insert(
+        id: 'fake-video',
+        group: 'video',
+        label: 'Fake Video',
+        baseUrl: 'https://fake.local',
+        protocol: 'async-task',
+      ),
+    );
+    final provider = (await db.providerDao.findById('fake-video'))!;
+    return ActiveVideo(
+      provider: provider,
+      apiKey: 'k',
+      model: const ProviderModel(id: 'vid', label: 'VID'),
+    );
+  }
+
   group('ShotService.directAndSave', () {
     test('落库提示词/帧/参考，幻觉 stableId 被跳过', () async {
       final summary = await service.directAndSave(
@@ -357,6 +455,198 @@ void main() {
 
       expect(result.success, 2);
       expect(result.failed, 0);
+    });
+  });
+
+  group('ShotService.submitVideo / pollVideoTask（M6）', () {
+    // 准备：生成分镜提示词 + 确认分镜图，使镜头可提交视频。
+    Future<Shot> prepareConfirmedShot() async {
+      await service.directAndSave(scriptId: scriptId, llm: await fakeLlm());
+      final g01 =
+          (await db.shotDao.listByScript(scriptId)).firstWhere((s) => s.globalSeq == 'G01');
+      final confirmed = await service.generate(
+        shotId: g01.id,
+        image: await fakeImage(),
+      );
+      await service.confirmShot(confirmed.id);
+      return (await db.shotDao.find(confirmed.id))!;
+    }
+
+    test('提交成功：A9 提示词含时间轴/时长，任务快照落库，镜头置视频生成中', () async {
+      final shot = await prepareConfirmedShot();
+      final video = await fakeVideo();
+
+      final task = await service.submitVideo(
+        shotId: shot.id,
+        video: video,
+        params: const VideoGenParams(
+          modelId: 'vid',
+          durationSec: 8,
+          ratio: '9:16',
+          resolution: '720p',
+          generateAudio: true,
+          referenceCount: 0,
+        ),
+      );
+
+      // 任务行：状态生成中、参数快照正确。
+      expect(task.status, '生成中');
+      expect(task.taskId, 'task_1');
+      expect(task.providerId, 'fake-video');
+      final params = VideoGenParams.decode(task.paramsJson);
+      expect(params.durationSec, 8);
+      expect(params.ratio, '9:16');
+      expect(params.resolution, '720p');
+      expect(params.generateAudio, isTrue);
+
+      // A9 提示词：Target duration 用参数值 8s（镜头 durationMs 为 6s）。
+      expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('Target duration: 8s'));
+      expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('Timeline:'));
+      // G01 单帧：有帧行、无 HARD CUT。
+      expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('00:00-00:06'));
+      expect(fakeVideoAdapter.lastSubmitPrompts.single, isNot(contains('HARD CUT')));
+      expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('Immutable locks:'));
+
+      // 镜头状态：视频生成中 + outputType video + modelVersion 记录模型。
+      final updated = (await db.shotDao.find(shot.id))!;
+      expect(updated.status, ShotStatuses.videoGenerating);
+      expect(updated.outputType, 'video');
+      expect(updated.modelVersion, 'vid');
+    });
+
+    test('轮询成功：视频落盘，任务置成功，镜头置视频完成', () async {
+      final shot = await prepareConfirmedShot();
+      final video = await fakeVideo();
+      final task = await service.submitVideo(
+        shotId: shot.id,
+        video: video,
+        params: const VideoGenParams(
+          modelId: 'vid',
+          durationSec: 5,
+          ratio: '16:9',
+          resolution: '480p',
+          generateAudio: false,
+          referenceCount: 0,
+        ),
+      );
+
+      fakeVideoAdapter.nextStatus = 'success';
+      final done = await service.pollVideoTask(task.id);
+
+      expect(done.status, '成功');
+      final updated = (await db.shotDao.find(shot.id))!;
+      expect(updated.status, ShotStatuses.videoDone);
+      expect(updated.outputType, 'video');
+      expect(File(updated.outputPath!).existsSync(), isTrue);
+    });
+
+    test('轮询业务失败：任务置失败并回滚镜头到分镜图已确认', () async {
+      final shot = await prepareConfirmedShot();
+      final video = await fakeVideo();
+      final task = await service.submitVideo(
+        shotId: shot.id,
+        video: video,
+        params: const VideoGenParams(
+          modelId: 'vid',
+          durationSec: 5,
+          ratio: '16:9',
+          resolution: '480p',
+          generateAudio: false,
+          referenceCount: 0,
+        ),
+      );
+
+      fakeVideoAdapter.nextStatus = 'failed';
+      final failed = await service.pollVideoTask(task.id);
+
+      expect(failed.status, '失败');
+      expect(failed.error, '模拟失败');
+      final updated = (await db.shotDao.find(shot.id))!;
+      expect(updated.status, ShotStatuses.confirmed);
+    });
+
+    test('轮询仍在生成：任务保持生成中', () async {
+      final shot = await prepareConfirmedShot();
+      final video = await fakeVideo();
+      final task = await service.submitVideo(
+        shotId: shot.id,
+        video: video,
+        params: const VideoGenParams(
+          modelId: 'vid',
+          durationSec: 5,
+          ratio: '16:9',
+          resolution: '480p',
+          generateAudio: false,
+          referenceCount: 0,
+        ),
+      );
+
+      final running = await service.pollVideoTask(task.id);
+      expect(running.status, '生成中');
+      final updated = (await db.shotDao.find(shot.id))!;
+      expect(updated.status, ShotStatuses.videoGenerating);
+    });
+
+    test('提交失败：回滚镜头到分镜图已确认 + outputType image', () async {
+      final shot = await prepareConfirmedShot();
+      final video = await fakeVideo();
+      fakeVideoAdapter.submitError = Exception('网络错误');
+
+      await expectLater(
+        service.submitVideo(
+          shotId: shot.id,
+          video: video,
+          params: const VideoGenParams(
+            modelId: 'vid',
+            durationSec: 5,
+            ratio: '16:9',
+            resolution: '480p',
+            generateAudio: false,
+            referenceCount: 0,
+          ),
+        ),
+        throwsException,
+      );
+
+      final updated = (await db.shotDao.find(shot.id))!;
+      expect(updated.status, ShotStatuses.confirmed);
+      expect(updated.outputType, 'image');
+      // 未留下任务行。
+      expect(await db.videoTaskDao.listByShot(shot.id), isEmpty);
+    });
+
+    test('重试失败任务：复用参数快照再次提交', () async {
+      final shot = await prepareConfirmedShot();
+      final video = await fakeVideo();
+      final task = await service.submitVideo(
+        shotId: shot.id,
+        video: video,
+        params: const VideoGenParams(
+          modelId: 'vid',
+          durationSec: 10,
+          ratio: '1:1',
+          resolution: '1080p',
+          generateAudio: true,
+          referenceCount: 0,
+        ),
+      );
+      fakeVideoAdapter.nextStatus = 'failed';
+      await service.pollVideoTask(task.id);
+
+      fakeVideoAdapter.nextStatus = 'running';
+      final retried = await service.retryVideo(
+        videoTaskId: task.id,
+        video: await fakeVideo(),
+      );
+
+      expect(fakeVideoAdapter.submitCount, 2);
+      expect(retried.status, '生成中');
+      expect(retried.taskId, 'task_2');
+      // 快照参数保持不变。
+      final params = VideoGenParams.decode(retried.paramsJson);
+      expect(params.durationSec, 10);
+      expect(params.ratio, '1:1');
+      expect(params.resolution, '1080p');
     });
   });
 

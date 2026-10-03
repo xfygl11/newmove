@@ -14,9 +14,11 @@ import '../../data/daos/script_revision_dao.dart';
 import '../../data/daos/shot_dao.dart';
 import '../../data/daos/shot_frame_dao.dart';
 import '../../data/daos/truth_file_dao.dart';
+import '../../data/daos/video_task_dao.dart';
 import 'asset_file_store.dart';
 import 'secure_key_store.dart';
 import 'shot_file_store.dart';
+import 'video_file_store.dart';
 
 /// 数据库单例（应用生命周期内复用）。
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -77,6 +79,10 @@ final shotFrameDaoProvider = Provider<ShotFrameDao>(
   (ref) => ref.watch(databaseProvider).shotFrameDao,
 );
 
+final videoTaskDaoProvider = Provider<VideoTaskDao>(
+  (ref) => ref.watch(databaseProvider).videoTaskDao,
+);
+
 final secureKeyStoreProvider = Provider<SecureKeyStore>(
   (ref) => SecureKeyStore(),
 );
@@ -87,4 +93,8 @@ final assetFileStoreProvider = Provider<AssetFileStore>(
 
 final shotFileStoreProvider = Provider<ShotFileStore>(
   (ref) => ShotFileStore(),
+);
+
+final videoFileStoreProvider = Provider<VideoFileStore>(
+  (ref) => VideoFileStore(),
 );

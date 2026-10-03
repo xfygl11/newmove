@@ -6,8 +6,11 @@ import 'package:drift/drift.dart' show Value;
 
 import '../../agent/active_image.dart';
 import '../../agent/active_llm.dart';
+import '../../agent/active_video.dart';
 import '../../core/network/image_provider_adapter.dart';
+import '../../core/network/video_provider_adapter.dart';
 import '../../core/storage/shot_file_store.dart';
+import '../../core/storage/video_file_store.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/asset_dao.dart';
 import '../../data/daos/asset_ref_dao.dart';
@@ -16,10 +19,13 @@ import '../../data/daos/scene_dao.dart';
 import '../../data/daos/script_dao.dart';
 import '../../data/daos/shot_dao.dart';
 import '../../data/daos/shot_frame_dao.dart';
+import '../../data/daos/video_task_dao.dart';
+import '../../data/daos/provider_dao.dart';
 import 'shot_agents.dart';
 import 'shot_models.dart';
+import 'video_prompt.dart';
 
-/// 分镜图的业务编排：上下文构建、导演落库、多参考图生成、衔接校验。
+/// 分镜图的业务编排：上下文构建、导演落库、多参考图生成、衔接校验、视频生成。
 class ShotService {
   ShotService({
     required this.scriptDao,
@@ -32,6 +38,10 @@ class ShotService {
     required this.agents,
     required this.imageAdapter,
     required this.fileStore,
+    required this.videoAdapter,
+    required this.videoFileStore,
+    required this.videoTaskDao,
+    required this.providerDao,
   });
 
   final ScriptDao scriptDao;
@@ -44,6 +54,10 @@ class ShotService {
   final ShotAgents agents;
   final ImageProviderAdapter imageAdapter;
   final ShotFileStore fileStore;
+  final VideoProviderAdapter videoAdapter;
+  final VideoFileStore videoFileStore;
+  final VideoTaskDao videoTaskDao;
+  final ProviderDao providerDao;
 
   // ---- 分镜提示词（T6.2 / T6.3） ----
 
@@ -394,6 +408,223 @@ class ShotService {
     if (text.contains('背')) return 180;
     if (text.contains('俯') || text.contains('仰')) return 45;
     return 0;
+  }
+
+  // ---- 视频生成（M6：T7.1–T7.4） ----
+
+  /// 提交视频生成任务（排队 → 生成中），返回任务行。
+  ///
+  /// 前置条件：镜头已有分镜图（作为首帧参考）与提示词。
+  /// 参考图取已生成分镜图 + 已采用资产图，上限 9 张。
+  Future<VideoTask> submitVideo({
+    required int shotId,
+    required ActiveVideo video,
+    required VideoGenParams params,
+  }) async {
+    final shot = await shotDao.find(shotId);
+    if (shot == null) throw StateError('镜头不存在：$shotId');
+    if (shot.prompt.isEmpty) throw StateError('镜头尚未生成分镜提示词');
+
+    // 组装参考图：分镜图优先，其次已采用资产图。
+    final referencePaths = <String>[];
+    if (shot.outputPath != null &&
+        shot.outputPath!.isNotEmpty &&
+        File(shot.outputPath!).existsSync()) {
+      referencePaths.add(shot.outputPath!);
+    }
+    final refs = await assetRefDao.listByShot(shotId);
+    for (final ref in refs) {
+      if (referencePaths.length >= 9) break;
+      final asset = await assetDao.find(ref.assetId);
+      final path = asset?.imagePath;
+      if (path != null && path.isNotEmpty && File(path).existsSync()) {
+        referencePaths.add(path);
+      }
+    }
+    final actualParams = VideoGenParams(
+      modelId: params.modelId,
+      durationSec: params.durationSec,
+      ratio: params.ratio,
+      resolution: params.resolution,
+      generateAudio: params.generateAudio,
+      referenceCount: referencePaths.length,
+    );
+
+    // 构造 A9 视频提示词（时长取参数面板选择值）。
+    final frames = await shotFrameDao.listByShot(shotId);
+    final prompt = const VideoPromptBuilder().build(
+      shot: shot,
+      frames: frames,
+      refs: refs,
+      assetById: {
+        for (final a in await assetDao.listByScript(shot.scriptId)) a.id: a,
+      },
+      durationSec: params.durationSec,
+    );
+
+    // 提交（状态：视频生成中）。
+    await shotDao.updateById(
+      shotId,
+      ShotsCompanion(
+        modelVersion: Value(params.modelId),
+        status: const Value(ShotStatuses.videoGenerating),
+        outputType: const Value('video'),
+      ),
+    );
+
+    try {
+      final taskId = await videoAdapter.submit(
+        baseUrl: video.baseUrl,
+        apiKey: video.apiKey,
+        model: params.modelId,
+        prompt: prompt,
+        durationSec: params.durationSec,
+        ratio: params.ratio,
+        resolution: params.resolution,
+        referencePaths: referencePaths,
+        generateAudio: params.generateAudio,
+      );
+      final id = await videoTaskDao.insert(
+        VideoTasksCompanion.insert(
+          shotId: shotId,
+          taskId: taskId,
+          providerId: video.provider.id,
+          status: const Value('生成中'),
+          paramsJson: Value(actualParams.encode()),
+        ),
+      );
+      return (await videoTaskDao.find(id))!;
+    } catch (e) {
+      // 提交失败回滚镜头状态。
+      await shotDao.updateById(
+        shotId,
+        ShotsCompanion(
+          status: const Value(ShotStatuses.confirmed),
+          outputType: const Value('image'),
+        ),
+      );
+      rethrow;
+    }
+  }
+
+  /// 轮询一次视频任务；完成时回填产物路径与镜头状态。
+  ///
+  /// 返回更新后的任务；仍在生成中返回原状态。
+  Future<VideoTask> pollVideoTask(int videoTaskId) async {
+    final task = await videoTaskDao.find(videoTaskId);
+    if (task == null) throw StateError('视频任务不存在：$videoTaskId');
+    if (task.status == '成功' || task.status == '失败') return task;
+
+    // 恢复供应商配置与 Key。
+    final provider = await _findProvider(task.providerId);
+    if (provider == null) {
+      return _markVideoFailed(task, '供应商配置已删除，无法恢复轮询');
+    }
+    final apiKey = await readProviderKey?.call(task.providerId);
+    if (apiKey == null || apiKey.isEmpty) {
+      return _markVideoFailed(task, '供应商 API Key 不可用');
+    }
+
+    try {
+      final snapshot = await videoAdapter.poll(
+        baseUrl: provider.baseUrl,
+        apiKey: apiKey,
+        taskId: task.taskId,
+      );
+
+      if (snapshot.isSuccess) {
+        // 取产物字节并落盘。
+        final Uint8List bytes;
+        if (snapshot.base64 != null) {
+          bytes = base64Decode(snapshot.base64!);
+        } else if (snapshot.url != null) {
+          bytes = await videoAdapter.downloadUrl(snapshot.url!);
+        } else {
+          return await _markVideoFailed(task, '供应商未返回视频数据');
+        }
+        final path = await videoFileStore.save(task.shotId, bytes);
+        await videoTaskDao.updateById(
+          task.id,
+          VideoTasksCompanion(
+            status: const Value('成功'),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
+        await shotDao.updateById(
+          task.shotId,
+          ShotsCompanion(
+            outputPath: Value(path),
+            status: const Value(ShotStatuses.videoDone),
+          ),
+        );
+        return (await videoTaskDao.find(task.id))!;
+      }
+
+      if (snapshot.isFailed) {
+        return await _markVideoFailed(task, snapshot.error ?? '视频生成失败');
+      }
+
+      // 仍在生成中。
+      await videoTaskDao.updateById(
+        task.id,
+        VideoTasksCompanion(
+          status: const Value('生成中'),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+      return (await videoTaskDao.find(task.id))!;
+    } catch (e) {
+      // 网络异常不标记失败，保持生成中，下次轮询重试。
+      return task;
+    }
+  }
+
+  /// 标记任务失败并回滚镜头状态到「分镜图已确认」。
+  Future<VideoTask> _markVideoFailed(VideoTask task, String error) async {
+    await videoTaskDao.updateById(
+      task.id,
+      VideoTasksCompanion(
+        status: const Value('失败'),
+        error: Value(error),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+    await shotDao.updateById(
+      task.shotId,
+      ShotsCompanion(status: const Value(ShotStatuses.confirmed)),
+    );
+    return (await videoTaskDao.find(task.id))!;
+  }
+
+  /// 按配置 id 查供应商行。
+  Future<ProviderConfig?> _findProvider(String id) {
+    return providerDao.findById(id);
+  }
+
+  /// 供应商 Key 读取回调（由 provider 层注入，避免 Service 依赖 secure storage）。
+  Future<String?> Function(String providerId)? readProviderKey;
+
+  /// 确认视频（视频完成 → 用户确认，当前等同保持视频完成）。
+  Future<void> confirmVideo(int shotId) async {
+    await shotDao.updateById(
+      shotId,
+      ShotsCompanion(status: const Value(ShotStatuses.videoDone)),
+    );
+  }
+
+  /// 重试失败的视频任务：复用原参数快照重新提交。
+  Future<VideoTask> retryVideo({
+    required int videoTaskId,
+    required ActiveVideo video,
+  }) async {
+    final task = await videoTaskDao.find(videoTaskId);
+    if (task == null) throw StateError('视频任务不存在：$videoTaskId');
+    final params = VideoGenParams.decode(task.paramsJson);
+    return submitVideo(
+      shotId: task.shotId,
+      video: video,
+      params: params,
+    );
   }
 
   // ---- 验收与编辑 ----

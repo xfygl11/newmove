@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/providers.dart';
-import '../../core/storage/providers.dart';
-import '../../data/app_database.dart';
+import '../../core/storage/providers.dart';import '../../data/app_database.dart';
 import 'shot_agents.dart';
 import 'shot_models.dart';
 import 'shot_service.dart';
@@ -12,18 +11,28 @@ final shotAgentsProvider = Provider<ShotAgents>(
 );
 
 final shotServiceProvider = Provider<ShotService>(
-  (ref) => ShotService(
-    scriptDao: ref.watch(scriptDaoProvider),
-    sceneDao: ref.watch(sceneDaoProvider),
-    beatDao: ref.watch(beatDaoProvider),
-    shotDao: ref.watch(shotDaoProvider),
-    shotFrameDao: ref.watch(shotFrameDaoProvider),
-    assetRefDao: ref.watch(assetRefDaoProvider),
-    assetDao: ref.watch(assetDaoProvider),
-    agents: ref.watch(shotAgentsProvider),
-    imageAdapter: ref.watch(imageProviderAdapterProvider),
-    fileStore: ref.watch(shotFileStoreProvider),
-  ),
+  (ref) {
+    final service = ShotService(
+      scriptDao: ref.watch(scriptDaoProvider),
+      sceneDao: ref.watch(sceneDaoProvider),
+      beatDao: ref.watch(beatDaoProvider),
+      shotDao: ref.watch(shotDaoProvider),
+      shotFrameDao: ref.watch(shotFrameDaoProvider),
+      assetRefDao: ref.watch(assetRefDaoProvider),
+      assetDao: ref.watch(assetDaoProvider),
+      agents: ref.watch(shotAgentsProvider),
+      imageAdapter: ref.watch(imageProviderAdapterProvider),
+      fileStore: ref.watch(shotFileStoreProvider),
+      videoAdapter: ref.watch(videoProviderAdapterProvider),
+      videoFileStore: ref.watch(videoFileStoreProvider),
+      videoTaskDao: ref.watch(videoTaskDaoProvider),
+      providerDao: ref.watch(providerDaoProvider),
+    );
+    // 轮询恢复时从安全存储读 Key。
+    final keyStore = ref.watch(secureKeyStoreProvider);
+    service.readProviderKey = keyStore.readKey;
+    return service;
+  },
 );
 
 /// 某剧本的镜头列表（G 序号升序）。
@@ -51,4 +60,14 @@ final shotTransitionIssuesProvider =
     FutureProvider.family<List<ShotTransitionIssue>, int>(
   (ref, scriptId) =>
       ref.watch(shotServiceProvider).listTransitionIssues(scriptId),
+);
+
+/// 某镜头的视频任务列表（最新在前）。
+final videoTasksByShotProvider = StreamProvider.family<List<VideoTask>, int>(
+  (ref, shotId) => ref.watch(videoTaskDaoProvider).watchByShot(shotId),
+);
+
+/// 全部进行中的视频任务（任务中心用）。
+final activeVideoTasksProvider = StreamProvider<List<VideoTask>>(
+  (ref) => ref.watch(videoTaskDaoProvider).watchActive(),
 );

@@ -7207,6 +7207,548 @@ class AssetRefsCompanion extends UpdateCompanion<AssetRef> {
   }
 }
 
+class $VideoTasksTable extends VideoTasks
+    with TableInfo<$VideoTasksTable, VideoTask> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $VideoTasksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shotIdMeta = const VerificationMeta('shotId');
+  @override
+  late final GeneratedColumn<int> shotId = GeneratedColumn<int>(
+    'shot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shots (id)',
+    ),
+  );
+  static const VerificationMeta _taskIdMeta = const VerificationMeta('taskId');
+  @override
+  late final GeneratedColumn<String> taskId = GeneratedColumn<String>(
+    'task_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _providerIdMeta = const VerificationMeta(
+    'providerId',
+  );
+  @override
+  late final GeneratedColumn<String> providerId = GeneratedColumn<String>(
+    'provider_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('排队'),
+  );
+  static const VerificationMeta _paramsJsonMeta = const VerificationMeta(
+    'paramsJson',
+  );
+  @override
+  late final GeneratedColumn<String> paramsJson = GeneratedColumn<String>(
+    'params_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
+  static const VerificationMeta _errorMeta = const VerificationMeta('error');
+  @override
+  late final GeneratedColumn<String> error = GeneratedColumn<String>(
+    'error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shotId,
+    taskId,
+    providerId,
+    status,
+    paramsJson,
+    error,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'video_tasks';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<VideoTask> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shot_id')) {
+      context.handle(
+        _shotIdMeta,
+        shotId.isAcceptableOrUnknown(data['shot_id']!, _shotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shotIdMeta);
+    }
+    if (data.containsKey('task_id')) {
+      context.handle(
+        _taskIdMeta,
+        taskId.isAcceptableOrUnknown(data['task_id']!, _taskIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_taskIdMeta);
+    }
+    if (data.containsKey('provider_id')) {
+      context.handle(
+        _providerIdMeta,
+        providerId.isAcceptableOrUnknown(data['provider_id']!, _providerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_providerIdMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('params_json')) {
+      context.handle(
+        _paramsJsonMeta,
+        paramsJson.isAcceptableOrUnknown(data['params_json']!, _paramsJsonMeta),
+      );
+    }
+    if (data.containsKey('error')) {
+      context.handle(
+        _errorMeta,
+        error.isAcceptableOrUnknown(data['error']!, _errorMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  VideoTask map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return VideoTask(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shot_id'],
+      )!,
+      taskId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}task_id'],
+      )!,
+      providerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_id'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      paramsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}params_json'],
+      )!,
+      error: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}error'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $VideoTasksTable createAlias(String alias) {
+    return $VideoTasksTable(attachedDatabase, alias);
+  }
+}
+
+class VideoTask extends DataClass implements Insertable<VideoTask> {
+  final int id;
+  final int shotId;
+  final String taskId;
+  final String providerId;
+  final String status;
+  final String paramsJson;
+  final String? error;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const VideoTask({
+    required this.id,
+    required this.shotId,
+    required this.taskId,
+    required this.providerId,
+    required this.status,
+    required this.paramsJson,
+    this.error,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shot_id'] = Variable<int>(shotId);
+    map['task_id'] = Variable<String>(taskId);
+    map['provider_id'] = Variable<String>(providerId);
+    map['status'] = Variable<String>(status);
+    map['params_json'] = Variable<String>(paramsJson);
+    if (!nullToAbsent || error != null) {
+      map['error'] = Variable<String>(error);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  VideoTasksCompanion toCompanion(bool nullToAbsent) {
+    return VideoTasksCompanion(
+      id: Value(id),
+      shotId: Value(shotId),
+      taskId: Value(taskId),
+      providerId: Value(providerId),
+      status: Value(status),
+      paramsJson: Value(paramsJson),
+      error: error == null && nullToAbsent
+          ? const Value.absent()
+          : Value(error),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory VideoTask.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return VideoTask(
+      id: serializer.fromJson<int>(json['id']),
+      shotId: serializer.fromJson<int>(json['shotId']),
+      taskId: serializer.fromJson<String>(json['taskId']),
+      providerId: serializer.fromJson<String>(json['providerId']),
+      status: serializer.fromJson<String>(json['status']),
+      paramsJson: serializer.fromJson<String>(json['paramsJson']),
+      error: serializer.fromJson<String?>(json['error']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shotId': serializer.toJson<int>(shotId),
+      'taskId': serializer.toJson<String>(taskId),
+      'providerId': serializer.toJson<String>(providerId),
+      'status': serializer.toJson<String>(status),
+      'paramsJson': serializer.toJson<String>(paramsJson),
+      'error': serializer.toJson<String?>(error),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  VideoTask copyWith({
+    int? id,
+    int? shotId,
+    String? taskId,
+    String? providerId,
+    String? status,
+    String? paramsJson,
+    Value<String?> error = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => VideoTask(
+    id: id ?? this.id,
+    shotId: shotId ?? this.shotId,
+    taskId: taskId ?? this.taskId,
+    providerId: providerId ?? this.providerId,
+    status: status ?? this.status,
+    paramsJson: paramsJson ?? this.paramsJson,
+    error: error.present ? error.value : this.error,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  VideoTask copyWithCompanion(VideoTasksCompanion data) {
+    return VideoTask(
+      id: data.id.present ? data.id.value : this.id,
+      shotId: data.shotId.present ? data.shotId.value : this.shotId,
+      taskId: data.taskId.present ? data.taskId.value : this.taskId,
+      providerId: data.providerId.present
+          ? data.providerId.value
+          : this.providerId,
+      status: data.status.present ? data.status.value : this.status,
+      paramsJson: data.paramsJson.present
+          ? data.paramsJson.value
+          : this.paramsJson,
+      error: data.error.present ? data.error.value : this.error,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('VideoTask(')
+          ..write('id: $id, ')
+          ..write('shotId: $shotId, ')
+          ..write('taskId: $taskId, ')
+          ..write('providerId: $providerId, ')
+          ..write('status: $status, ')
+          ..write('paramsJson: $paramsJson, ')
+          ..write('error: $error, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    shotId,
+    taskId,
+    providerId,
+    status,
+    paramsJson,
+    error,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is VideoTask &&
+          other.id == this.id &&
+          other.shotId == this.shotId &&
+          other.taskId == this.taskId &&
+          other.providerId == this.providerId &&
+          other.status == this.status &&
+          other.paramsJson == this.paramsJson &&
+          other.error == this.error &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class VideoTasksCompanion extends UpdateCompanion<VideoTask> {
+  final Value<int> id;
+  final Value<int> shotId;
+  final Value<String> taskId;
+  final Value<String> providerId;
+  final Value<String> status;
+  final Value<String> paramsJson;
+  final Value<String?> error;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const VideoTasksCompanion({
+    this.id = const Value.absent(),
+    this.shotId = const Value.absent(),
+    this.taskId = const Value.absent(),
+    this.providerId = const Value.absent(),
+    this.status = const Value.absent(),
+    this.paramsJson = const Value.absent(),
+    this.error = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  VideoTasksCompanion.insert({
+    this.id = const Value.absent(),
+    required int shotId,
+    required String taskId,
+    required String providerId,
+    this.status = const Value.absent(),
+    this.paramsJson = const Value.absent(),
+    this.error = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : shotId = Value(shotId),
+       taskId = Value(taskId),
+       providerId = Value(providerId);
+  static Insertable<VideoTask> custom({
+    Expression<int>? id,
+    Expression<int>? shotId,
+    Expression<String>? taskId,
+    Expression<String>? providerId,
+    Expression<String>? status,
+    Expression<String>? paramsJson,
+    Expression<String>? error,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shotId != null) 'shot_id': shotId,
+      if (taskId != null) 'task_id': taskId,
+      if (providerId != null) 'provider_id': providerId,
+      if (status != null) 'status': status,
+      if (paramsJson != null) 'params_json': paramsJson,
+      if (error != null) 'error': error,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  VideoTasksCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shotId,
+    Value<String>? taskId,
+    Value<String>? providerId,
+    Value<String>? status,
+    Value<String>? paramsJson,
+    Value<String?>? error,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return VideoTasksCompanion(
+      id: id ?? this.id,
+      shotId: shotId ?? this.shotId,
+      taskId: taskId ?? this.taskId,
+      providerId: providerId ?? this.providerId,
+      status: status ?? this.status,
+      paramsJson: paramsJson ?? this.paramsJson,
+      error: error ?? this.error,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shotId.present) {
+      map['shot_id'] = Variable<int>(shotId.value);
+    }
+    if (taskId.present) {
+      map['task_id'] = Variable<String>(taskId.value);
+    }
+    if (providerId.present) {
+      map['provider_id'] = Variable<String>(providerId.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (paramsJson.present) {
+      map['params_json'] = Variable<String>(paramsJson.value);
+    }
+    if (error.present) {
+      map['error'] = Variable<String>(error.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('VideoTasksCompanion(')
+          ..write('id: $id, ')
+          ..write('shotId: $shotId, ')
+          ..write('taskId: $taskId, ')
+          ..write('providerId: $providerId, ')
+          ..write('status: $status, ')
+          ..write('paramsJson: $paramsJson, ')
+          ..write('error: $error, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ProviderConfigsTable extends ProviderConfigs
     with TableInfo<$ProviderConfigsTable, ProviderConfig> {
   @override
@@ -7731,6 +8273,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ShotsTable shots = $ShotsTable(this);
   late final $ShotFramesTable shotFrames = $ShotFramesTable(this);
   late final $AssetRefsTable assetRefs = $AssetRefsTable(this);
+  late final $VideoTasksTable videoTasks = $VideoTasksTable(this);
   late final $ProviderConfigsTable providerConfigs = $ProviderConfigsTable(
     this,
   );
@@ -7750,6 +8293,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final AssetRefDao assetRefDao = AssetRefDao(this as AppDatabase);
   late final ShotDao shotDao = ShotDao(this as AppDatabase);
   late final ShotFrameDao shotFrameDao = ShotFrameDao(this as AppDatabase);
+  late final VideoTaskDao videoTaskDao = VideoTaskDao(this as AppDatabase);
   late final ProviderDao providerDao = ProviderDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -7769,6 +8313,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     shots,
     shotFrames,
     assetRefs,
+    videoTasks,
     providerConfigs,
   ];
 }
@@ -12598,6 +13143,24 @@ final class $$ShotsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$VideoTasksTable, List<VideoTask>>
+  _videoTasksRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.videoTasks,
+    aliasName: 'shots__id__video_tasks__shot_id',
+  );
+
+  $$VideoTasksTableProcessedTableManager get videoTasksRefs {
+    final manager = $$VideoTasksTableTableManager(
+      $_db,
+      $_db.videoTasks,
+    ).filter((f) => f.shotId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_videoTasksRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$ShotsTableFilterComposer extends Composer<_$AppDatabase, $ShotsTable> {
@@ -12742,6 +13305,31 @@ class $$ShotsTableFilterComposer extends Composer<_$AppDatabase, $ShotsTable> {
           }) => $$AssetRefsTableFilterComposer(
             $db: $db,
             $table: $db.assetRefs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> videoTasksRefs(
+    Expression<bool> Function($$VideoTasksTableFilterComposer f) f,
+  ) {
+    final $$VideoTasksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.videoTasks,
+      getReferencedColumn: (t) => t.shotId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$VideoTasksTableFilterComposer(
+            $db: $db,
+            $table: $db.videoTasks,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -12990,6 +13578,31 @@ class $$ShotsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> videoTasksRefs<T extends Object>(
+    Expression<T> Function($$VideoTasksTableAnnotationComposer a) f,
+  ) {
+    final $$VideoTasksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.videoTasks,
+      getReferencedColumn: (t) => t.shotId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$VideoTasksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.videoTasks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ShotsTableTableManager
@@ -13009,6 +13622,7 @@ class $$ShotsTableTableManager
             bool scriptId,
             bool shotFramesRefs,
             bool assetRefsRefs,
+            bool videoTasksRefs,
           })
         > {
   $$ShotsTableTableManager(_$AppDatabase db, $ShotsTable table)
@@ -13103,12 +13717,14 @@ class $$ShotsTableTableManager
                 scriptId = false,
                 shotFramesRefs = false,
                 assetRefsRefs = false,
+                videoTasksRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (shotFramesRefs) db.shotFrames,
                     if (assetRefsRefs) db.assetRefs,
+                    if (videoTasksRefs) db.videoTasks,
                   ],
                   addJoins:
                       <
@@ -13176,6 +13792,23 @@ class $$ShotsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (videoTasksRefs)
+                        await $_getPrefetchedData<Shot, $ShotsTable, VideoTask>(
+                          currentTable: table,
+                          referencedTable: $$ShotsTableReferences
+                              ._videoTasksRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShotsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).videoTasksRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shotId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -13200,6 +13833,7 @@ typedef $$ShotsTableProcessedTableManager =
         bool scriptId,
         bool shotFramesRefs,
         bool assetRefsRefs,
+        bool videoTasksRefs,
       })
     >;
 typedef $$ShotFramesTableCreateCompanionBuilder = ShotFramesCompanion Function({
@@ -14016,6 +14650,393 @@ typedef $$AssetRefsTableProcessedTableManager =
       AssetRef,
       PrefetchHooks Function({bool shotId, bool assetId})
     >;
+typedef $$VideoTasksTableCreateCompanionBuilder = VideoTasksCompanion Function({
+  Value<int> id,
+  required int shotId,
+  required String taskId,
+  required String providerId,
+  Value<String> status,
+  Value<String> paramsJson,
+  Value<String?> error,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+typedef $$VideoTasksTableUpdateCompanionBuilder = VideoTasksCompanion Function({
+  Value<int> id,
+  Value<int> shotId,
+  Value<String> taskId,
+  Value<String> providerId,
+  Value<String> status,
+  Value<String> paramsJson,
+  Value<String?> error,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+});
+
+final class $$VideoTasksTableReferences
+    extends BaseReferences<_$AppDatabase, $VideoTasksTable, VideoTask> {
+  $$VideoTasksTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ShotsTable _shotIdTable(_$AppDatabase db) =>
+      db.shots.createAlias('video_tasks__shot_id__shots__id');
+
+  $$ShotsTableProcessedTableManager get shotId {
+    final $_column = $_itemColumn<int>('shot_id')!;
+
+    final manager = $$ShotsTableTableManager(
+      $_db,
+      $_db.shots,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shotIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$VideoTasksTableFilterComposer
+    extends Composer<_$AppDatabase, $VideoTasksTable> {
+  $$VideoTasksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get taskId => $composableBuilder(
+    column: $table.taskId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get providerId => $composableBuilder(
+    column: $table.providerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paramsJson => $composableBuilder(
+    column: $table.paramsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get error => $composableBuilder(
+    column: $table.error,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShotsTableFilterComposer get shotId {
+    final $$ShotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shotId,
+      referencedTable: $db.shots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShotsTableFilterComposer(
+            $db: $db,
+            $table: $db.shots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$VideoTasksTableOrderingComposer
+    extends Composer<_$AppDatabase, $VideoTasksTable> {
+  $$VideoTasksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get taskId => $composableBuilder(
+    column: $table.taskId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get providerId => $composableBuilder(
+    column: $table.providerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get paramsJson => $composableBuilder(
+    column: $table.paramsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get error => $composableBuilder(
+    column: $table.error,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShotsTableOrderingComposer get shotId {
+    final $$ShotsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shotId,
+      referencedTable: $db.shots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShotsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$VideoTasksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $VideoTasksTable> {
+  $$VideoTasksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get taskId =>
+      $composableBuilder(column: $table.taskId, builder: (column) => column);
+
+  GeneratedColumn<String> get providerId => $composableBuilder(
+    column: $table.providerId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get paramsJson => $composableBuilder(
+    column: $table.paramsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get error =>
+      $composableBuilder(column: $table.error, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$ShotsTableAnnotationComposer get shotId {
+    final $$ShotsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shotId,
+      referencedTable: $db.shots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShotsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$VideoTasksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $VideoTasksTable,
+          VideoTask,
+          $$VideoTasksTableFilterComposer,
+          $$VideoTasksTableOrderingComposer,
+          $$VideoTasksTableAnnotationComposer,
+          $$VideoTasksTableCreateCompanionBuilder,
+          $$VideoTasksTableUpdateCompanionBuilder,
+          (VideoTask, $$VideoTasksTableReferences),
+          VideoTask,
+          PrefetchHooks Function({bool shotId})
+        > {
+  $$VideoTasksTableTableManager(_$AppDatabase db, $VideoTasksTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$VideoTasksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$VideoTasksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$VideoTasksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shotId = const Value.absent(),
+                Value<String> taskId = const Value.absent(),
+                Value<String> providerId = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String> paramsJson = const Value.absent(),
+                Value<String?> error = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => VideoTasksCompanion(
+                id: id,
+                shotId: shotId,
+                taskId: taskId,
+                providerId: providerId,
+                status: status,
+                paramsJson: paramsJson,
+                error: error,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shotId,
+                required String taskId,
+                required String providerId,
+                Value<String> status = const Value.absent(),
+                Value<String> paramsJson = const Value.absent(),
+                Value<String?> error = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => VideoTasksCompanion.insert(
+                id: id,
+                shotId: shotId,
+                taskId: taskId,
+                providerId: providerId,
+                status: status,
+                paramsJson: paramsJson,
+                error: error,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$VideoTasksTable, VideoTask>(table),
+                  $$VideoTasksTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({shotId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (shotId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.shotId,
+                        referencedTable: $$VideoTasksTableReferences
+                            ._shotIdTable(db),
+                        referencedColumn: $$VideoTasksTableReferences
+                            ._shotIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$VideoTasksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $VideoTasksTable,
+      VideoTask,
+      $$VideoTasksTableFilterComposer,
+      $$VideoTasksTableOrderingComposer,
+      $$VideoTasksTableAnnotationComposer,
+      $$VideoTasksTableCreateCompanionBuilder,
+      $$VideoTasksTableUpdateCompanionBuilder,
+      (VideoTask, $$VideoTasksTableReferences),
+      VideoTask,
+      PrefetchHooks Function({bool shotId})
+    >;
 typedef $$ProviderConfigsTableCreateCompanionBuilder =
     ProviderConfigsCompanion Function({
       required String id,
@@ -14318,6 +15339,8 @@ class $AppDatabaseManager {
       $$ShotFramesTableTableManager(_db, _db.shotFrames);
   $$AssetRefsTableTableManager get assetRefs =>
       $$AssetRefsTableTableManager(_db, _db.assetRefs);
+  $$VideoTasksTableTableManager get videoTasks =>
+      $$VideoTasksTableTableManager(_db, _db.videoTasks);
   $$ProviderConfigsTableTableManager get providerConfigs =>
       $$ProviderConfigsTableTableManager(_db, _db.providerConfigs);
 }

@@ -14,6 +14,7 @@ import 'daos/script_revision_dao.dart';
 import 'daos/shot_dao.dart';
 import 'daos/shot_frame_dao.dart';
 import 'daos/truth_file_dao.dart';
+import 'daos/video_task_dao.dart';
 import 'tables/tables.dart';
 
 part 'app_database.g.dart';
@@ -34,6 +35,7 @@ part 'app_database.g.dart';
     Shots,
     ShotFrames,
     AssetRefs,
+    VideoTasks,
     ProviderConfigs,
   ],
   daos: [
@@ -49,6 +51,7 @@ part 'app_database.g.dart';
     AssetRefDao,
     ShotDao,
     ShotFrameDao,
+    VideoTaskDao,
     ProviderDao,
   ],
 )
@@ -60,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -78,6 +81,10 @@ class AppDatabase extends _$AppDatabase {
         // M3：片段补充节拍引用与资产出镜状态。
         await m.addColumn(shots, shots.beatRefs);
         await m.addColumn(shots, shots.assetStates);
+      }
+      if (from < 4) {
+        // M6：视频生成任务表（断点续跑）。
+        await m.createTable(videoTasks);
       }
     },
     beforeOpen: (details) async {

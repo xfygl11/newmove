@@ -208,6 +208,24 @@ class AssetRefs extends Table {
   IntColumn get order => integer().withDefault(const Constant(0))();
 }
 
+/// 视频生成任务（异步提交 → 轮询 → 回填；taskId 持久化支持断点续跑）。
+@DataClassName('VideoTask')
+class VideoTasks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get shotId => integer().references(Shots, #id)();
+  // 供应商返回的任务 ID。
+  TextColumn get taskId => text()();
+  // 供应商配置 id（恢复轮询时定位供应商与 Key）。
+  TextColumn get providerId => text()();
+  // 状态：排队 / 生成中 / 成功 / 失败。
+  TextColumn get status => text().withDefault(const Constant('排队'))();
+  // 提交时的参数快照（模型/时长/画幅/分辨率/参考数），重试与详情展示用。
+  TextColumn get paramsJson => text().withDefault(const Constant('{}'))();
+  TextColumn get error => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 /// 模型供应商配置（API Key 不入库，存安全存储）。
 @DataClassName('ProviderConfig')
 class ProviderConfigs extends Table {

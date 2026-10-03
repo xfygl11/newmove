@@ -17,12 +17,20 @@ class ShotStatuses {
   /// 用户确认分镜图。
   static const confirmed = '分镜图已确认';
 
+  /// 视频生成中（M6）。
+  static const videoGenerating = '视频生成中';
+
+  /// 视频生成完成（M6）。
+  static const videoDone = '视频完成';
+
   static const all = [
     awaitingPrompt,
     awaitingImage,
     generating,
     reviewing,
     confirmed,
+    videoGenerating,
+    videoDone,
   ];
 }
 
