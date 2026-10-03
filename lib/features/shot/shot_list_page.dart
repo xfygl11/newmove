@@ -434,6 +434,8 @@ class _StatusBadge extends StatelessWidget {
       ShotStatuses.generating => Colors.blue,
       ShotStatuses.reviewing => Colors.amber,
       ShotStatuses.confirmed => Colors.teal,
+      ShotStatuses.videoGenerating => Colors.blue,
+      ShotStatuses.videoDone => Colors.green,
       _ => Colors.grey,
     };
 

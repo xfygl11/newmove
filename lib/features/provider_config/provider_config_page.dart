@@ -1,12 +1,15 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
+import '../project/project_providers.dart';
 import 'provider_config_providers.dart';
 import 'provider_edit_sheet.dart';
 import 'provider_models.dart';
 
-/// 模型供应商配置页：按 LLM / 图片 / 视频 三组增删改查。
+/// 设置页：模型供应商配置 + 数据备份（M7 T8.1）。
 class ProviderConfigPage extends ConsumerWidget {
   const ProviderConfigPage({super.key});
 
@@ -15,51 +18,138 @@ class ProviderConfigPage extends ConsumerWidget {
     final listAsync = ref.watch(providerConfigListProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('模型供应商')),
-      body: listAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('加载失败：$e')),
-        data: (providers) {
-          if (providers.isEmpty) {
-            return const _EmptyView();
-          }
-          return ListView(
-            children: [
-              for (final group in ProviderGroup.values) ...[
-                _GroupSection(
-                  group: group,
-                  providers: providers
-                      .where((p) => p.group == group.name)
-                      .toList(),
-                ),
+      appBar: AppBar(title: const Text('设置')),
+      body: ListView(
+        children: [
+          const _BackupSection(),
+          const SizedBox(height: 8),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Text('模型供应商'),
+          ),
+          listAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (e, _) => Center(child: Text('加载失败：$e')),
+            data: (providers) => Column(
+              children: [
+                for (final group in ProviderGroup.values) ...[
+                  _GroupSection(
+                    group: group,
+                    providers: providers
+                        .where((p) => p.group == group.name)
+                        .toList(),
+                  ),
+                ],
               ],
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _EmptyView extends StatelessWidget {
-  const _EmptyView();
+/// 数据备份区块：导出当前项目 / 从 zip 恢复。
+class _BackupSection extends ConsumerWidget {
+  const _BackupSection();
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('还没有配置任何模型供应商'),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: () => showProviderEditSheet(context),
-            icon: const Icon(Icons.add),
-            label: const Text('添加供应商'),
+          ListTile(
+            leading: const Icon(Icons.file_download_outlined),
+            title: const Text('导出项目备份'),
+            subtitle: const Text('全部数据 + 图片/视频打包为 zip 分享出去'),
+            onTap: () => _export(context, ref),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.restore),
+            title: const Text('从备份恢复'),
+            subtitle: const Text('选择 zip 备份包，导入为新项目'),
+            onTap: () => _import(context, ref),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _export(BuildContext context, WidgetRef ref) async {
+    final projects = await ref.read(projectDaoProvider).listAll();
+    if (!context.mounted) return;
+    if (projects.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('暂无项目可导出')));
+      return;
+    }
+    final Project? target = projects.length == 1
+        ? projects.first
+        : await showDialog<Project>(
+            context: context,
+            builder: (ctx) => SimpleDialog(
+              title: const Text('选择要导出的项目'),
+              children: [
+                for (final p in projects)
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.of(ctx).pop(p),
+                    child: Text(p.name),
+                  ),
+              ],
+            ),
+          );
+    if (target == null || !context.mounted) return;
+
+    try {
+      final path =
+          await ref.read(backupServiceProvider).exportProject(target.id);
+      if (!context.mounted) return;
+      // 导出后仅提示路径（无分享目标时也能拿到文件）。
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('已导出：${target.name}\n$path'),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导出失败：$e')));
+      }
+    }
+  }
+
+  Future<void> _import(BuildContext context, WidgetRef ref) async {
+    final picked = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['zip'],
+    );
+    if (picked.isEmpty || picked.single.path == null) return;
+    try {
+      final newId = await ref
+          .read(backupServiceProvider)
+          .importProject(picked.single.path!);
+      ref.invalidate(projectListProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('导入成功，已创建新项目（id $newId）')),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导入失败：$e')));
+      }
+    }
   }
 }
 
