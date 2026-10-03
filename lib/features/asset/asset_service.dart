@@ -1,0 +1,302 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:drift/drift.dart' show Value;
+
+import '../../agent/active_image.dart';
+import '../../agent/active_llm.dart';
+import '../../core/network/image_provider_adapter.dart';
+import '../../core/storage/asset_file_store.dart';
+import '../../data/app_database.dart';
+import '../../data/daos/asset_dao.dart';
+import '../../data/daos/beat_dao.dart';
+import '../../data/daos/shot_dao.dart';
+import 'asset_agents.dart';
+import 'asset_models.dart';
+
+/// 资产图片的业务编排：清单提取落库、生成、验收、变体。
+class AssetService {
+  AssetService({
+    required this.assetDao,
+    required this.beatDao,
+    required this.shotDao,
+    required this.agents,
+    required this.imageAdapter,
+    required this.fileStore,
+  });
+
+  final AssetDao assetDao;
+  final BeatDao beatDao;
+  final ShotDao shotDao;
+  final AssetAgents agents;
+  final ImageProviderAdapter imageAdapter;
+  final AssetFileStore fileStore;
+
+  // ---- 清单提取（T5.2） ----
+
+  Future<String> buildSkeletonContext(int scriptId) async {
+    final beats = await beatDao.listByScript(scriptId);
+    final shots = await shotDao.listByScript(scriptId);
+    final buf = StringBuffer();
+    buf.writeln('【原子节拍】');
+    buf.writeln(jsonEncode([
+      for (final b in beats)
+        {
+          'seq': b.seq,
+          'type': b.type,
+          'who': b.who,
+          'content': b.content,
+          'object': b.object,
+          'sourceRef': b.sourceRef,
+        },
+    ]));
+    buf.writeln('【分段与出镜状态】');
+    buf.writeln(jsonEncode([
+      for (final s in shots)
+        {
+          'globalSeq': s.globalSeq,
+          'beatRefs': _decodeList(s.beatRefs),
+          'assetStates': _decodeMap(s.assetStates),
+        },
+    ]));
+    buf.writeln('请按规则提取资产清单 JSON。');
+    return buf.toString();
+  }
+
+  /// 提取资产清单并按 stableId 去重合并后落库（复用项跳过）。
+  Future<AssetExtractionSummary> extractAndSave({
+    required int scriptId,
+    required ActiveLlm llm,
+  }) async {
+    final context = await buildSkeletonContext(scriptId);
+    final result = await agents.extract(skeletonContext: context, llm: llm);
+
+    // stableId -> 已存在/本轮新建的资产，用于复用与变体父解析。
+    final byStableId = <String, Asset>{
+      for (final a in await assetDao.listByScript(scriptId)) a.stableId: a,
+    };
+
+    var created = 0;
+    var reused = 0;
+    var variants = 0;
+
+    // 第一遍：新建非变体资产。
+    for (final d in result.drafts) {
+      if (d.stableId.isEmpty || d.name.isEmpty) continue;
+      if (d.variantOf != null) continue;
+      if (byStableId.containsKey(d.stableId)) {
+        reused++;
+        continue;
+      }
+      final id = await assetDao.insert(
+        AssetsCompanion.insert(
+          scriptId: scriptId,
+          type: _normalizeType(d.type),
+          name: d.name,
+          stableId: d.stableId,
+          appearanceAnchor: Value(jsonEncode(d.appearanceAnchor)),
+          boardLayout: Value(_normalizeBoardLayout(d.type, d.boardLayout)),
+          prompt: Value(d.prompt),
+          status: const Value(AssetStatuses.pending),
+        ),
+      );
+      byStableId[d.stableId] = (await assetDao.find(id))!;
+      created++;
+    }
+
+    // 第二遍：新建变体（父资产可能本轮刚建，也可能复用已存在）。
+    for (final d in result.drafts) {
+      if (d.variantOf == null) continue;
+      if (d.stableId.isEmpty || d.name.isEmpty) continue;
+      if (byStableId.containsKey(d.stableId)) {
+        reused++;
+        continue;
+      }
+      final parent = byStableId[d.variantOf];
+      final id = await assetDao.insert(
+        AssetsCompanion.insert(
+          scriptId: scriptId,
+          type: _normalizeType(d.type),
+          name: d.name,
+          stableId: d.stableId,
+          variantOf: Value(parent?.id),
+          appearanceAnchor: Value(jsonEncode(d.appearanceAnchor)),
+          boardLayout: Value(_normalizeBoardLayout(d.type, d.boardLayout)),
+          prompt: Value(d.prompt),
+          status: const Value(AssetStatuses.pending),
+        ),
+      );
+      byStableId[d.stableId] = (await assetDao.find(id))!;
+      variants++;
+    }
+
+    return AssetExtractionSummary(
+      created: created,
+      reused: reused,
+      variants: variants,
+    );
+  }
+
+  // ---- 生成 / 验收（T5.4 / T5.5） ----
+
+  Future<Asset> generate({
+    required int assetId,
+    required ActiveImage image,
+  }) async {
+    final asset = await assetDao.find(assetId);
+    if (asset == null) throw StateError('资产不存在：$assetId');
+
+    await assetDao.updateById(
+      assetId,
+      AssetsCompanion(status: const Value(AssetStatuses.generating)),
+    );
+
+    try {
+      final bytes = await _generateBytes(asset, image);
+      final path = await fileStore.save(assetId, bytes);
+
+      await assetDao.updateById(
+        assetId,
+        AssetsCompanion(
+          imagePath: Value(path),
+          status: const Value(AssetStatuses.reviewing),
+        ),
+      );
+      return (await assetDao.find(assetId))!;
+    } catch (_) {
+      await assetDao.updateById(
+        assetId,
+        AssetsCompanion(status: const Value(AssetStatuses.pending)),
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> adopt(int assetId) async {
+    await assetDao.updateById(
+      assetId,
+      AssetsCompanion(status: const Value(AssetStatuses.accepted)),
+    );
+  }
+
+  Future<void> discard(int assetId) async {
+    await assetDao.updateById(
+      assetId,
+      AssetsCompanion(status: const Value(AssetStatuses.discarded)),
+    );
+  }
+
+  Future<Asset> regenerate({
+    required int assetId,
+    required ActiveImage image,
+  }) {
+    return generate(assetId: assetId, image: image);
+  }
+
+  /// 基于已采用基础图做图生图变体（T5.6）。
+  Future<Asset> createVariant({
+    required int assetId,
+    required ActiveImage image,
+  }) async {
+    final base = await assetDao.find(assetId);
+    if (base == null) throw StateError('基础资产不存在：$assetId');
+    if (base.imagePath == null || base.imagePath!.isEmpty) {
+      throw StateError('基础资产尚未生成图片');
+    }
+
+    final suffix = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+    final newId = await assetDao.insert(
+      AssetsCompanion.insert(
+        scriptId: base.scriptId,
+        type: base.type,
+        name: '${base.name}·变体',
+        stableId: '${base.stableId}_v$suffix',
+        variantOf: Value(base.id),
+        appearanceAnchor: Value(base.appearanceAnchor),
+        boardLayout: Value(base.boardLayout),
+        prompt: Value('${base.prompt}\n保持与基础图同一角色身份，仅做指定变化。'),
+        status: const Value(AssetStatuses.pending),
+      ),
+    );
+
+    return generate(assetId: newId, image: image);
+  }
+
+  // ---- 内部辅助 ----
+
+  Future<Uint8List> _generateBytes(Asset asset, ActiveImage image) async {
+    // 变体优先走图生图，保持身份一致。
+    if (asset.variantOf != null) {
+      final parent = await assetDao.find(asset.variantOf!);
+      final reference = parent?.imagePath;
+      if (reference != null && reference.isNotEmpty) {
+        final result = await imageAdapter.imageToImage(
+          baseUrl: image.baseUrl,
+          apiKey: image.apiKey,
+          model: image.modelId,
+          prompt: asset.prompt,
+          referencePath: reference,
+        );
+        return _resolveBytes(result);
+      }
+    }
+
+    final result = await imageAdapter.textToImage(
+      baseUrl: image.baseUrl,
+      apiKey: image.apiKey,
+      model: image.modelId,
+      prompt: asset.prompt,
+    );
+    return _resolveBytes(result);
+  }
+
+  Future<Uint8List> _resolveBytes(ImageGenerationResult result) async {
+    final bytes = result.bytes;
+    if (bytes != null && bytes.isNotEmpty) return bytes;
+    final url = result.url;
+    if (url != null && url.isNotEmpty) return imageAdapter.downloadUrl(url);
+    throw StateError('图片供应商未返回图片数据');
+  }
+
+  String _normalizeType(String type) {
+    return AssetTypes.all.contains(type) ? type : AssetTypes.character;
+  }
+
+  String _normalizeBoardLayout(String type, String boardLayout) {
+    if (boardLayout.isNotEmpty) return boardLayout;
+    return switch (type) {
+      AssetTypes.character => BoardLayouts.fourView,
+      AssetTypes.scene => BoardLayouts.mainView,
+      _ => BoardLayouts.grid2x2,
+    };
+  }
+
+  dynamic _decodeList(String value) {
+    try {
+      return jsonDecode(value);
+    } on FormatException {
+      return const [];
+    }
+  }
+
+  dynamic _decodeMap(String value) {
+    try {
+      return jsonDecode(value);
+    } on FormatException {
+      return const {};
+    }
+  }
+}
+
+/// 一次资产清单提取的落库结果摘要。
+class AssetExtractionSummary {
+  const AssetExtractionSummary({
+    required this.created,
+    required this.reused,
+    required this.variants,
+  });
+
+  final int created;
+  final int reused;
+  final int variants;
+}

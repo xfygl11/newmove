@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'daos/asset_dao.dart';
+import 'daos/asset_ref_dao.dart';
 import 'daos/beat_dao.dart';
 import 'daos/chapter_revision_dao.dart';
 import 'daos/novel_dao.dart';
@@ -43,6 +45,8 @@ part 'app_database.g.dart';
     SceneDao,
     ScriptRevisionDao,
     BeatDao,
+    AssetDao,
+    AssetRefDao,
     ShotDao,
     ShotFrameDao,
     ProviderDao,

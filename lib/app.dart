@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'features/asset/asset_detail_page.dart';
+import 'features/asset/asset_gallery_page.dart';
 import 'features/novel/chapter_editor_page.dart';
 import 'features/novel/novel_shelf_page.dart';
 import 'features/novel/setting_workshop_page.dart';
@@ -93,6 +95,21 @@ final GoRouter appRouter = GoRouter(
       builder: (_, state) => SkeletonPage(
         projectId: int.parse(state.pathParameters['projectId']!),
         scriptId: int.parse(state.pathParameters['scriptId']!),
+      ),
+    ),
+    GoRoute(
+      path: '/script/:projectId/script/:scriptId/assets',
+      builder: (_, state) => AssetGalleryPage(
+        projectId: int.parse(state.pathParameters['projectId']!),
+        scriptId: int.parse(state.pathParameters['scriptId']!),
+      ),
+    ),
+    GoRoute(
+      path: '/script/:projectId/script/:scriptId/asset/:assetId',
+      builder: (_, state) => AssetDetailPage(
+        projectId: int.parse(state.pathParameters['projectId']!),
+        scriptId: int.parse(state.pathParameters['scriptId']!),
+        assetId: int.parse(state.pathParameters['assetId']!),
       ),
     ),
   ],

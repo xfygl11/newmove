@@ -7746,6 +7746,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this as AppDatabase,
   );
   late final BeatDao beatDao = BeatDao(this as AppDatabase);
+  late final AssetDao assetDao = AssetDao(this as AppDatabase);
+  late final AssetRefDao assetRefDao = AssetRefDao(this as AppDatabase);
   late final ShotDao shotDao = ShotDao(this as AppDatabase);
   late final ShotFrameDao shotFrameDao = ShotFrameDao(this as AppDatabase);
   late final ProviderDao providerDao = ProviderDao(this as AppDatabase);

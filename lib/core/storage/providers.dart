@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/app_database.dart';
+import '../../data/daos/asset_dao.dart';
+import '../../data/daos/asset_ref_dao.dart';
 import '../../data/daos/beat_dao.dart';
 import '../../data/daos/chapter_revision_dao.dart';
 import '../../data/daos/novel_dao.dart';
@@ -12,6 +14,7 @@ import '../../data/daos/script_revision_dao.dart';
 import '../../data/daos/shot_dao.dart';
 import '../../data/daos/shot_frame_dao.dart';
 import '../../data/daos/truth_file_dao.dart';
+import 'asset_file_store.dart';
 import 'secure_key_store.dart';
 
 /// 数据库单例（应用生命周期内复用）。
@@ -57,6 +60,14 @@ final beatDaoProvider = Provider<BeatDao>(
   (ref) => ref.watch(databaseProvider).beatDao,
 );
 
+final assetDaoProvider = Provider<AssetDao>(
+  (ref) => ref.watch(databaseProvider).assetDao,
+);
+
+final assetRefDaoProvider = Provider<AssetRefDao>(
+  (ref) => ref.watch(databaseProvider).assetRefDao,
+);
+
 final shotDaoProvider = Provider<ShotDao>(
   (ref) => ref.watch(databaseProvider).shotDao,
 );
@@ -67,4 +78,8 @@ final shotFrameDaoProvider = Provider<ShotFrameDao>(
 
 final secureKeyStoreProvider = Provider<SecureKeyStore>(
   (ref) => SecureKeyStore(),
+);
+
+final assetFileStoreProvider = Provider<AssetFileStore>(
+  (ref) => AssetFileStore(),
 );
