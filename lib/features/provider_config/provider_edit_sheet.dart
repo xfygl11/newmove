@@ -206,7 +206,9 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
     // 编辑时若未填新 Key，则读取已存 Key。
     var apiKey = _apiKey.text.trim();
     if (apiKey.isEmpty && _isEdit) {
-      apiKey = await ref.read(secureKeyStoreProvider).readKey(widget.existing!.id) ?? '';
+      apiKey =
+          await ref.read(secureKeyStoreProvider).readKey(widget.existing!.id) ??
+          '';
     }
     if (apiKey.isEmpty) {
       _showMessage('请填写 API Key');
@@ -215,7 +217,9 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
 
     setState(() => _testing = true);
     try {
-      await ref.read(llmProviderAdapterProvider).testConnection(
+      await ref
+          .read(llmProviderAdapterProvider)
+          .testConnection(
             baseUrl: baseUrl,
             apiKey: apiKey,
             model: models.first.id,
@@ -239,7 +243,9 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
     // 编辑时若未填新 Key，则读取已存 Key。
     var apiKey = _apiKey.text.trim();
     if (apiKey.isEmpty && _isEdit) {
-      apiKey = await ref.read(secureKeyStoreProvider).readKey(widget.existing!.id) ?? '';
+      apiKey =
+          await ref.read(secureKeyStoreProvider).readKey(widget.existing!.id) ??
+          '';
     }
     if (apiKey.isEmpty) {
       _showMessage('请填写 API Key');
@@ -259,7 +265,10 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
         return;
       }
       setState(() {
-        _models = ModelFetcher.mergeFetched(existing: _models, fetched: fetched);
+        _models = ModelFetcher.mergeFetched(
+          existing: _models,
+          fetched: fetched,
+        );
       });
       _showMessage('已获取 ${fetched.length} 个模型，请勾选启用');
     } catch (e) {
@@ -271,9 +280,7 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
 
   void _showMessage(String text) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(text)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   @override
@@ -601,9 +608,9 @@ class _ModelCapabilityDialogState extends State<_ModelCapabilityDialog> {
   }
 
   List<String> _split(String raw) => [
-        for (final p in raw.split(RegExp(r'[,，]')))
-          if (p.trim().isNotEmpty) p.trim(),
-      ];
+    for (final p in raw.split(RegExp(r'[,，]')))
+      if (p.trim().isNotEmpty) p.trim(),
+  ];
 
   void _save() {
     final m = widget.model;

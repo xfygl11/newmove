@@ -130,8 +130,7 @@ class ProviderModel {
     bool? enabled,
     List<String>? imageSizes,
     List<String>? imageRatios,
-    List<({List<int> duration, List<String> resolution})>?
-    durationResolutions,
+    List<({List<int> duration, List<String> resolution})>? durationResolutions,
     Object? audio,
     List<String>? videoModes,
     int? maxImageRefs,
@@ -195,7 +194,10 @@ class ProviderModel {
 
   static List<String>? _stringList(Object? raw) {
     if (raw is! List) return null;
-    return [for (final item in raw) if (item is String) item];
+    return [
+      for (final item in raw)
+        if (item is String) item,
+    ];
   }
 
   static List<({List<int> duration, List<String> resolution})>?

@@ -51,7 +51,10 @@ class _AssetGalleryPageState extends ConsumerState<AssetGalleryPage> {
       ),
       body: Column(
         children: [
-          _FilterBar(filter: _filter, onChanged: (v) => setState(() => _filter = v)),
+          _FilterBar(
+            filter: _filter,
+            onChanged: (v) => setState(() => _filter = v),
+          ),
           Expanded(
             child: assetsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -112,9 +115,7 @@ class _AssetGalleryPageState extends ConsumerState<AssetGalleryPage> {
 
   void _showMessage(String text) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(text)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 }
 
@@ -176,7 +177,9 @@ class _AssetCard extends StatelessWidget {
               child: hasImage
                   ? Image.file(File(path), fit: BoxFit.cover)
                   : Container(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest,
                       child: const Icon(Icons.image_outlined, size: 40),
                     ),
             ),
@@ -194,7 +197,10 @@ class _AssetCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Text(asset.type, style: Theme.of(context).textTheme.bodySmall),
+                      Text(
+                        asset.type,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                       const Spacer(),
                       _StatusBadge(status: asset.status),
                     ],

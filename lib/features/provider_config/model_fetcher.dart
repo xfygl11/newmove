@@ -28,7 +28,11 @@ class ModelFetcher {
   }) {
     var path = baseUrl.trim();
     if (path.endsWith('/')) path = path.substring(0, path.length - 1);
-    if (path.endsWith('/models')) return mediaType && type != null && type.isNotEmpty ? '$path?type=$type' : path;
+    if (path.endsWith('/models')) {
+      return mediaType && type != null && type.isNotEmpty
+          ? '$path?type=$type'
+          : path;
+    }
     // 根路径视作「只有 host」，补 /v1（对齐 Toonflow：pathname "/" → "/v1"）。
     final uri = Uri.tryParse(path);
     final needsV1 = uri == null || uri.path.isEmpty || uri.path == '/';

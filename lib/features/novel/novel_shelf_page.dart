@@ -98,8 +98,10 @@ class _BookView extends ConsumerWidget {
               }
               return ListView.builder(
                 itemCount: chapters.length,
-                itemBuilder: (context, i) =>
-                    _ChapterTile(projectId: book.projectId, chapter: chapters[i]),
+                itemBuilder: (context, i) => _ChapterTile(
+                  projectId: book.projectId,
+                  chapter: chapters[i],
+                ),
               );
             },
           ),
@@ -159,6 +161,15 @@ class _BookHeader extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           TextButton(
+            onPressed: () => context.push('/novel/${book.projectId}/outline'),
+            child: const Text('大纲'),
+          ),
+          TextButton(
+            onPressed: () =>
+                context.push('/novel/${book.projectId}/characters'),
+            child: const Text('角色'),
+          ),
+          TextButton(
             onPressed: () => context.push('/script/${book.projectId}'),
             child: const Text('剧本'),
           ),
@@ -172,14 +183,14 @@ class _BookHeader extends StatelessWidget {
   }
 }
 
-class _ChapterTile extends StatelessWidget {
+class _ChapterTile extends ConsumerWidget {
   const _ChapterTile({required this.projectId, required this.chapter});
 
   final int projectId;
   final Chapter chapter;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final statusColor = switch (chapter.status) {
       '定稿' => Colors.green,
       '审校中' => Colors.blue,
@@ -190,9 +201,60 @@ class _ChapterTile extends StatelessWidget {
       title: Text(chapter.title),
       subtitle: Text('${chapter.wordCount} 字 · 修订 ${chapter.revision}'),
       trailing: Text(chapter.status, style: TextStyle(color: statusColor)),
-      onTap: () =>
-          context.push('/novel/$projectId/chapter/${chapter.id}'),
+      onTap: () => context.push('/novel/$projectId/chapter/${chapter.id}'),
+      onLongPress: () => _showChapterMenu(context, ref),
     );
+  }
+
+  /// 长按章节弹出操作菜单：删除。
+  Future<void> _showChapterMenu(BuildContext context, WidgetRef ref) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: Icon(Icons.delete_outline, color: Colors.red),
+            title: Text(
+              '删除第 ${chapter.seq} 章「${chapter.title}」',
+              style: const TextStyle(color: Colors.red),
+            ),
+            onTap: () => Navigator.of(ctx).pop('delete'),
+          ),
+          const SizedBox(height: 48),
+        ],
+      ),
+    );
+    if (action != 'delete' || !context.mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除章节'),
+        content: Text('确定删除「${chapter.title}」？该章节及其版本历史将不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref.read(novelDaoProvider).deleteChapter(chapter.id);
+      if (context.mounted) {
+        _toast(context, '已删除「${chapter.title}」');
+      }
+    } catch (e) {
+      if (context.mounted) _toast(context, '删除失败：$e');
+    }
   }
 }
 
@@ -234,7 +296,9 @@ class _SetupDialogState extends ConsumerState<_SetupDialog> {
       final bookId = await dao.insertBook(
         NovelBooksCompanion.insert(projectId: widget.projectId, title: '未命名作品'),
       );
-      await ref.read(novelServiceProvider).generateSetup(
+      await ref
+          .read(novelServiceProvider)
+          .generateSetup(
             bookId: bookId,
             idea: idea,
             genre: _genre.text.trim(),
@@ -294,7 +358,5 @@ class _SetupDialogState extends ConsumerState<_SetupDialog> {
 }
 
 void _toast(BuildContext context, String text) {
-  ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(text)));
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 }

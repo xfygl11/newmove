@@ -27,8 +27,9 @@ class BackupService {
     final data = await _collect(projectId);
 
     final archive = Archive();
-    final jsonBytes =
-        utf8.encode(const JsonEncoder.withIndent('  ').convert(data));
+    final jsonBytes = utf8.encode(
+      const JsonEncoder.withIndent('  ').convert(data),
+    );
     archive.addFile(ArchiveFile('backup.json', jsonBytes.length, jsonBytes));
 
     // 媒体文件按相对路径打包。
@@ -41,10 +42,13 @@ class BackupService {
     }
 
     final project = await db.projectDao.findById(projectId);
-    final safeName =
-        (project?.name ?? 'project').replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-    final outFile =
-        File('${(await getTemporaryDirectory()).path}/newmove_backup_$safeName.zip');
+    final safeName = (project?.name ?? 'project').replaceAll(
+      RegExp(r'[\\/:*?"<>|]'),
+      '_',
+    );
+    final outFile = File(
+      '${(await getTemporaryDirectory()).path}/newmove_backup_$safeName.zip',
+    );
     await outFile.writeAsBytes(ZipEncoder().encode(archive));
     return outFile.path;
   }
@@ -56,9 +60,7 @@ class BackupService {
 
     // 项目（示例工程）下单书模型：listByProject 未提供，走 watchBookByProject
     // 的一次性等价查询。
-    final books = <NovelBook>[
-      ?await db.novelDao.findBookByProject(projectId),
-    ];
+    final books = <NovelBook>[?await db.novelDao.findBookByProject(projectId)];
     final mediaFiles = <String>{};
 
     // ---- 书 → 章节 / 版本 / 真相文件 ----
@@ -124,8 +126,9 @@ class BackupService {
     }
 
     // ---- 供应商配置（不含 Key） ----
-    final providersJson =
-        [for (final p in await db.providerDao.listAll()) p.toJson()];
+    final providersJson = [
+      for (final p in await db.providerDao.listAll()) p.toJson(),
+    ];
 
     return {
       'formatVersion': 1,
@@ -166,8 +169,7 @@ class BackupService {
 
     final jsonFile = archive.findFile('backup.json');
     if (jsonFile == null) throw const FormatException('备份包缺少 backup.json');
-    final data = (jsonDecode(utf8.decode(jsonFile.content as List<int>))
-            as Map)
+    final data = (jsonDecode(utf8.decode(jsonFile.content as List<int>)) as Map)
         .cast<String, dynamic>();
 
     // 解压媒体文件到应用文档目录，记录 相对路径 → 新绝对路径。
@@ -190,15 +192,16 @@ class BackupService {
         String key,
         Map<String, Object?> Function(Map<String, dynamic>) transform,
       ) async {
-        final rows =
-            (data[key] as List? ?? const []).cast<Map<String, dynamic>>();
+        final rows = (data[key] as List? ?? const [])
+            .cast<Map<String, dynamic>>();
         for (final row in rows) {
           final cols = <String, Expression<Object>>{};
           for (final e in transform(row).entries) {
             cols[_snake(e.key)] = _expr(e.value);
           }
-          final newId =
-              await db.into(table).insert(RawValuesInsertable<D>(cols));
+          final newId = await db
+              .into(table)
+              .insert(RawValuesInsertable<D>(cols));
           (idMap[key] ??= {})[row['id'] as int] = newId;
         }
         return rows.length;
@@ -210,8 +213,9 @@ class BackupService {
         if (e.key == 'id') continue;
         projCols[_snake(e.key)] = _expr(e.value);
       }
-      final projectId =
-          await db.into(db.projects).insert(RawValuesInsertable<Project>(projCols));
+      final projectId = await db
+          .into(db.projects)
+          .insert(RawValuesInsertable<Project>(projCols));
 
       // ---- 需要跨表 id 映射的表，显式构造 transform ----
       int mapped(String key, dynamic old) => idMap[key]?[old as int] ?? 0;
@@ -227,11 +231,14 @@ class BackupService {
         return remapped;
       });
       await insertRows<ChapterRevisions, ChapterRevision>(
-          db.chapterRevisions, 'chapterRevisions', (r) {
-        final remapped = _remap(r, const {});
-        remapped['chapterId'] = mapped('chapters', r['chapterId']);
-        return remapped;
-      });
+        db.chapterRevisions,
+        'chapterRevisions',
+        (r) {
+          final remapped = _remap(r, const {});
+          remapped['chapterId'] = mapped('chapters', r['chapterId']);
+          return remapped;
+        },
+      );
       await insertRows<TruthFiles, TruthFile>(db.truthFiles, 'truthFiles', (r) {
         final remapped = _remap(r, const {});
         remapped['bookId'] = mapped('books', r['bookId']);
@@ -285,16 +292,22 @@ class BackupService {
         return remapped;
       });
       await insertRows<ScriptRevisions, ScriptRevision>(
-          db.scriptRevisions, 'scriptRevisions', (r) {
-        final remapped = _remap(r, const {});
-        remapped['scriptId'] = mapped('scripts', r['scriptId']);
-        return remapped;
-      });
+        db.scriptRevisions,
+        'scriptRevisions',
+        (r) {
+          final remapped = _remap(r, const {});
+          remapped['scriptId'] = mapped('scripts', r['scriptId']);
+          return remapped;
+        },
+      );
 
       // 供应商配置：同 id 覆盖（保留本地安全存储中的 Key 绑定）。
-      for (final row in (data['providers'] as List? ?? const [])
-          .cast<Map<String, dynamic>>()) {
-        await db.into(db.providerConfigs).insert(
+      for (final row
+          in (data['providers'] as List? ?? const [])
+              .cast<Map<String, dynamic>>()) {
+        await db
+            .into(db.providerConfigs)
+            .insert(
               RawValuesInsertable<ProviderConfig>({
                 for (final e in row.entries)
                   if (e.key != 'id') _snake(e.key): _expr(e.value),

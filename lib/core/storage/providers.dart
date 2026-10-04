@@ -92,9 +92,7 @@ final assetFileStoreProvider = Provider<AssetFileStore>(
   (ref) => AssetFileStore(),
 );
 
-final shotFileStoreProvider = Provider<ShotFileStore>(
-  (ref) => ShotFileStore(),
-);
+final shotFileStoreProvider = Provider<ShotFileStore>((ref) => ShotFileStore());
 
 final videoFileStoreProvider = Provider<VideoFileStore>(
   (ref) => VideoFileStore(),

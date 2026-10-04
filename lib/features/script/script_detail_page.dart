@@ -33,30 +33,26 @@ class ScriptDetailPage extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.account_tree_outlined),
             tooltip: '剧本骨架',
-            onPressed: () => context.push(
-              '/script/$projectId/script/$scriptId/skeleton',
-            ),
+            onPressed: () =>
+                context.push('/script/$projectId/script/$scriptId/skeleton'),
           ),
           IconButton(
             icon: const Icon(Icons.image_outlined),
             tooltip: '资产',
-            onPressed: () => context.push(
-              '/script/$projectId/script/$scriptId/assets',
-            ),
+            onPressed: () =>
+                context.push('/script/$projectId/script/$scriptId/assets'),
           ),
           IconButton(
             icon: const Icon(Icons.movie_filter_outlined),
             tooltip: '镜头',
-            onPressed: () => context.push(
-              '/script/$projectId/script/$scriptId/shots',
-            ),
+            onPressed: () =>
+                context.push('/script/$projectId/script/$scriptId/shots'),
           ),
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: '版本历史',
-            onPressed: () => context.push(
-              '/script/$projectId/script/$scriptId/versions',
-            ),
+            onPressed: () =>
+                context.push('/script/$projectId/script/$scriptId/versions'),
           ),
         ],
       ),
@@ -77,7 +73,10 @@ class ScriptDetailPage extends ConsumerWidget {
               _HeaderCard(projectId: projectId, script: script),
               const SizedBox(height: 16),
               if (proposals.isNotEmpty) ...[
-                Text('改编提案（需确认）', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  '改编提案（需确认）',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 for (final p in proposals)
                   _ProposalCard(
@@ -166,18 +165,17 @@ class _HeaderCard extends ConsumerWidget {
                     icon: const Icon(Icons.refresh),
                     label: const Text('重新改编'),
                     onPressed: () async {
-                      final book = await ref
-                          .read(novelBookByProjectProvider(projectId).future);
+                      final book = await ref.read(
+                        novelBookByProjectProvider(projectId).future,
+                      );
                       if (book == null) return;
                       if (!context.mounted) return;
                       showModalBottomSheet<void>(
                         context: context,
                         isScrollControlled: true,
                         showDragHandle: true,
-                        builder: (_) => AdaptSheet(
-                          book: book,
-                          existing: script,
-                        ),
+                        builder: (_) =>
+                            AdaptSheet(book: book, existing: script),
                       );
                     },
                   ),
@@ -187,9 +185,7 @@ class _HeaderCard extends ConsumerWidget {
                   child: FilledButton.icon(
                     icon: const Icon(Icons.check_circle_outline),
                     label: const Text('定稿'),
-                    onPressed: isFinal
-                        ? null
-                        : () => _finalize(context, ref),
+                    onPressed: isFinal ? null : () => _finalize(context, ref),
                   ),
                 ),
               ],
@@ -255,7 +251,11 @@ class _ComposeRow extends ConsumerWidget {
       const SnackBar(
         content: Row(
           children: [
-            SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
             SizedBox(width: 12),
             Expanded(child: Text('正在合成…（FFmpeg 本地拼接）')),
           ],
@@ -269,9 +269,7 @@ class _ComposeRow extends ConsumerWidget {
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(SnackBar(content: Text('已合成：$path')));
       final file = XFile(path);
-      await SharePlus.instance.share(
-        ShareParams(files: [file]),
-      );
+      await SharePlus.instance.share(ShareParams(files: [file]));
     } catch (e) {
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(SnackBar(content: Text('合成失败：$e')));
@@ -336,8 +334,10 @@ class _ProposalCard extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Icon(accepted ? Icons.check_circle : Icons.error_outline,
-                    color: accent),
+                Icon(
+                  accepted ? Icons.check_circle : Icons.error_outline,
+                  color: accent,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -378,10 +378,8 @@ class _ProposalCard extends ConsumerWidget {
   }
 
   Future<void> _setAccepted(WidgetRef ref, bool value) async {
-    await ref.read(scriptServiceProvider).setProposalAccepted(
-          script,
-          proposalId: proposal.id,
-          accepted: value,
-        );
+    await ref
+        .read(scriptServiceProvider)
+        .setProposalAccepted(script, proposalId: proposal.id, accepted: value);
   }
 }

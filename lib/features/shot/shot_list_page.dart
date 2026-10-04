@@ -10,6 +10,7 @@ import '../../data/app_database.dart';
 import '../asset/asset_providers.dart';
 import 'shot_models.dart';
 import 'shot_providers.dart';
+import 'shot_service.dart' show GenerationCancelToken;
 
 /// 镜头列表：按 G 序号分段展示，支持批量提取提示词与批量生成分镜图。
 class ShotListPage extends ConsumerStatefulWidget {
@@ -31,12 +32,14 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
   bool _generating = false;
   String _progress = '';
   final Set<int> _selected = {};
+  GenerationCancelToken? _cancelToken;
 
   @override
   Widget build(BuildContext context) {
     final shotsAsync = ref.watch(shotListByScriptProvider(widget.scriptId));
-    final issuesAsync =
-        ref.watch(shotTransitionIssuesProvider(widget.scriptId));
+    final issuesAsync = ref.watch(
+      shotTransitionIssuesProvider(widget.scriptId),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -94,9 +97,7 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
               error: (e, _) => Center(child: Text('加载失败：$e')),
               data: (shots) {
                 if (shots.isEmpty) {
-                  return const Center(
-                    child: Text('暂无镜头，先在骨架页提取分段'),
-                  );
+                  return const Center(child: Text('暂无镜头，先在骨架页提取分段'));
                 }
                 // 清理已不存在的选中项。
                 _selected.retainAll(shots.map((s) => s.id));
@@ -124,8 +125,9 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
       ),
       bottomNavigationBar: shotsAsync.maybeWhen(
         data: (shots) {
-          final eligible =
-              shots.where((s) => s.status == ShotStatuses.awaitingImage).toList();
+          final eligible = shots
+              .where((s) => s.status == ShotStatuses.awaitingImage)
+              .toList();
           if (eligible.isEmpty) return null;
           final allSelected =
               _selected.length == eligible.length && eligible.isNotEmpty;
@@ -154,23 +156,38 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: FilledButton.icon(
-                      onPressed:
-                          (_generating || _selected.isEmpty) ? null : _generateSelected,
-                      icon: _generating
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.image_outlined),
-                      label: Text(_generating && _progress.isNotEmpty
-                          ? _progress
-                          : '生成选中分镜图'),
+                  if (_generating)
+                    Expanded(
+                      flex: 1,
+                      child: OutlinedButton.icon(
+                        onPressed: _cancelGeneration,
+                        icon: const Icon(Icons.cancel, size: 16),
+                        label: const Text('取消'),
+                      ),
+                    )
+                  else
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton.icon(
+                        onPressed: (_generating || _selected.isEmpty)
+                            ? null
+                            : _generateSelected,
+                        icon: _generating
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.image_outlined),
+                        label: Text(
+                          _generating && _progress.isNotEmpty
+                              ? _progress
+                              : '生成选中分镜图',
+                        ),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -217,8 +234,10 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('确认生成'),
-        content: Text('将为选中的 ${ids.length} 个镜头生成静态分镜图，'
-            '供应商 ${image.provider.label} / 模型 ${image.modelId}。'),
+        content: Text(
+          '将为选中的 ${ids.length} 个镜头生成静态分镜图，'
+          '供应商 ${image.provider.label} / 模型 ${image.modelId}。',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -233,21 +252,30 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
     );
     if (ok != true) return;
 
+    _cancelToken = GenerationCancelToken();
     setState(() => _generating = true);
     try {
-      final result = await ref.read(shotServiceProvider).generateSelected(
+      final result = await ref
+          .read(shotServiceProvider)
+          .generateSelected(
             shotIds: ids,
             image: image,
+            cancelToken: _cancelToken,
             onProgress: (done, total, _) {
               if (mounted) {
                 setState(() => _progress = '生成中 $done/$total');
               }
             },
           );
-      _toast('批量完成：成功 ${result.success}，失败 ${result.failed}');
+      if (result.cancelled) {
+        _toast('已取消：成功 ${result.success}，剩余 ${result.pending} 未生成');
+      } else {
+        _toast('批量完成：成功 ${result.success}，失败 ${result.failed}');
+      }
     } catch (e) {
       _toast('批量生成失败：$e');
     } finally {
+      _cancelToken = null;
       if (mounted) {
         setState(() {
           _generating = false;
@@ -255,6 +283,10 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
         });
       }
     }
+  }
+
+  void _cancelGeneration() {
+    _cancelToken?.cancelled = true;
   }
 
   void _toast(String text) {
@@ -297,9 +329,8 @@ class _ShotCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 12),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push(
-          '/script/$projectId/script/$scriptId/shot/${shot.id}',
-        ),
+        onTap: () =>
+            context.push('/script/$projectId/script/$scriptId/shot/${shot.id}'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -334,8 +365,7 @@ class _ShotCard extends ConsumerWidget {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(width: 8),
-                      if (shot.shotType != null)
-                        _Chip(label: shot.shotType!),
+                      if (shot.shotType != null) _Chip(label: shot.shotType!),
                       Text(
                         '$durationSec 秒 · ${shot.globalTimeRange}',
                         style: Theme.of(context).textTheme.bodySmall,
@@ -355,9 +385,7 @@ class _ShotCard extends ConsumerWidget {
                       runSpacing: 6,
                       children: [
                         for (final ref in refs)
-                          _RefAvatar(
-                            asset: assetById[ref.assetId],
-                          ),
+                          _RefAvatar(asset: assetById[ref.assetId]),
                       ],
                     ),
                   ],
@@ -387,15 +415,12 @@ class _RefAvatar extends StatelessWidget {
       backgroundImage: hasImage ? FileImage(File(path)) : null,
       child: hasImage
           ? null
-          : Icon(
-              switch (asset?.type) {
-                '角色' => Icons.person_outline,
-                '场景' => Icons.landscape_outlined,
-                '道具' => Icons.category_outlined,
-                _ => Icons.help_outline,
-              },
-              size: 14,
-            ),
+          : Icon(switch (asset?.type) {
+              '角色' => Icons.person_outline,
+              '场景' => Icons.landscape_outlined,
+              '道具' => Icons.category_outlined,
+              _ => Icons.help_outline,
+            }, size: 14),
     );
   }
 }
@@ -413,10 +438,7 @@ class _Chip extends StatelessWidget {
         color: Theme.of(context).colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall,
-      ),
+      child: Text(label, style: Theme.of(context).textTheme.labelSmall),
     );
   }
 }
@@ -445,10 +467,7 @@ class _StatusBadge extends StatelessWidget {
         color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        status,
-        style: TextStyle(color: color, fontSize: 11),
-      ),
+      child: Text(status, style: TextStyle(color: color, fontSize: 11)),
     );
   }
 }

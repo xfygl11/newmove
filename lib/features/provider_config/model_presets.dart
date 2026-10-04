@@ -22,8 +22,13 @@ class ModelPresets {
     ),
     // Seedance 2.0 系列（含 fast / mini）：4-15s，480p/720p。
     _Spec(
-      match: ['seedance 2.0', 'seedance-2.0', 'seedance 2.0 fast',
-        'seedance 2.0 mini', 'seedance2'],
+      match: [
+        'seedance 2.0',
+        'seedance-2.0',
+        'seedance 2.0 fast',
+        'seedance 2.0 mini',
+        'seedance2',
+      ],
       durationRange: (4, 15),
       resolutions: ['480p', '720p'],
       videoModes: ['text', 'multiImage', 'startFrameOptional'],
@@ -53,7 +58,12 @@ class ModelPresets {
       match: ['kling'],
       durations: [5, 10],
       resolutions: ['720p', '1080p'],
-      videoModes: ['text', 'multiImage', 'startFrameOptional', 'startEndRequired'],
+      videoModes: [
+        'text',
+        'multiImage',
+        'startFrameOptional',
+        'startEndRequired',
+      ],
       maxImageRefs: 9,
       audio: 'optional',
     ),
@@ -86,7 +96,12 @@ class ModelPresets {
       match: ['agnes-video-2.5', 'agnes video 2.5'],
       durationRange: (4, 12),
       resolutions: ['720P', '1080P', '1K', '2K'],
-      videoModes: ['text', 'multiImage', 'startFrameOptional', 'startEndRequired'],
+      videoModes: [
+        'text',
+        'multiImage',
+        'startFrameOptional',
+        'startEndRequired',
+      ],
       maxImageRefs: 8,
       audio: 'optional',
     ),
@@ -103,8 +118,9 @@ class ModelPresets {
   }
 
   /// 对列表批量套用预设。
-  static List<ProviderModel> applyAll(List<ProviderModel> models) =>
-      [for (final m in models) apply(m)];
+  static List<ProviderModel> applyAll(List<ProviderModel> models) => [
+    for (final m in models) apply(m),
+  ];
 }
 
 /// 单条预设规则。
@@ -140,13 +156,13 @@ class _Spec {
   bool matches(String key) => match.any(key.contains);
 
   ProviderModel fill(ProviderModel m) {
-    final duration = durations ??
+    final duration =
+        durations ??
         (durationRange == null
             ? null
-            : [
-                for (var d = durationRange!.$1; d <= durationRange!.$2; d++) d,
-              ]);
-    final durRes = m.durationResolutions ??
+            : [for (var d = durationRange!.$1; d <= durationRange!.$2; d++) d]);
+    final durRes =
+        m.durationResolutions ??
         (duration != null && resolutions != null
             ? [(duration: duration, resolution: resolutions!)]
             : null);

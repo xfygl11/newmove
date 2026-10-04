@@ -30,10 +30,7 @@ class NovelAgents {
       model: llm.modelId,
       messages: [
         (role: ChatRole.system, content: system),
-        (
-          role: ChatRole.user,
-          content: '【创意】$idea\n【题材】$genre\n请按规则产出设定 JSON。',
-        ),
+        (role: ChatRole.user, content: '【创意】$idea\n【题材】$genre\n请按规则产出设定 JSON。'),
       ],
       temperature: 0.7,
     );
@@ -79,7 +76,8 @@ class NovelAgents {
     final map = _extractJson(reply);
     final issues = map['issues'] as List<dynamic>? ?? const [];
     return [
-      for (final i in issues) ReviewIssue.fromJson((i as Map).cast<String, dynamic>()),
+      for (final i in issues)
+        ReviewIssue.fromJson((i as Map).cast<String, dynamic>()),
     ];
   }
 
@@ -95,7 +93,10 @@ class NovelAgents {
       apiKey: llm.apiKey,
       model: llm.modelId,
       messages: [
-        (role: ChatRole.system, content: '$system\n\n当前是修订任务：只输出修订后的完整正文，不输出解释。'),
+        (
+          role: ChatRole.system,
+          content: '$system\n\n当前是修订任务：只输出修订后的完整正文，不输出解释。',
+        ),
         (role: ChatRole.user, content: prompt),
       ],
       temperature: 0.6,

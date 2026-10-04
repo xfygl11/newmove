@@ -39,26 +39,30 @@ class AssetService {
     final shots = await shotDao.listByScript(scriptId);
     final buf = StringBuffer();
     buf.writeln('【原子节拍】');
-    buf.writeln(jsonEncode([
-      for (final b in beats)
-        {
-          'seq': b.seq,
-          'type': b.type,
-          'who': b.who,
-          'content': b.content,
-          'object': b.object,
-          'sourceRef': b.sourceRef,
-        },
-    ]));
+    buf.writeln(
+      jsonEncode([
+        for (final b in beats)
+          {
+            'seq': b.seq,
+            'type': b.type,
+            'who': b.who,
+            'content': b.content,
+            'object': b.object,
+            'sourceRef': b.sourceRef,
+          },
+      ]),
+    );
     buf.writeln('【分段与出镜状态】');
-    buf.writeln(jsonEncode([
-      for (final s in shots)
-        {
-          'globalSeq': s.globalSeq,
-          'beatRefs': _decodeList(s.beatRefs),
-          'assetStates': _decodeMap(s.assetStates),
-        },
-    ]));
+    buf.writeln(
+      jsonEncode([
+        for (final s in shots)
+          {
+            'globalSeq': s.globalSeq,
+            'beatRefs': _decodeList(s.beatRefs),
+            'assetStates': _decodeMap(s.assetStates),
+          },
+      ]),
+    );
     buf.writeln('请按规则提取资产清单 JSON。');
     return buf.toString();
   }
@@ -186,10 +190,7 @@ class AssetService {
     );
   }
 
-  Future<Asset> regenerate({
-    required int assetId,
-    required ActiveImage image,
-  }) {
+  Future<Asset> regenerate({required int assetId, required ActiveImage image}) {
     return generate(assetId: assetId, image: image);
   }
 

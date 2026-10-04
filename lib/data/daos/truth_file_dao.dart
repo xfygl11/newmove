@@ -7,7 +7,8 @@ part 'truth_file_dao.g.dart';
 
 /// 真相状态（TruthFiles）数据访问对象。
 @DriftAccessor(tables: [TruthFiles])
-class TruthFileDao extends DatabaseAccessor<AppDatabase> with _$TruthFileDaoMixin {
+class TruthFileDao extends DatabaseAccessor<AppDatabase>
+    with _$TruthFileDaoMixin {
   TruthFileDao(super.db);
 
   Future<List<TruthFile>> listByBook(int bookId) {
@@ -31,7 +32,8 @@ class TruthFileDao extends DatabaseAccessor<AppDatabase> with _$TruthFileDaoMixi
       await into(truthFiles).insert(entry);
       return;
     }
-    await (update(truthFiles)..where((t) => t.id.equals(existing.id)))
-        .write(entry);
+    await (update(
+      truthFiles,
+    )..where((t) => t.id.equals(existing.id))).write(entry);
   }
 }

@@ -51,7 +51,9 @@ class VideoGenParams {
   static VideoGenParams decode(String raw) {
     try {
       final decoded = jsonDecode(raw);
-      if (decoded is Map<String, dynamic>) return VideoGenParams.fromJson(decoded);
+      if (decoded is Map<String, dynamic>) {
+        return VideoGenParams.fromJson(decoded);
+      }
     } on FormatException {
       // 落库内容异常时返回默认值。
     }
@@ -90,7 +92,9 @@ class VideoPromptBuilder {
     final buf = StringBuffer();
 
     // Objective：以分镜提示词为本段目标事件底稿。
-    buf.writeln('Objective: 完成本段画面事件——${shot.prompt.isEmpty ? shot.globalSeq : shot.prompt}');
+    buf.writeln(
+      'Objective: 完成本段画面事件——${shot.prompt.isEmpty ? shot.globalSeq : shot.prompt}',
+    );
 
     // Reference binding：AssetRefs 顺序 → {{ref N}}。
     buf.writeln('Reference binding:');
@@ -103,8 +107,10 @@ class VideoPromptBuilder {
     if (refs.isEmpty) buf.writeln('- 无');
 
     // Immutable locks：从出镜状态提取主要角色与场景（静态锁定项）。
-    buf.writeln('Immutable locks: 保持人物身份与外观锚点不变，'
-        '道具持有状态与本段开头一致，不出现画面外的角色');
+    buf.writeln(
+      'Immutable locks: 保持人物身份与外观锚点不变，'
+      '道具持有状态与本段开头一致，不出现画面外的角色',
+    );
 
     buf.writeln('Target duration: ${targetSec}s');
 
@@ -130,10 +136,14 @@ class VideoPromptBuilder {
 
     buf.writeln('Visual direction: $artStyle');
     buf.writeln('Audio direction: 同期对白与环境音，不加 BGM 与后期字幕');
-    buf.writeln('Preserve: 不新增、不删除、不替换、不改顺序剧情事件；'
-        '人物位置与道具持有状态保持本段开头登记');
-    buf.writeln('Avoid: 不叠化、不闪白、不甩镜，无水印，'
-        '不出现画面外的角色');
+    buf.writeln(
+      'Preserve: 不新增、不删除、不替换、不改顺序剧情事件；'
+      '人物位置与道具持有状态保持本段开头登记',
+    );
+    buf.writeln(
+      'Avoid: 不叠化、不闪白、不甩镜，无水印，'
+      '不出现画面外的角色',
+    );
 
     return buf.toString();
   }
@@ -150,9 +160,7 @@ class VideoPromptBuilder {
       if (f.angle.isNotEmpty) f.angle,
     ].join('，');
     if (view.isNotEmpty) {
-      parts.add(
-        f.subject.isNotEmpty ? '画面为$view，主体是${f.subject}' : '画面为$view',
-      );
+      parts.add(f.subject.isNotEmpty ? '画面为$view，主体是${f.subject}' : '画面为$view');
     } else if (f.subject.isNotEmpty) {
       parts.add('主体是${f.subject}');
     }
@@ -181,7 +189,8 @@ class VideoPromptBuilder {
   /// 时间块头部：帧的 timeRange 形如 00:00-00:06，转为 Toonflow 2.5
   /// 风格 0:00-0:06；解析失败时原样返回。
   String _normalizeTimeRange(String timeRange, List<ShotFrame> frames, int i) {
-    final m = RegExp(r'(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})').firstMatch(timeRange);
+    final m = RegExp(r'(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})')
+        .firstMatch(timeRange);
     if (m == null) return timeRange;
     String fmt(int group, int g2) {
       final min = int.parse(m.group(group)!);

@@ -26,8 +26,9 @@ class ShotFrameDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<ShotFrame?> find(int id) {
-    return (select(shotFrames)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (select(
+      shotFrames,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<int> insert(ShotFramesCompanion entry) {

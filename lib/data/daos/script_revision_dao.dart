@@ -19,8 +19,9 @@ class ScriptRevisionDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<ScriptRevision?> findByVersion(int scriptId, int version) {
-    return (select(scriptRevisions)
-          ..where((t) => t.scriptId.equals(scriptId) & t.version.equals(version)))
+    return (select(scriptRevisions)..where(
+          (t) => t.scriptId.equals(scriptId) & t.version.equals(version),
+        ))
         .getSingleOrNull();
   }
 

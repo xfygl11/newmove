@@ -56,10 +56,7 @@ class ShotDao extends DatabaseAccessor<AppDatabase> with _$ShotDaoMixin {
   /// 状态取「生成中 / 待分镜图 / 待验收」。
   Stream<List<Shot>> watchActive() {
     return (select(shots)
-          ..where(
-            (t) =>
-                t.status.isIn(['生成中', '待分镜图', '待验收']),
-          )
+          ..where((t) => t.status.isIn(['生成中', '待分镜图', '待验收']))
           ..orderBy([(t) => OrderingTerm.desc(t.id)]))
         .watch();
   }

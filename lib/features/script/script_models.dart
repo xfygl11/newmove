@@ -69,7 +69,9 @@ class AdaptedScene {
 
   factory AdaptedScene.fromJson(Map<String, dynamic> json) {
     final sound = json['sound'];
-    final soundMap = sound is Map<String, dynamic> ? sound : const <String, dynamic>{};
+    final soundMap = sound is Map<String, dynamic>
+        ? sound
+        : const <String, dynamic>{};
     return AdaptedScene(
       seq: json['seq'] as int? ?? 0,
       location: json['location'] as String? ?? '',
@@ -100,10 +102,7 @@ class AdaptedScene {
     'summary': summary,
     'action': action,
     'dialogue': [for (final d in dialogue) d.toJson()],
-    'sound': {
-      'music': music,
-      'sfx': sfx,
-    },
+    'sound': {'music': music, 'sfx': sfx},
     'startState': startState,
     'endState': endState,
     'transition': transition,
@@ -177,7 +176,11 @@ class AdaptationResult {
           AdaptedScene.fromJson((s as Map).cast<String, dynamic>()),
       ],
       proposals: [
-        for (var i = 0; i < (json['proposals'] as List<dynamic>? ?? const []).length; i++)
+        for (
+          var i = 0;
+          i < (json['proposals'] as List<dynamic>? ?? const []).length;
+          i++
+        )
           AdaptationProposal.fromJson(
             (json['proposals'] as List)[i] as Map<String, dynamic>,
             fallbackId: 'P${i + 1}',

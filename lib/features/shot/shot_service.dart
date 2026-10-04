@@ -76,41 +76,41 @@ class ShotService {
     final buf = StringBuffer();
     buf.writeln('【画面风格】${script?.artStyle ?? '日式 2D 动画，干净线稿，柔和上色'}');
     buf.writeln('【可用资产清单（仅可绑定这些 stableId）】');
-    buf.writeln(jsonEncode([
-      for (final a in assets)
-        {
-          'stableId': a.stableId,
-          'type': a.type,
-          'name': a.name,
-        },
-    ]));
+    buf.writeln(
+      jsonEncode([
+        for (final a in assets)
+          {'stableId': a.stableId, 'type': a.type, 'name': a.name},
+      ]),
+    );
     buf.writeln('【分段与节拍】');
-    buf.writeln(jsonEncode([
-      for (final s in shots)
-        {
-          'globalSeq': s.globalSeq,
-          'batch': s.batch,
-          'durationMs': s.durationMs,
-          'globalTimeRange': s.globalTimeRange,
-          'beatRefs': _decodeList(s.beatRefs),
-          'assetStates': _decodeMap(s.assetStates),
-          'beats': [
-            for (final ref in _decodeList(s.beatRefs))
-              if (beatById[ref] != null)
-                {
-                  'id': beatById[ref]!.sourceRef,
-                  'type': beatById[ref]!.type,
-                  'who': beatById[ref]!.who,
-                  'content': beatById[ref]!.content,
-                },
-          ],
-          'scene': () {
-            final scene = sceneBySeq[s.sceneId];
-            if (scene == null) return null;
-            return {'location': scene.location, 'time': scene.time};
-          }(),
-        },
-    ]));
+    buf.writeln(
+      jsonEncode([
+        for (final s in shots)
+          {
+            'globalSeq': s.globalSeq,
+            'batch': s.batch,
+            'durationMs': s.durationMs,
+            'globalTimeRange': s.globalTimeRange,
+            'beatRefs': _decodeList(s.beatRefs),
+            'assetStates': _decodeMap(s.assetStates),
+            'beats': [
+              for (final ref in _decodeList(s.beatRefs))
+                if (beatById[ref] != null)
+                  {
+                    'id': beatById[ref]!.sourceRef,
+                    'type': beatById[ref]!.type,
+                    'who': beatById[ref]!.who,
+                    'content': beatById[ref]!.content,
+                  },
+            ],
+            'scene': () {
+              final scene = sceneBySeq[s.sceneId];
+              if (scene == null) return null;
+              return {'location': scene.location, 'time': scene.time};
+            }(),
+          },
+      ]),
+    );
     buf.writeln('请按规则输出分镜提示词 JSON。');
     return buf.toString();
   }
@@ -241,12 +241,20 @@ class ShotService {
     required List<int> shotIds,
     required ActiveImage image,
     void Function(int done, int total, int shotId)? onProgress,
+    GenerationCancelToken? cancelToken,
   }) async {
     var success = 0;
     var failed = 0;
+    var pending = 0;
+    var cancelled = false;
     final total = shotIds.length;
 
     for (var i = 0; i < shotIds.length; i++) {
+      if (cancelToken?.cancelled ?? false) {
+        cancelled = true;
+        pending = total - i;
+        break;
+      }
       onProgress?.call(i, total, shotIds[i]);
       try {
         await generate(shotId: shotIds[i], image: image);
@@ -255,9 +263,16 @@ class ShotService {
         failed++;
       }
     }
-    onProgress?.call(total, total, -1);
+    if (!cancelled) {
+      onProgress?.call(total, total, -1);
+    }
 
-    return ShotBatchResult(success: success, failed: failed);
+    return ShotBatchResult(
+      success: success,
+      failed: failed,
+      cancelled: cancelled,
+      pending: pending,
+    );
   }
 
   /// 组装参考图并按需替换 {{ref N}}，调用适配器生成图片字节。
@@ -359,8 +374,8 @@ class ShotService {
       final subjectA = await _subjectsOf(a.id);
       final subjectB = await _subjectsOf(b.id);
       final subjectSame = subjectA.intersection(subjectB).isNotEmpty;
-      final sizeGap =
-          (_shotSizeRank(a.shotType) - _shotSizeRank(b.shotType)).abs();
+      final sizeGap = (_shotSizeRank(a.shotType) - _shotSizeRank(b.shotType))
+          .abs();
       final angleA = await _angleDegreesOf(a.id);
       final angleB = await _angleDegreesOf(b.id);
       final angleGap = (angleA - angleB).abs();
@@ -371,7 +386,8 @@ class ShotService {
             fromSeq: a.globalSeq,
             toSeq: b.globalSeq,
             reason: 'no_contrast',
-            message: '${a.globalSeq} 与 ${b.globalSeq} 主体相同、'
+            message:
+                '${a.globalSeq} 与 ${b.globalSeq} 主体相同、'
                 '景别差 $sizeGap 档、角度差 $angleGap°，缺少画面区分度（A7）',
           ),
         );
@@ -540,28 +556,28 @@ class ShotService {
       return task;
     }
 
-      // 恢复供应商配置与 Key。
-      final provider = await _findProvider(task.providerId);
-      if (provider == null) {
-        return _markVideoFailed(task, '供应商配置已删除，无法恢复轮询');
-      }
-      final apiKey = await readProviderKey?.call(task.providerId);
-      if (apiKey == null || apiKey.isEmpty) {
-        return _markVideoFailed(task, '供应商 API Key 不可用');
-      }
+    // 恢复供应商配置与 Key。
+    final provider = await _findProvider(task.providerId);
+    if (provider == null) {
+      return _markVideoFailed(task, '供应商配置已删除，无法恢复轮询');
+    }
+    final apiKey = await readProviderKey?.call(task.providerId);
+    if (apiKey == null || apiKey.isEmpty) {
+      return _markVideoFailed(task, '供应商 API Key 不可用');
+    }
 
-      // 轮询需传 protocol + model（openai-videos 协议需要 model_name 参数）。
-      final decodedParams = VideoGenParams.decode(task.paramsJson);
-      final modelId = decodedParams.modelId;
+    // 轮询需传 protocol + model（openai-videos 协议需要 model_name 参数）。
+    final decodedParams = VideoGenParams.decode(task.paramsJson);
+    final modelId = decodedParams.modelId;
 
-      try {
-        final snapshot = await videoAdapter.poll(
-          baseUrl: provider.baseUrl,
-          apiKey: apiKey,
-          taskId: task.taskId,
-          model: modelId,
-          protocol: provider.protocol,
-        );
+    try {
+      final snapshot = await videoAdapter.poll(
+        baseUrl: provider.baseUrl,
+        apiKey: apiKey,
+        taskId: task.taskId,
+        model: modelId,
+        protocol: provider.protocol,
+      );
 
       if (snapshot.isSuccess) {
         // 取产物字节并落盘。
@@ -652,11 +668,7 @@ class ShotService {
     final task = await videoTaskDao.find(videoTaskId);
     if (task == null) throw StateError('视频任务不存在：$videoTaskId');
     final params = VideoGenParams.decode(task.paramsJson);
-    return submitVideo(
-      shotId: task.shotId,
-      video: video,
-      params: params,
-    );
+    return submitVideo(shotId: task.shotId, video: video, params: params);
   }
 
   /// 取消进行中的视频任务（本地取消：停轮询 + 回滚镜头到分镜图已确认）。
@@ -728,10 +740,7 @@ class ShotService {
     required int shotId,
     required String prompt,
   }) async {
-    await shotDao.updateById(
-      shotId,
-      ShotsCompanion(prompt: Value(prompt)),
-    );
+    await shotDao.updateById(shotId, ShotsCompanion(prompt: Value(prompt)));
   }
 
   /// 确认分镜图（待验收 → 分镜图已确认）。
@@ -788,8 +797,20 @@ class ShotDirectionSummary {
 
 /// 一次批量生成的结果摘要。
 class ShotBatchResult {
-  const ShotBatchResult({required this.success, required this.failed});
+  const ShotBatchResult({
+    required this.success,
+    required this.failed,
+    this.cancelled = false,
+    this.pending = 0,
+  });
 
   final int success;
   final int failed;
+  final bool cancelled;
+  final int pending;
+}
+
+/// 批量生成取消令牌：UI 侧持有引用并置位 [cancelled] 以中断循环。
+class GenerationCancelToken {
+  bool cancelled = false;
 }

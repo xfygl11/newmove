@@ -13,18 +13,21 @@ class NovelDao extends DatabaseAccessor<AppDatabase> with _$NovelDaoMixin {
   // ---- 小说书 ----
 
   Future<NovelBook?> findBookByProject(int projectId) {
-    return (select(novelBooks)..where((t) => t.projectId.equals(projectId)))
-        .getSingleOrNull();
+    return (select(
+      novelBooks,
+    )..where((t) => t.projectId.equals(projectId))).getSingleOrNull();
   }
 
   Stream<NovelBook?> watchBookByProject(int projectId) {
-    return (select(novelBooks)..where((t) => t.projectId.equals(projectId)))
-        .watchSingleOrNull();
+    return (select(
+      novelBooks,
+    )..where((t) => t.projectId.equals(projectId))).watchSingleOrNull();
   }
 
   Future<NovelBook?> findBook(int id) {
-    return (select(novelBooks)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (select(
+      novelBooks,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<int> insertBook(NovelBooksCompanion entry) {
@@ -56,7 +59,9 @@ class NovelDao extends DatabaseAccessor<AppDatabase> with _$NovelDaoMixin {
   }
 
   Stream<Chapter?> watchChapter(int id) {
-    return (select(chapters)..where((t) => t.id.equals(id))).watchSingleOrNull();
+    return (select(
+      chapters,
+    )..where((t) => t.id.equals(id))).watchSingleOrNull();
   }
 
   Future<int> insertChapter(ChaptersCompanion entry) {

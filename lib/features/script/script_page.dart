@@ -44,10 +44,7 @@ class _ScriptList extends ConsumerWidget {
 
     return Column(
       children: [
-        ListTile(
-          title: Text(book.title),
-          subtitle: Text('选择原文片段，AI 改编为分场剧本'),
-        ),
+        ListTile(title: Text(book.title), subtitle: Text('选择原文片段，AI 改编为分场剧本')),
         Expanded(
           child: scriptsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -58,10 +55,8 @@ class _ScriptList extends ConsumerWidget {
               }
               return ListView.builder(
                 itemCount: scripts.length,
-                itemBuilder: (context, i) => _ScriptTile(
-                  projectId: book.projectId,
-                  script: scripts[i],
-                ),
+                itemBuilder: (context, i) =>
+                    _ScriptTile(projectId: book.projectId, script: scripts[i]),
               );
             },
           ),
@@ -105,10 +100,11 @@ class _ScriptTile extends ConsumerWidget {
     return ListTile(
       leading: const CircleAvatar(child: Icon(Icons.movie_outlined)),
       title: Text(script.title),
-      subtitle: Text('v${script.version} · $sceneCount 场 · ${script.fidelityMode}'),
+      subtitle: Text(
+        'v${script.version} · $sceneCount 场 · ${script.fidelityMode}',
+      ),
       trailing: Text(script.status, style: TextStyle(color: statusColor)),
       onTap: () => context.push('/script/$projectId/script/${script.id}'),
     );
   }
 }
-

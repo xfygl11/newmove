@@ -60,7 +60,8 @@ class AssetDraft {
       stableId: (json['stableId'] as String? ?? '').trim(),
       variantOf: (json['variantOf'] as String?)?.trim(),
       appearanceAnchor: _asStringMap(json['appearanceAnchor']),
-      boardLayout: (json['boardLayout'] as String? ?? BoardLayouts.mainView).trim(),
+      boardLayout: (json['boardLayout'] as String? ?? BoardLayouts.mainView)
+          .trim(),
       prompt: (json['prompt'] as String? ?? '').trim(),
     );
   }

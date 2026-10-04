@@ -10,7 +10,11 @@ import 'script_providers.dart';
 
 /// 场次编辑：基本信息 + 对白 + 声音提示。
 class SceneEditPage extends ConsumerStatefulWidget {
-  const SceneEditPage({super.key, required this.projectId, required this.sceneId});
+  const SceneEditPage({
+    super.key,
+    required this.projectId,
+    required this.sceneId,
+  });
 
   final int projectId;
   final int sceneId;
@@ -40,8 +44,16 @@ class _SceneEditPageState extends ConsumerState<SceneEditPage> {
   @override
   void dispose() {
     for (final c in [
-      _seq, _location, _time, _characters, _summary,
-      _action, _startState, _endState, _transition, _sound,
+      _seq,
+      _location,
+      _time,
+      _characters,
+      _summary,
+      _action,
+      _startState,
+      _endState,
+      _transition,
+      _sound,
     ]) {
       c.dispose();
     }
@@ -105,16 +117,27 @@ class _SceneEditPageState extends ConsumerState<SceneEditPage> {
         seq: Value(seq),
         location: Value(_location.text.trim()),
         time: Value(_time.text.trim()),
-        characters: Value(jsonEncode(_characters.text.split('、').where((s) => s.trim().isNotEmpty).toList())),
+        characters: Value(
+          jsonEncode(
+            _characters.text
+                .split('、')
+                .where((s) => s.trim().isNotEmpty)
+                .toList(),
+          ),
+        ),
         summary: Value(_summary.text.trim()),
         action: Value(_action.text.trim()),
         startState: Value(_startState.text.trim()),
         endState: Value(_endState.text.trim()),
         transition: Value(_transition.text.trim()),
         dialogue: Value(jsonEncode([for (final d in _dialogue) d.toJson()])),
-        sound: Value(jsonEncode(_sound.text.trim().isEmpty
-            ? const <String, dynamic>{}
-            : <String, dynamic>{'text': _sound.text.trim()})),
+        sound: Value(
+          jsonEncode(
+            _sound.text.trim().isEmpty
+                ? const <String, dynamic>{}
+                : <String, dynamic>{'text': _sound.text.trim()},
+          ),
+        ),
       );
       await ref.read(scriptServiceProvider).updateScene(widget.sceneId, data);
       if (mounted) Navigator.of(context).pop();
@@ -126,9 +149,7 @@ class _SceneEditPageState extends ConsumerState<SceneEditPage> {
   }
 
   void _toast(String text) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(text)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   @override
@@ -142,8 +163,10 @@ class _SceneEditPageState extends ConsumerState<SceneEditPage> {
           IconButton(
             icon: _busy
                 ? const SizedBox(
-                    width: 18, height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2))
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Icon(Icons.save),
             onPressed: _busy ? null : _save,
           ),
@@ -174,13 +197,18 @@ class _SceneEditPageState extends ConsumerState<SceneEditPage> {
               Row(
                 children: [
                   Expanded(
-                    child: Text('对白', style: Theme.of(context).textTheme.titleMedium),
+                    child: Text(
+                      '对白',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                   ),
                   TextButton.icon(
                     icon: const Icon(Icons.add),
                     label: const Text('加对白'),
                     onPressed: () => setState(() {
-                      _dialogue.add(DialogueLine(speaker: '', type: '对白', text: ''));
+                      _dialogue.add(
+                        DialogueLine(speaker: '', type: '对白', text: ''),
+                      );
                     }),
                   ),
                 ],
@@ -301,7 +329,8 @@ class _DialogueEditorState extends State<_DialogueEditor> {
                   child: TextField(
                     decoration: const InputDecoration(labelText: '说话人'),
                     controller: _speaker,
-                    onChanged: (v) => widget.onChanged(line.copyWith(speaker: v)),
+                    onChanged: (v) =>
+                        widget.onChanged(line.copyWith(speaker: v)),
                   ),
                 ),
                 const SizedBox(width: 8),

@@ -7,25 +7,24 @@ part 'provider_dao.g.dart';
 
 /// 模型供应商配置数据访问对象（API Key 不在此表，见安全存储层）。
 @DriftAccessor(tables: [ProviderConfigs])
-class ProviderDao extends DatabaseAccessor<AppDatabase> with _$ProviderDaoMixin {
+class ProviderDao extends DatabaseAccessor<AppDatabase>
+    with _$ProviderDaoMixin {
   ProviderDao(super.db);
 
   /// 按分组、标签排序列出全部供应商。
   Future<List<ProviderConfig>> listAll() {
-    return (select(providerConfigs)
-          ..orderBy([
-            (t) => OrderingTerm.asc(t.group),
-            (t) => OrderingTerm.asc(t.label),
-          ]))
+    return (select(providerConfigs)..orderBy([
+          (t) => OrderingTerm.asc(t.group),
+          (t) => OrderingTerm.asc(t.label),
+        ]))
         .get();
   }
 
   Stream<List<ProviderConfig>> watchAll() {
-    return (select(providerConfigs)
-          ..orderBy([
-            (t) => OrderingTerm.asc(t.group),
-            (t) => OrderingTerm.asc(t.label),
-          ]))
+    return (select(providerConfigs)..orderBy([
+          (t) => OrderingTerm.asc(t.group),
+          (t) => OrderingTerm.asc(t.label),
+        ]))
         .watch();
   }
 
@@ -34,8 +33,9 @@ class ProviderDao extends DatabaseAccessor<AppDatabase> with _$ProviderDaoMixin 
   }
 
   Future<ProviderConfig?> findById(String id) {
-    return (select(providerConfigs)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (select(
+      providerConfigs,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   /// 存在则更新，不存在则插入（主键 id）。

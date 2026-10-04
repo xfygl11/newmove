@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
@@ -72,10 +73,7 @@ class _StaticSettings extends ConsumerWidget {
             children: [
               Text('基础设定', style: Theme.of(context).textTheme.titleMedium),
               const Spacer(),
-              Text(
-                book.title,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              Text(book.title, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
           const SizedBox(height: 4),
@@ -115,6 +113,7 @@ class _StaticSettings extends ConsumerWidget {
               ref,
               book.copyWith(outline: Value(text.isEmpty ? null : text)),
             ),
+            onAction: () => context.push('/novel/${book.projectId}/outline'),
           ),
         ],
       ),
@@ -130,9 +129,8 @@ class _StaticSettings extends ConsumerWidget {
       await ref.read(novelDaoProvider).updateBook(updated);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('保存失败：$e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('保存失败：$e')));
       }
     }
   }
@@ -144,12 +142,14 @@ class _EditRow extends StatelessWidget {
     required this.value,
     required this.onEdit,
     this.multiline = false,
+    this.onAction,
   });
 
   final String label;
   final String? value;
   final ValueChanged<String> onEdit;
   final bool multiline;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -163,7 +163,22 @@ class _EditRow extends StatelessWidget {
         maxLines: multiline ? 3 : 2,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: const Icon(Icons.edit_outlined, size: 18),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (onAction != null)
+            IconButton(
+              tooltip: '打开大纲编辑器',
+              icon: const Icon(Icons.edit_note, size: 18),
+              onPressed: onAction,
+            ),
+          IconButton(
+            tooltip: '快速编辑',
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            onPressed: () => _showEditDialog(context),
+          ),
+        ],
+      ),
       onTap: () => _showEditDialog(context),
     );
   }
@@ -228,6 +243,7 @@ class _TruthFileTabs extends ConsumerWidget {
                   _TruthFileView(
                     row: _find(rows, kind),
                     kind: kind,
+                    bookId: bookId,
                   ),
               ],
             ),
@@ -246,10 +262,15 @@ class _TruthFileTabs extends ConsumerWidget {
 }
 
 class _TruthFileView extends StatelessWidget {
-  const _TruthFileView({required this.row, required this.kind});
+  const _TruthFileView({
+    required this.row,
+    required this.kind,
+    required this.bookId,
+  });
 
   final TruthFile? row;
   final String kind;
+  final int bookId;
 
   @override
   Widget build(BuildContext context) {
@@ -264,13 +285,12 @@ class _TruthFileView extends StatelessWidget {
 
     final cards = switch (kind) {
       TruthFileKind.worldFacts => _factCards(json),
-      TruthFileKind.characterMatrix => _characterCards(json),
+      TruthFileKind.characterMatrix => _characterCards(context, json),
       TruthFileKind.resources => _resourceCards(json),
       TruthFileKind.hooks => _hookCards(json),
       TruthFileKind.chapterSummaries => _summaryCards(json),
-      TruthFileKind.authorIntent || TruthFileKind.currentFocus => [
-        _textCard(json['text'] as String? ?? ''),
-      ],
+      TruthFileKind.authorIntent ||
+      TruthFileKind.currentFocus => [_textCard(json['text'] as String? ?? '')],
       _ => [_rawCard(content)],
     };
 
@@ -299,9 +319,23 @@ class _TruthFileView extends StatelessWidget {
     ];
   }
 
-  List<Widget> _characterCards(Map<String, dynamic> json) {
+  List<Widget> _characterCards(
+    BuildContext context,
+    Map<String, dynamic> json,
+  ) {
     final chars = (json['characters'] as List<dynamic>? ?? const []);
     return [
+      Card(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        color: Theme.of(context).colorScheme.secondaryContainer,
+        child: ListTile(
+          leading: const Icon(Icons.person_outline, size: 22),
+          title: Text('角色矩阵（${chars.length} 个角色）'),
+          subtitle: const Text('点按管理可增删改角色'),
+          trailing: const Icon(Icons.chevron_right, size: 18),
+          onTap: () => context.push('/novel/$bookId/characters'),
+        ),
+      ),
       for (final c in chars)
         _kvCard(
           '${c['name']}（${c['role'] ?? ''}）',
@@ -312,32 +346,20 @@ class _TruthFileView extends StatelessWidget {
 
   List<Widget> _resourceCards(Map<String, dynamic> json) {
     final items = (json['items'] as List<dynamic>? ?? const []);
-    return [
-      for (final i in items)
-        _kvCard(
-          '${i['name']}',
-          _compact(i),
-        ),
-    ];
+    return [for (final i in items) _kvCard('${i['name']}', _compact(i))];
   }
 
   List<Widget> _hookCards(Map<String, dynamic> json) {
     final hooks = (json['hooks'] as List<dynamic>? ?? const []);
     return [
       for (final h in hooks)
-        _kvCard(
-          '${h['id'] ?? ''}（${h['status'] ?? 'open'}）',
-          _compact(h),
-        ),
+        _kvCard('${h['id'] ?? ''}（${h['status'] ?? 'open'}）', _compact(h)),
     ];
   }
 
   List<Widget> _summaryCards(Map<String, dynamic> json) {
     final rows = (json['rows'] as List<dynamic>? ?? const []);
-    return [
-      for (final r in rows)
-        _kvCard('第 ${r['chapter']} 章', _compact(r)),
-    ];
+    return [for (final r in rows) _kvCard('第 ${r['chapter']} 章', _compact(r))];
   }
 
   Widget _textCard(String text) {

@@ -58,10 +58,9 @@ class NovelService {
 
     // 初始化角色矩阵 TruthFile。
     final store = storeFor(bookId);
-    await store.write(
-      TruthFileKind.characterMatrix,
-      {'characters': [for (final c in result.characters) c.toJson()]},
-    );
+    await store.write(TruthFileKind.characterMatrix, {
+      'characters': [for (final c in result.characters) c.toJson()],
+    });
 
     return result;
   }
@@ -190,10 +189,7 @@ class NovelService {
       ..writeln('【现有状态（7 类 JSON）】${jsonEncode(texts)}')
       ..writeln('请输出固化 delta JSON。');
 
-    final delta = await agents.settle(
-      prompt: prompt.toString(),
-      llm: llm,
-    );
+    final delta = await agents.settle(prompt: prompt.toString(), llm: llm);
     await store.applyDelta(delta, chapter.seq);
   }
 

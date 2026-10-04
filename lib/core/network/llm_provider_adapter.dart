@@ -85,10 +85,7 @@ class LlmProviderAdapter {
       endpoint(baseUrl),
       data: _buildBody(
         model,
-        const [(
-          role: ChatRole.user,
-          content: '请仅回复"ok"两个字。',
-        )],
+        const [(role: ChatRole.user, content: '请仅回复"ok"两个字。')],
         0,
         stream: false,
       ),
@@ -105,8 +102,7 @@ class LlmProviderAdapter {
     return {
       'model': model,
       'messages': [
-        for (final m in messages)
-          {'role': m.role.name, 'content': m.content},
+        for (final m in messages) {'role': m.role.name, 'content': m.content},
       ],
       'temperature': temperature,
       'stream': stream,
@@ -121,7 +117,9 @@ class LlmProviderAdapter {
       },
       responseType: stream ? ResponseType.stream : ResponseType.json,
       sendTimeout: const Duration(seconds: 30),
-      receiveTimeout: stream ? const Duration(minutes: 5) : const Duration(minutes: 2),
+      receiveTimeout: stream
+          ? const Duration(minutes: 5)
+          : const Duration(minutes: 2),
     );
   }
 

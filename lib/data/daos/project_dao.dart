@@ -12,16 +12,16 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
 
   /// 按更新时间倒序列出全部项目。
   Future<List<Project>> listAll() {
-    return (select(projects)
-          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
-        .get();
+    return (select(
+      projects,
+    )..orderBy([(t) => OrderingTerm.desc(t.updatedAt)])).get();
   }
 
   /// 监听项目列表变化（更新时间倒序）。
   Stream<List<Project>> watchAll() {
-    return (select(projects)
-          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
-        .watch();
+    return (select(
+      projects,
+    )..orderBy([(t) => OrderingTerm.desc(t.updatedAt)])).watch();
   }
 
   Future<Project?> findById(int id) {

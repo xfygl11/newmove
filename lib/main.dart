@@ -5,11 +5,7 @@ import 'app.dart';
 import 'core/settings/app_settings.dart';
 
 void main() {
-  runApp(
-    ProviderScope(
-      child: _AppBootstrap(child: const NewmoveApp()),
-    ),
-  );
+  runApp(ProviderScope(child: _AppBootstrap(child: const NewmoveApp())));
 }
 
 /// 启动时初始化通用设置（shared_preferences 异步读取后注入 store）。

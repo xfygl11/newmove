@@ -12,36 +12,32 @@ final shotAgentsProvider = Provider<ShotAgents>(
   (ref) => ShotAgents(adapter: ref.watch(llmProviderAdapterProvider)),
 );
 
-final shotServiceProvider = Provider<ShotService>(
-  (ref) {
-    final service = ShotService(
-      scriptDao: ref.watch(scriptDaoProvider),
-      sceneDao: ref.watch(sceneDaoProvider),
-      beatDao: ref.watch(beatDaoProvider),
-      shotDao: ref.watch(shotDaoProvider),
-      shotFrameDao: ref.watch(shotFrameDaoProvider),
-      assetRefDao: ref.watch(assetRefDaoProvider),
-      assetDao: ref.watch(assetDaoProvider),
-      agents: ref.watch(shotAgentsProvider),
-      imageAdapter: ref.watch(imageProviderAdapterProvider),
-      fileStore: ref.watch(shotFileStoreProvider),
-      videoAdapter: ref.watch(videoProviderAdapterProvider),
-      videoFileStore: ref.watch(videoFileStoreProvider),
-      videoTaskDao: ref.watch(videoTaskDaoProvider),
-      providerDao: ref.watch(providerDaoProvider),
-    );
-    // 轮询恢复时从安全存储读 Key。
-    final keyStore = ref.watch(secureKeyStoreProvider);
-    service.readProviderKey = keyStore.readKey;
-    return service;
-  },
-);
+final shotServiceProvider = Provider<ShotService>((ref) {
+  final service = ShotService(
+    scriptDao: ref.watch(scriptDaoProvider),
+    sceneDao: ref.watch(sceneDaoProvider),
+    beatDao: ref.watch(beatDaoProvider),
+    shotDao: ref.watch(shotDaoProvider),
+    shotFrameDao: ref.watch(shotFrameDaoProvider),
+    assetRefDao: ref.watch(assetRefDaoProvider),
+    assetDao: ref.watch(assetDaoProvider),
+    agents: ref.watch(shotAgentsProvider),
+    imageAdapter: ref.watch(imageProviderAdapterProvider),
+    fileStore: ref.watch(shotFileStoreProvider),
+    videoAdapter: ref.watch(videoProviderAdapterProvider),
+    videoFileStore: ref.watch(videoFileStoreProvider),
+    videoTaskDao: ref.watch(videoTaskDaoProvider),
+    providerDao: ref.watch(providerDaoProvider),
+  );
+  // 轮询恢复时从安全存储读 Key。
+  final keyStore = ref.watch(secureKeyStoreProvider);
+  service.readProviderKey = keyStore.readKey;
+  return service;
+});
 
 /// 成片合成服务（M8：FFmpeg 拼接，借鉴 Toonflow）。
 final shotComposeServiceProvider = Provider<ShotComposeService>(
-  (ref) => ShotComposeService(
-    appDatabase: ref.watch(databaseProvider),
-  ),
+  (ref) => ShotComposeService(appDatabase: ref.watch(databaseProvider)),
 );
 
 /// 某剧本的镜头列表（G 序号升序）。
@@ -67,9 +63,9 @@ final shotRefsProvider = StreamProvider.family<List<AssetRef>, int>(
 /// 某剧本的 A7 段间衔接校验结果。
 final shotTransitionIssuesProvider =
     FutureProvider.family<List<ShotTransitionIssue>, int>(
-  (ref, scriptId) =>
-      ref.watch(shotServiceProvider).listTransitionIssues(scriptId),
-);
+      (ref, scriptId) =>
+          ref.watch(shotServiceProvider).listTransitionIssues(scriptId),
+    );
 
 /// 某镜头的视频任务列表（最新在前）。
 final videoTasksByShotProvider = StreamProvider.family<List<VideoTask>, int>(

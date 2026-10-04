@@ -60,9 +60,8 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
         error: (e, _) => Center(child: Text('加载失败：$e')),
         data: (asset) {
           if (asset == null) return const Center(child: Text('资产不存在'));
-          final variants = allAssets.value
-                  ?.where((a) => a.variantOf == asset.id)
-                  .toList() ??
+          final variants =
+              allAssets.value?.where((a) => a.variantOf == asset.id).toList() ??
               const <Asset>[];
           return _DetailBody(
             asset: asset,
@@ -80,10 +79,9 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
     if (image == null) return;
     setState(() => _working = true);
     try {
-      await ref.read(assetServiceProvider).regenerate(
-            assetId: widget.assetId,
-            image: image,
-          );
+      await ref
+          .read(assetServiceProvider)
+          .regenerate(assetId: widget.assetId, image: image);
     } catch (e) {
       _showMessage('重新生成失败：$e');
     } finally {
@@ -104,10 +102,9 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
     if (image == null) return;
     setState(() => _working = true);
     try {
-      await ref.read(assetServiceProvider).createVariant(
-            assetId: widget.assetId,
-            image: image,
-          );
+      await ref
+          .read(assetServiceProvider)
+          .createVariant(assetId: widget.assetId, image: image);
       _showMessage('变体已生成，待验收');
     } catch (e) {
       _showMessage('生成变体失败：$e');
@@ -127,9 +124,7 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
 
   void _showMessage(String text) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(text)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 }
 
@@ -163,8 +158,12 @@ class _DetailBody extends StatelessWidget {
                     child: Image.file(File(path), fit: BoxFit.contain),
                   )
                 : Container(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    child: const Center(child: Icon(Icons.image_outlined, size: 64)),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest,
+                    child: const Center(
+                      child: Icon(Icons.image_outlined, size: 64),
+                    ),
                   ),
           ),
         ),
@@ -177,15 +176,19 @@ class _DetailBody extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(asset.name, style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      asset.name,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                     const Spacer(),
                     _StatusBadge(status: asset.status),
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text('${asset.type} · ${asset.boardLayout} · ${asset.stableId}'),
-                if (asset.variantOf != null)
-                  Text('变体父资产 #${asset.variantOf}'),
+                Text(
+                  '${asset.type} · ${asset.boardLayout} · ${asset.stableId}',
+                ),
+                if (asset.variantOf != null) Text('变体父资产 #${asset.variantOf}'),
                 const Divider(height: 24),
                 Text('外观锚点', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 4),
@@ -211,7 +214,8 @@ class _DetailBody extends StatelessWidget {
               itemBuilder: (context, index) {
                 final v = variants[index];
                 final vPath = v.imagePath;
-                final vHas = vPath != null &&
+                final vHas =
+                    vPath != null &&
                     vPath.isNotEmpty &&
                     File(vPath).existsSync();
                 return Card(

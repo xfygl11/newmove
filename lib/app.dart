@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import 'features/asset/asset_detail_page.dart';
 import 'features/asset/asset_gallery_page.dart';
+import 'features/novel/character_manager_page.dart';
+import 'features/novel/outline_editor_page.dart';
 import 'features/novel/chapter_editor_page.dart';
 import 'features/novel/novel_shelf_page.dart';
 import 'features/novel/setting_workshop_page.dart';
@@ -26,9 +28,7 @@ final GoRouter appRouter = GoRouter(
           AppShell(navigationShell: navigationShell),
       branches: [
         StatefulShellBranch(
-          routes: [
-            GoRoute(path: '/', builder: (_, _) => const ProjectPage()),
-          ],
+          routes: [GoRoute(path: '/', builder: (_, _) => const ProjectPage())],
         ),
         StatefulShellBranch(
           routes: [
@@ -64,12 +64,23 @@ final GoRouter appRouter = GoRouter(
         projectId: int.parse(state.pathParameters['projectId']!),
       ),
     ),
+    GoRoute(
+      path: '/novel/:projectId/outline',
+      builder: (_, state) => OutlineEditorPage(
+        projectId: int.parse(state.pathParameters['projectId']!),
+      ),
+    ),
+    GoRoute(
+      path: '/novel/:projectId/characters',
+      builder: (_, state) => CharacterManagerPage(
+        projectId: int.parse(state.pathParameters['projectId']!),
+      ),
+    ),
     // 剧本模块：小说改编为分场剧本（对齐 docs/05 4.4 流程即导航）。
     GoRoute(
       path: '/script/:projectId',
-      builder: (_, state) => ScriptPage(
-        projectId: int.parse(state.pathParameters['projectId']!),
-      ),
+      builder: (_, state) =>
+          ScriptPage(projectId: int.parse(state.pathParameters['projectId']!)),
     ),
     GoRoute(
       path: '/script/:projectId/script/:scriptId',

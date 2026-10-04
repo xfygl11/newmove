@@ -44,8 +44,9 @@ class VideoTaskDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<VideoTask?> find(int id) {
-    return (select(videoTasks)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (select(
+      videoTasks,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<int> insert(VideoTasksCompanion entry) {

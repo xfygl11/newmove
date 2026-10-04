@@ -87,10 +87,7 @@ class ShotFrameDraft {
 
 /// ShotDirector 输出的一条参考绑定草案。
 class ShotRefDraft {
-  const ShotRefDraft({
-    required this.role,
-    required this.stableId,
-  });
+  const ShotRefDraft({required this.role, required this.stableId});
 
   /// 角色参考 / 场景参考 / 道具参考 / 仅站位。
   final String role;

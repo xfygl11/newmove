@@ -40,7 +40,10 @@ class ScriptService {
     required String fidelityMode,
   }) async {
     final book = await novelDao.findBook(bookId);
-    final texts = await TruthFileStore(dao: truthDao, bookId: bookId).readAllText();
+    final texts = await TruthFileStore(
+      dao: truthDao,
+      bookId: bookId,
+    ).readAllText();
 
     final buf = StringBuffer();
     buf.writeln('【作品命题】${book?.premise ?? ''}');

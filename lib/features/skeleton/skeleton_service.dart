@@ -41,9 +41,11 @@ class SkeletonService {
     buf.writeln('【剧本标题】${script.title}');
     buf.writeln('【目标模型单段上限】${durationCapMs}ms');
     buf.writeln('【定稿剧本（分场 JSON）】');
-    buf.writeln(jsonEncode({
-      'scenes': [for (final s in scenes) _sceneToJson(s)],
-    }));
+    buf.writeln(
+      jsonEncode({
+        'scenes': [for (final s in scenes) _sceneToJson(s)],
+      }),
+    );
     buf.writeln('请按规则提取骨架 JSON。');
     return buf.toString();
   }
@@ -62,9 +64,7 @@ class SkeletonService {
     );
     final result = await agents.extract(prompt: prompt, llm: llm);
 
-    final sceneIdBySeq = <int, int>{
-      for (final s in scenes) s.seq: s.id,
-    };
+    final sceneIdBySeq = <int, int>{for (final s in scenes) s.seq: s.id};
 
     await beatDao.deleteByScript(script.id);
     await shotDao.deleteByScript(script.id);
@@ -98,7 +98,9 @@ class SkeletonService {
           globalSeq: seg.id,
           batch: Value(seg.batch),
           durationMs: Value(seg.durationMs),
-          globalTimeRange: seg.globalTimeRange.isEmpty ? '-' : seg.globalTimeRange,
+          globalTimeRange: seg.globalTimeRange.isEmpty
+              ? '-'
+              : seg.globalTimeRange,
           beatRefs: Value(jsonEncode(seg.beatRefs)),
           assetStates: Value(jsonEncode(seg.assets.toJson())),
         ),

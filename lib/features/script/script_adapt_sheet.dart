@@ -40,7 +40,9 @@ class _AdaptSheetState extends ConsumerState<AdaptSheet> {
       return;
     }
 
-    final chapters = await ref.read(novelDaoProvider).listChapters(widget.book.id);
+    final chapters = await ref
+        .read(novelDaoProvider)
+        .listChapters(widget.book.id);
     final sourceTexts = [
       for (final c in chapters)
         if (_selectedChapterIds.contains(c.id)) c.content ?? '',
@@ -52,7 +54,9 @@ class _AdaptSheetState extends ConsumerState<AdaptSheet> {
 
     setState(() => _busy = true);
     try {
-      await ref.read(scriptServiceProvider).adaptChapters(
+      await ref
+          .read(scriptServiceProvider)
+          .adaptChapters(
             bookId: widget.book.id,
             existing: widget.existing,
             title: widget.existing?.title ?? widget.book.title,
@@ -69,9 +73,7 @@ class _AdaptSheetState extends ConsumerState<AdaptSheet> {
   }
 
   void _toast(String text) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(text)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   @override

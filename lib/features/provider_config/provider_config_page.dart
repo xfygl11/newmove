@@ -118,11 +118,8 @@ class _UpdateCheckTile extends ConsumerWidget {
       leading: const Icon(Icons.update),
       title: const Text('检查更新'),
       subtitle: state.when(
-        data: (u) => Text(
-          u.hasUpdate
-              ? '发现新版本 ${u.latestVersion}，点击前往下载'
-              : '已是最新版本',
-        ),
+        data: (u) =>
+            Text(u.hasUpdate ? '发现新版本 ${u.latestVersion}，点击前往下载' : '已是最新版本'),
         loading: () => const Text('检查中…'),
         error: (e, _) => Text('检查失败：$e'),
       ),
@@ -148,8 +145,8 @@ class _UpdateCheckTile extends ConsumerWidget {
 
 final updateCheckProvider =
     AsyncNotifierProvider<UpdateCheckNotifier, UpdateCheck>(
-  UpdateCheckNotifier.new,
-);
+      UpdateCheckNotifier.new,
+    );
 
 class UpdateCheckNotifier extends AsyncNotifier<UpdateCheck> {
   @override
@@ -196,9 +193,8 @@ class _BackupSection extends ConsumerWidget {
     final projects = await ref.read(projectDaoProvider).listAll();
     if (!context.mounted) return;
     if (projects.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('暂无项目可导出')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('暂无项目可导出')));
       return;
     }
     final Project? target = projects.length == 1
@@ -219,8 +215,9 @@ class _BackupSection extends ConsumerWidget {
     if (target == null || !context.mounted) return;
 
     try {
-      final path =
-          await ref.read(backupServiceProvider).exportProject(target.id);
+      final path = await ref
+          .read(backupServiceProvider)
+          .exportProject(target.id);
       if (!context.mounted) return;
       // 导出后仅提示路径（无分享目标时也能拿到文件）。
       ScaffoldMessenger.of(context).showSnackBar(
@@ -231,9 +228,8 @@ class _BackupSection extends ConsumerWidget {
       );
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('导出失败：$e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('导出失败：$e')));
       }
     }
   }
@@ -250,14 +246,12 @@ class _BackupSection extends ConsumerWidget {
           .importProject(picked.single.path!);
       ref.invalidate(projectListProvider);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('导入成功，已创建新项目（id $newId）')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('导入成功，已创建新项目（id $newId）')));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('导入失败：$e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('导入失败：$e')));
       }
     }
   }
@@ -282,15 +276,13 @@ class _GroupSection extends StatelessWidget {
               Text(group.label, style: Theme.of(context).textTheme.titleMedium),
               IconButton(
                 tooltip: '添加${group.label}供应商',
-                onPressed: () =>
-                    showProviderEditSheet(context, group: group),
+                onPressed: () => showProviderEditSheet(context, group: group),
                 icon: const Icon(Icons.add),
               ),
             ],
           ),
         ),
-        for (final p in providers)
-          _ProviderCard(provider: p),
+        for (final p in providers) _ProviderCard(provider: p),
         if (providers.isEmpty)
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 0, 16, 8),

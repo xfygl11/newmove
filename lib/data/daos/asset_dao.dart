@@ -38,10 +38,9 @@ class AssetDao extends DatabaseAccessor<AppDatabase> with _$AssetDaoMixin {
   }
 
   Future<List<Asset>> listByStableId(int scriptId, String stableId) {
-    return (select(assets)
-          ..where(
-            (t) => t.scriptId.equals(scriptId) & t.stableId.equals(stableId),
-          ))
+    return (select(assets)..where(
+          (t) => t.scriptId.equals(scriptId) & t.stableId.equals(stableId),
+        ))
         .get();
   }
 

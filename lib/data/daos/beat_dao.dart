@@ -12,24 +12,24 @@ class BeatDao extends DatabaseAccessor<AppDatabase> with _$BeatDaoMixin {
 
   /// 按剧本列出节拍（场次序 + 节拍序升序）。
   Future<List<Beat>> listByScript(int scriptId) async {
-    final query = select(beats).join([
-      innerJoin(scenes, scenes.id.equalsExp(beats.sceneId)),
-    ])
-      ..where(scenes.scriptId.equals(scriptId))
-      ..orderBy([OrderingTerm.asc(beats.seq)]);
+    final query =
+        select(beats)
+            .join([innerJoin(scenes, scenes.id.equalsExp(beats.sceneId))])
+          ..where(scenes.scriptId.equals(scriptId))
+          ..orderBy([OrderingTerm.asc(beats.seq)]);
     final rows = await query.get();
     return [for (final r in rows) r.readTable(beats)];
   }
 
   Stream<List<Beat>> watchByScript(int scriptId) {
-    final query = select(beats).join([
-      innerJoin(scenes, scenes.id.equalsExp(beats.sceneId)),
-    ])
-      ..where(scenes.scriptId.equals(scriptId))
-      ..orderBy([OrderingTerm.asc(beats.seq)]);
+    final query =
+        select(beats)
+            .join([innerJoin(scenes, scenes.id.equalsExp(beats.sceneId))])
+          ..where(scenes.scriptId.equals(scriptId))
+          ..orderBy([OrderingTerm.asc(beats.seq)]);
     return query.watch().map(
-          (rows) => [for (final r in rows) r.readTable(beats)],
-        );
+      (rows) => [for (final r in rows) r.readTable(beats)],
+    );
   }
 
   Future<List<Beat>> listByScene(int sceneId) {

@@ -157,7 +157,8 @@ class VideoProviderAdapter {
         'role': 'reference_image',
         'type': 'image_url',
         'image_url': {
-          'url': 'data:image/png;base64,${base64Encode(await File(p).readAsBytes())}',
+          'url':
+              'data:image/png;base64,${base64Encode(await File(p).readAsBytes())}',
         },
       });
     }
@@ -199,9 +200,12 @@ class VideoProviderAdapter {
 
     final map = response.data ?? const {};
     final data = map['data'];
-    final dataMap = data is Map<String, dynamic> ? data : const <String, dynamic>{};
-    final rawStatus =
-        (map['status'] ?? dataMap['status'] ?? 'running').toString().toLowerCase();
+    final dataMap = data is Map<String, dynamic>
+        ? data
+        : const <String, dynamic>{};
+    final rawStatus = (map['status'] ?? dataMap['status'] ?? 'running')
+        .toString()
+        .toLowerCase();
 
     if (rawStatus == 'success' || rawStatus == 'completed') {
       final result = dataMap['data'];
@@ -265,8 +269,9 @@ class VideoProviderAdapter {
       );
     }
 
-    final mode =
-        (images.isNotEmpty || firstFramePath != null) ? 'keyframe' : 'text';
+    final mode = (images.isNotEmpty || firstFramePath != null)
+        ? 'keyframe'
+        : 'text';
 
     final body = <String, dynamic>{
       'model': model,
@@ -289,8 +294,9 @@ class VideoProviderAdapter {
     // Agnes 返回顶层 video_id（兼容 task_id / id）。
     final videoId = map['video_id'] ?? map['task_id'] ?? map['id'];
     if (videoId == null || videoId.toString().isEmpty) {
-      throw StateError('Agnes 视频供应商未返回任务 ID: ${map.toString()}'
-          .substring(0, 200));
+      throw StateError(
+        'Agnes 视频供应商未返回任务 ID: ${map.toString()}'.substring(0, 200),
+      );
     }
     return videoId.toString();
   }

@@ -9,8 +9,9 @@ final providerConfigListProvider = StreamProvider<List<ProviderConfig>>(
 );
 
 /// 读取指定供应商的 API Key（来自安全存储）。
-final providerApiKeyProvider = FutureProvider.family<String?, String>(
-  (ref, providerId) async {
-    return ref.watch(secureKeyStoreProvider).readKey(providerId);
-  },
-);
+final providerApiKeyProvider = FutureProvider.family<String?, String>((
+  ref,
+  providerId,
+) async {
+  return ref.watch(secureKeyStoreProvider).readKey(providerId);
+});

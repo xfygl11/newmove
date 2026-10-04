@@ -111,8 +111,10 @@ class _ShotDetailPageState extends ConsumerState<ShotDetailPage>
                       onSave: () => _savePrompt(shot),
                     ),
                     const SizedBox(height: 16),
-                    Text('参考绑定（${refs.length}）',
-                        style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      '参考绑定（${refs.length}）',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 8),
                     if (refs.isEmpty)
                       Text(
@@ -127,10 +129,13 @@ class _ShotDetailPageState extends ConsumerState<ShotDetailPage>
                           role: refs[i].role,
                         ),
                     const SizedBox(height: 16),
-                    Text('分镜帧（${framesAsync.value?.length ?? 0}）',
-                        style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      '分镜帧（${framesAsync.value?.length ?? 0}）',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 8),
-                    for (final frame in framesAsync.value ?? const <ShotFrame>[])
+                    for (final frame
+                        in framesAsync.value ?? const <ShotFrame>[])
                       _FrameTile(frame: frame),
                   ],
                 ),
@@ -174,24 +179,23 @@ class _ShotDetailPageState extends ConsumerState<ShotDetailPage>
                         ] else
                           Expanded(
                             child: FilledButton.icon(
-                              onPressed:
-                                  _generating ? null : () => _generate(shot),
+                              onPressed: _generating
+                                  ? null
+                                  : () => _generate(shot),
                               icon: _generating
                                   ? const SizedBox(
                                       width: 16,
                                       height: 16,
                                       child: CircularProgressIndicator(
-                                          strokeWidth: 2),
+                                        strokeWidth: 2,
+                                      ),
                                     )
                                   : const Icon(Icons.image_outlined),
-                              label: Text(
-                                switch (shot.status) {
-                                  ShotStatuses.awaitingPrompt =>
-                                    '先生成分镜提示词',
-                                  ShotStatuses.generating => '生成中…',
-                                  _ => '生成分镜图',
-                                },
-                              ),
+                              label: Text(switch (shot.status) {
+                                ShotStatuses.awaitingPrompt => '先生成分镜提示词',
+                                ShotStatuses.generating => '生成中…',
+                                _ => '生成分镜图',
+                              }),
                             ),
                           ),
                       ],
@@ -209,39 +213,34 @@ class _ShotDetailPageState extends ConsumerState<ShotDetailPage>
 
   /// 保存用户编辑后的提示词。
   Future<void> _savePrompt(Shot shot) async {
-    await ref.read(shotServiceProvider).updatePrompt(
-          shotId: shot.id,
-          prompt: _promptCtrl.text.trim(),
-        );
+    await ref
+        .read(shotServiceProvider)
+        .updatePrompt(shotId: shot.id, prompt: _promptCtrl.text.trim());
     if (!mounted) return;
     setState(() => _editing = false);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('提示词已保存')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('提示词已保存')));
   }
 
   /// 确认分镜图（待验收 → 分镜图已确认）。
   Future<void> _confirm(int shotId) async {
     await ref.read(shotServiceProvider).confirmShot(shotId);
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('分镜图已确认')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('分镜图已确认')));
   }
 
   Future<void> _generate(Shot shot) async {
     if (shot.status == ShotStatuses.awaitingPrompt) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先在列表页生成分镜提示词')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('请先在列表页生成分镜提示词')));
       return;
     }
     final image = await ref.read(activeImageProvider.future);
     if (!mounted) return;
     if (image == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先在「设置」配置可用的图片供应商')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('请先在「设置」配置可用的图片供应商')));
       return;
     }
     // 「生成前确认」开关关闭时直接提交（设置页 T9.3）。
@@ -275,9 +274,8 @@ class _ShotDetailPageState extends ConsumerState<ShotDetailPage>
           .generate(shotId: shot.id, image: image);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('生成失败：$e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('生成失败：$e')));
       }
     } finally {
       if (mounted) setState(() => _generating = false);
@@ -312,9 +310,9 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
   (ProviderModel?, VideoGenParams) _effective(ActiveVideo? video) {
     final models = video == null
         ? const <ProviderModel>[]
-        : ProviderModelCodec.decode(
-            video.provider.models,
-          ).where((m) => m.enabled).toList();
+        : ProviderModelCodec.decode(video.provider.models)
+              .where((m) => m.enabled)
+              .toList();
     final selectedId = _modelId ?? video?.modelId;
     final model = models.isEmpty
         ? null
@@ -399,7 +397,8 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
           submitting: _submitting,
           onSubmit: () => _submit(),
           onRetry: activeTask == null ? null : () => _retry(activeTask.id),
-          onCancel: (activeTask != null &&
+          onCancel:
+              (activeTask != null &&
                   (activeTask.status == '排队' || activeTask.status == '生成中'))
               ? () => _cancel(activeTask.id)
               : null,
@@ -416,8 +415,10 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
         const SizedBox(height: 16),
 
         // ---- 任务历史 ----
-        Text('任务记录（${tasks.length}）',
-            style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          '任务记录（${tasks.length}）',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 8),
         if (tasks.isEmpty)
           Text('暂无视频任务', style: Theme.of(context).textTheme.bodySmall)
@@ -467,20 +468,16 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
 
     setState(() => _submitting = true);
     try {
-      await ref.read(shotServiceProvider).submitVideo(
-            shotId: widget.shot.id,
-            video: video,
-            params: params,
-          );
+      await ref
+          .read(shotServiceProvider)
+          .submitVideo(shotId: widget.shot.id, video: video, params: params);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('视频任务已提交，可在任务中心查看进度')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('视频任务已提交，可在任务中心查看进度')));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('提交失败：$e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('提交失败：$e')));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -492,9 +489,8 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
     final video = await ref.read(activeVideoProvider.future);
     if (!mounted) return;
     if (video == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先在「设置」配置可用的视频供应商')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('请先在「设置」配置可用的视频供应商')));
       return;
     }
     setState(() => _submitting = true);
@@ -503,14 +499,12 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
           .read(shotServiceProvider)
           .retryVideo(videoTaskId: videoTaskId, video: video);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已重新提交视频任务')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('已重新提交视频任务')));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('重试失败：$e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('重试失败：$e')));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -523,14 +517,12 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
     try {
       await ref.read(shotServiceProvider).cancelVideoTask(videoTaskId);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已取消视频生成')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('已取消视频生成')));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('取消失败：$e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('取消失败：$e')));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -540,19 +532,16 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
   /// 切换镜头采用的视频版本（历史成功任务）。
   Future<void> _selectVersion(String path) async {
     try {
-      await ref.read(shotServiceProvider).selectVideoVersion(
-            shotId: widget.shot.id,
-            outputPath: path,
-          );
+      await ref
+          .read(shotServiceProvider)
+          .selectVideoVersion(shotId: widget.shot.id, outputPath: path);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已切换视频版本')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('已切换视频版本')));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('切换失败：$e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('切换失败：$e')));
       }
     }
   }
@@ -564,19 +553,16 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
     final path = result.single.path;
     if (path == null) return;
     try {
-      await ref.read(shotServiceProvider).replaceVideo(
-            shotId: widget.shot.id,
-            sourcePath: path,
-          );
+      await ref
+          .read(shotServiceProvider)
+          .replaceVideo(shotId: widget.shot.id, sourcePath: path);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已替换视频')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('已替换视频')));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('替换失败：$e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('替换失败：$e')));
       }
     }
   }
@@ -620,26 +606,30 @@ class _ParamCard extends StatelessWidget {
 
   /// 可选分辨率：优先模型能力（按时长），否则回退通用词表。
   List<String> _resolutionOptions() {
-    final fromCap = selectedModel?.resolutionsFor(durationSec.round()) ?? const [];
+    final fromCap =
+        selectedModel?.resolutionsFor(durationSec.round()) ?? const [];
     return fromCap.isNotEmpty ? fromCap : _fallbackResolutions;
   }
 
   /// 可选时长（模型能力，升序）；无能力时回退 4-15 连续区间。
-  List<int> get _durationOptions => selectedModel?.supportedDurations ?? const [];
+  List<int> get _durationOptions =>
+      selectedModel?.supportedDurations ?? const [];
 
   @override
   Widget build(BuildContext context) {
     final models = video == null
         ? const <ProviderModel>[]
-        : ProviderModelCodec.decode(
-            video!.provider.models,
-          ).where((m) => m.enabled).toList();
+        : ProviderModelCodec.decode(video!.provider.models)
+              .where((m) => m.enabled)
+              .toList();
     final resolutions = _resolutionOptions();
     final durations = _durationOptions;
-    final effectiveResolution =
-        resolutions.contains(resolution) ? resolution : resolutions.first;
-    final effectiveDuration =
-        durations.isEmpty ? durationSec.round() : durationSec.round();
+    final effectiveResolution = resolutions.contains(resolution)
+        ? resolution
+        : resolutions.first;
+    final effectiveDuration = durations.isEmpty
+        ? durationSec.round()
+        : durationSec.round();
 
     return Card(
       child: Padding(
@@ -708,8 +698,10 @@ class _ParamCard extends StatelessWidget {
               else
                 Row(
                   children: [
-                    Text('时长 $effectiveDuration s',
-                        style: Theme.of(context).textTheme.bodySmall),
+                    Text(
+                      '时长 $effectiveDuration s',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                     Expanded(
                       child: Slider(
                         min: 4,
@@ -734,7 +726,8 @@ class _ParamCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 value: generateAudio,
-                onChanged: (selectedModel?.audioRequired == true ||
+                onChanged:
+                    (selectedModel?.audioRequired == true ||
                         selectedModel?.audioDisabled == true)
                     ? null
                     : onAudioChanged,
@@ -790,8 +783,10 @@ class _DurationSlider extends StatelessWidget {
     }
     return Row(
       children: [
-        Text('时长 ${options[index]}s',
-            style: Theme.of(context).textTheme.bodySmall),
+        Text(
+          '时长 ${options[index]}s',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
         Expanded(
           child: Slider(
             min: 0,
@@ -900,8 +895,10 @@ class _HistoryVersions extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('视频版本（${versions.length}）',
-                    style: Theme.of(context).textTheme.titleSmall),
+                Text(
+                  '视频版本（${versions.length}）',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
                 TextButton.icon(
                   onPressed: onImport,
                   icon: const Icon(Icons.folder_open, size: 18),
@@ -910,8 +907,10 @@ class _HistoryVersions extends StatelessWidget {
               ],
             ),
             if (versions.isEmpty)
-              Text('暂无成功版本，可生成视频或从本地替换',
-                  style: Theme.of(context).textTheme.bodySmall)
+              Text(
+                '暂无成功版本，可生成视频或从本地替换',
+                style: Theme.of(context).textTheme.bodySmall,
+              )
             else
               for (final t in versions)
                 ListTile(
@@ -924,7 +923,8 @@ class _HistoryVersions extends StatelessWidget {
                     size: 20,
                   ),
                   title: Text(
-                    '版本 ${t.id} · ${DateTime.fromMillisecondsSinceEpoch((t.createdAt.millisecondsSinceEpoch ~/ 1000) * 1000).toLocal()}'),
+                    '版本 ${t.id} · ${DateTime.fromMillisecondsSinceEpoch((t.createdAt.millisecondsSinceEpoch ~/ 1000) * 1000).toLocal()}',
+                  ),
                   subtitle: currentPath == t.outputPath
                       ? const Text('当前采用')
                       : null,
@@ -978,10 +978,8 @@ class _VideoPreviewState extends ConsumerState<_VideoPreview> {
   Widget build(BuildContext context) {
     final path = widget.shot.outputPath;
     final isVideo = widget.shot.outputType == 'video';
-    final hasVideo = isVideo &&
-        path != null &&
-        path.isNotEmpty &&
-        File(path).existsSync();
+    final hasVideo =
+        isVideo && path != null && path.isNotEmpty && File(path).existsSync();
 
     // 有产物则初始化播放器。
     if (hasVideo) {
@@ -1014,7 +1012,8 @@ class _VideoPreviewState extends ConsumerState<_VideoPreview> {
 
     // 占位：显示分镜图或状态。
     final imagePath = widget.shot.outputPath;
-    final hasImage = !isVideo &&
+    final hasImage =
+        !isVideo &&
         imagePath != null &&
         imagePath.isNotEmpty &&
         File(imagePath).existsSync();
@@ -1070,7 +1069,11 @@ class _PlayButton extends StatelessWidget {
                   ctrl.play();
                 }
               },
-              icon: Icon(playing ? Icons.pause_circle_outline : Icons.play_circle_outline),
+              icon: Icon(
+                playing
+                    ? Icons.pause_circle_outline
+                    : Icons.play_circle_outline,
+              ),
             ),
           ),
         );
@@ -1097,7 +1100,9 @@ class _TaskTile extends StatelessWidget {
           '失败' => Icons.error_outline,
           _ => Icons.hourglass_top,
         }),
-        title: Text('${params.durationSec}s · ${params.ratio} · ${params.resolution}'),
+        title: Text(
+          '${params.durationSec}s · ${params.ratio} · ${params.resolution}',
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1107,9 +1112,7 @@ class _TaskTile extends StatelessWidget {
                 task.error!,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
           ],
         ),
@@ -1127,7 +1130,8 @@ class _Preview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final path = shot.outputPath;
-    final hasImage = path != null &&
+    final hasImage =
+        path != null &&
         path.isNotEmpty &&
         shot.outputType == 'image' &&
         File(path).existsSync();
@@ -1146,7 +1150,10 @@ class _Preview extends StatelessWidget {
                   children: [
                     const Icon(Icons.image_outlined, size: 40),
                     const SizedBox(height: 8),
-                    Text(shot.status, style: Theme.of(context).textTheme.bodySmall),
+                    Text(
+                      shot.status,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ),
@@ -1202,10 +1209,7 @@ class _PromptSection extends StatelessWidget {
                 ),
               )
             else if (shot.prompt.isEmpty)
-              Text(
-                '尚未生成提示词',
-                style: Theme.of(context).textTheme.bodySmall,
-              )
+              Text('尚未生成提示词', style: Theme.of(context).textTheme.bodySmall)
             else
               SelectableText(shot.prompt),
           ],
@@ -1236,9 +1240,7 @@ class _RefTile extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
         backgroundImage: hasImage ? FileImage(File(path)) : null,
-        child: hasImage
-            ? null
-            : const Icon(Icons.image_outlined, size: 18),
+        child: hasImage ? null : const Icon(Icons.image_outlined, size: 18),
       ),
       title: Text('{{ref$order}} ${asset?.name ?? '未知资产'}'),
       subtitle: Text(role),
@@ -1263,11 +1265,15 @@ class _FrameTile extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text('帧 ${frame.seq} · ${frame.timeRange}',
-                    style: Theme.of(context).textTheme.titleSmall),
+                Text(
+                  '帧 ${frame.seq} · ${frame.timeRange}',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
                 const Spacer(),
-                Text('${frame.shotSize} · ${frame.angle}',
-                    style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  '${frame.shotSize} · ${frame.angle}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
             if (frame.subject.isNotEmpty) ...[
@@ -1275,14 +1281,20 @@ class _FrameTile extends StatelessWidget {
               Text('主体：${frame.subject}'),
             ],
             if (frame.blocking.isNotEmpty)
-              Text('站位：${frame.blocking}',
-                  style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                '站位：${frame.blocking}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             if (frame.performance.isNotEmpty)
-              Text('表演：${frame.performance}',
-                  style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                '表演：${frame.performance}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             if (frame.dialogue != null && frame.dialogue!.isNotEmpty)
-              Text('台词：${frame.dialogue}',
-                  style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                '台词：${frame.dialogue}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
           ],
         ),
       ),

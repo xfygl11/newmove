@@ -75,7 +75,10 @@ class ImageProviderAdapter {
       'n': 1,
       'size': size,
       'response_format': 'b64_json',
-      'image': await MultipartFile.fromFile(referencePath, filename: 'reference.png'),
+      'image': await MultipartFile.fromFile(
+        referencePath,
+        filename: 'reference.png',
+      ),
     });
 
     final response = await _dio.post<Map<String, dynamic>>(
@@ -99,7 +102,11 @@ class ImageProviderAdapter {
     String size = '1024x1024',
   }) async {
     if (referencePaths.isEmpty) {
-      throw ArgumentError.value(referencePaths, 'referencePaths', '至少需要 1 张参考图');
+      throw ArgumentError.value(
+        referencePaths,
+        'referencePaths',
+        '至少需要 1 张参考图',
+      );
     }
     final paths = referencePaths.take(16).toList();
     final form = FormData.fromMap({
@@ -151,9 +158,7 @@ class ImageProviderAdapter {
 
   Options _options(String apiKey) {
     return Options(
-      headers: {
-        'Authorization': 'Bearer $apiKey',
-      },
+      headers: {'Authorization': 'Bearer $apiKey'},
       sendTimeout: const Duration(seconds: 60),
       receiveTimeout: const Duration(minutes: 5),
     );

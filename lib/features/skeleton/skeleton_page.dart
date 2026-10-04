@@ -56,10 +56,7 @@ class _SkeletonPageState extends ConsumerState<SkeletonPage> {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text(
-                  '剧本尚未定稿。定稿后才能提取骨架。',
-                  textAlign: TextAlign.center,
-                ),
+                child: Text('剧本尚未定稿。定稿后才能提取骨架。', textAlign: TextAlign.center),
               ),
             );
           }
@@ -79,7 +76,9 @@ class _SkeletonPageState extends ConsumerState<SkeletonPage> {
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: FilledButton.icon(
-                  onPressed: _busy ? null : () => _reExtract(scenesAsync.value ?? const []),
+                  onPressed: _busy
+                      ? null
+                      : () => _reExtract(scenesAsync.value ?? const []),
                   icon: _busy
                       ? const SizedBox(
                           width: 16,
@@ -98,8 +97,10 @@ class _SkeletonPageState extends ConsumerState<SkeletonPage> {
   Future<void> _reExtract(List<Scene> scenes) async {
     final script = ref.read(scriptProvider(widget.scriptId)).value;
     if (script == null) return;
-    final shots = ref.read(shotsByScriptProvider(widget.scriptId)).value ?? const [];
-    final beats = ref.read(beatsByScriptProvider(widget.scriptId)).value ?? const [];
+    final shots =
+        ref.read(shotsByScriptProvider(widget.scriptId)).value ?? const [];
+    final beats =
+        ref.read(beatsByScriptProvider(widget.scriptId)).value ?? const [];
 
     final ok = await showDialog<bool>(
       context: context,
@@ -131,11 +132,9 @@ class _SkeletonPageState extends ConsumerState<SkeletonPage> {
 
     setState(() => _busy = true);
     try {
-      final summary = await ref.read(skeletonServiceProvider).extract(
-            script: script,
-            scenes: scenes,
-            llm: llm,
-          );
+      final summary = await ref
+          .read(skeletonServiceProvider)
+          .extract(script: script, scenes: scenes, llm: llm);
       if (mounted) {
         _toast(
           '骨架已更新：${summary.segmentCount} 段 / '
@@ -218,7 +217,8 @@ class _SkeletonBody extends ConsumerWidget {
                 return const Center(child: Text('还没有骨架，点击下方「重新提取」生成'));
               }
 
-              final batches = <int>{for (final s in shots) s.batch}.toList()..sort();
+              final batches = <int>{for (final s in shots) s.batch}.toList()
+                ..sort();
               return Column(
                 children: [
                   SingleChildScrollView(
@@ -304,7 +304,10 @@ class _TimelineView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(s.globalSeq, style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      s.globalSeq,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 4),
                     Text(s.globalTimeRange),
                     Text('${s.durationMs ~/ 1000}s · Batch ${s.batch}'),
@@ -347,7 +350,10 @@ class _SegmentCard extends StatelessWidget {
         onExpansionChanged: (_) => onToggle(),
         title: Row(
           children: [
-            Text(shot.globalSeq, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              shot.globalSeq,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(width: 8),
             Text(
               '${shot.durationMs ~/ 1000}s',
@@ -377,8 +383,7 @@ class _SegmentCard extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    for (final ref in beatRefs)
-                      _beatChip(context, ref),
+                    for (final ref in beatRefs) _beatChip(context, ref),
                   ],
                 ),
                 if (beatRefs.isNotEmpty) const SizedBox(height: 8),

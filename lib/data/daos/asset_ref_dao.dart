@@ -7,7 +7,8 @@ part 'asset_ref_dao.g.dart';
 
 /// 镜头-资产引用（参考图绑定）数据访问对象。
 @DriftAccessor(tables: [AssetRefs])
-class AssetRefDao extends DatabaseAccessor<AppDatabase> with _$AssetRefDaoMixin {
+class AssetRefDao extends DatabaseAccessor<AppDatabase>
+    with _$AssetRefDaoMixin {
   AssetRefDao(super.db);
 
   Future<List<AssetRef>> listByShot(int shotId) {

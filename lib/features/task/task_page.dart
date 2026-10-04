@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../agent/active_video.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
@@ -22,7 +23,8 @@ class TaskPage extends ConsumerStatefulWidget {
   ConsumerState<TaskPage> createState() => _TaskPageState();
 }
 
-class _TaskPageState extends ConsumerState<TaskPage> with WidgetsBindingObserver {
+class _TaskPageState extends ConsumerState<TaskPage>
+    with WidgetsBindingObserver {
   Timer? _pollTimer;
   bool _polling = false;
 
@@ -62,6 +64,43 @@ class _TaskPageState extends ConsumerState<TaskPage> with WidgetsBindingObserver
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // 回前台立即补一轮轮询（后台期间错过的状态在此追回）。
     if (state == AppLifecycleState.resumed) {
+      _pollAllActive();
+    }
+  }
+
+  /// 批量重试所有失败的视频任务。
+  Future<void> _retryAllFailed(
+    BuildContext context,
+    WidgetRef ref,
+    List<VideoTask> tasks,
+  ) async {
+    final video = await ref.read(activeVideoProvider.future);
+    if (video == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('请先在「设置」配置可用的视频供应商')));
+      }
+      return;
+    }
+    final failed = [
+      for (final t in tasks)
+        if (t.status == '失败') t,
+    ];
+    var ok = 0;
+    var fail = 0;
+    for (final task in failed) {
+      try {
+        await ref
+            .read(shotServiceProvider)
+            .retryVideo(videoTaskId: task.id, video: video);
+        ok++;
+      } catch (_) {
+        fail++;
+      }
+    }
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('批量重试完成：成功 $ok，失败 $fail')));
       _pollAllActive();
     }
   }
@@ -139,25 +178,38 @@ class _TaskPageState extends ConsumerState<TaskPage> with WidgetsBindingObserver
                     padding: const EdgeInsets.all(16),
                     children: [
                       if (videoTasks.isNotEmpty) ...[
-                        Text('视频任务（${videoTasks.length}）',
-                            style: Theme.of(context).textTheme.titleMedium),
+                        Text(
+                          '视频任务（${videoTasks.length}）',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        _RetryFailedVideoRow(
+                          tasks: videoTasks,
+                          onRetryAll: () =>
+                              _retryAllFailed(context, ref, videoTasks),
+                        ),
                         const SizedBox(height: 8),
                         for (final t in videoTasks)
                           _VideoTaskTile(task: t, onPoll: _pollAllActive),
                         const SizedBox(height: 16),
                       ],
                       if (shots.isNotEmpty) ...[
-                        Text('分镜任务（${shots.length}）',
-                            style: Theme.of(context).textTheme.titleMedium),
+                        Text(
+                          '分镜任务（${shots.length}）',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                         const SizedBox(height: 8),
                         for (final shot in shots) _ShotTaskTile(shot: shot),
                         const SizedBox(height: 16),
                       ],
                       if (assets.isNotEmpty) ...[
-                        Text('资产任务（${assets.length}）',
-                            style: Theme.of(context).textTheme.titleMedium),
+                        Text(
+                          '资产任务（${assets.length}）',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                         const SizedBox(height: 8),
-                        for (final asset in assets) _AssetTaskTile(asset: asset),
+                        for (final asset in assets)
+                          _AssetTaskTile(asset: asset),
                       ],
                     ],
                   );
@@ -200,7 +252,9 @@ class _VideoTaskTile extends ConsumerWidget {
           Icons.movie_outlined,
           color: failed ? Theme.of(context).colorScheme.error : null,
         ),
-        title: Text('视频 ${params.durationSec}s · ${params.ratio} · ${params.resolution}'),
+        title: Text(
+          '视频 ${params.durationSec}s · ${params.ratio} · ${params.resolution}',
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -231,14 +285,24 @@ Future<String?> _shotRouteByShotId(WidgetRef ref, int shotId) async {
   return _shotRoute(ref, shot);
 }
 
-/// 资产任务行。
-class _AssetTaskTile extends StatelessWidget {
+/// 找到资产所属剧本→书→项目链，拼出资产详情路由；失败返回 null 不跳转。
+Future<String?> _assetRoute(WidgetRef ref, Asset asset) async {
+  final script = await ref.watch(scriptDaoProvider).find(asset.scriptId);
+  final book = script == null
+      ? null
+      : await ref.watch(novelDaoProvider).findBook(script.bookId);
+  if (script == null || book == null) return null;
+  return '/script/${book.projectId}/script/${script.id}/asset/${asset.id}';
+}
+
+/// 资产任务行：点击跳转资产详情。
+class _AssetTaskTile extends ConsumerWidget {
   const _AssetTaskTile({required this.asset});
 
   final Asset asset;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final hasImage =
         asset.imagePath != null && File(asset.imagePath!).existsSync();
 
@@ -258,6 +322,10 @@ class _AssetTaskTile extends StatelessWidget {
         title: Text(asset.name),
         subtitle: Text('${asset.type} · ${asset.status}'),
         trailing: _TaskBadge(status: asset.status),
+        onTap: () async {
+          final route = await _assetRoute(ref, asset);
+          if (route != null && context.mounted) context.push(route);
+        },
       ),
     );
   }
@@ -338,6 +406,38 @@ class _TaskBadge extends StatelessWidget {
         const SizedBox(width: 6),
         Text(status, style: TextStyle(color: color, fontSize: 12)),
       ],
+    );
+  }
+}
+
+/// 失败视频任务「全部重试」按钮行。
+class _RetryFailedVideoRow extends StatelessWidget {
+  const _RetryFailedVideoRow({required this.tasks, required this.onRetryAll});
+
+  final List<VideoTask> tasks;
+  final VoidCallback onRetryAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final failedCount = tasks.where((t) => t.status == '失败').length;
+    if (failedCount == 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '有 $failedCount 个视频任务失败',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          TextButton.icon(
+            onPressed: onRetryAll,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('全部重试'),
+          ),
+        ],
+      ),
     );
   }
 }
