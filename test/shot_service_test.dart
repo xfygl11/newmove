@@ -697,6 +697,91 @@ void main() {
       expect(params.ratio, '1:1');
       expect(params.resolution, '1080p');
     });
+
+    test('取消进行中任务：置已取消并回滚镜头到分镜图已确认', () async {
+      final shot = await prepareConfirmedShot();
+      final video = await fakeVideo();
+      final task = await service.submitVideo(
+        shotId: shot.id,
+        video: video,
+        params: const VideoGenParams(
+          modelId: 'vid',
+          durationSec: 5,
+          ratio: '16:9',
+          resolution: '480p',
+          generateAudio: false,
+          referenceCount: 0,
+        ),
+      );
+
+      final cancelled = await service.cancelVideoTask(task.id);
+      expect(cancelled.status, '已取消');
+      final updated = (await db.shotDao.find(shot.id))!;
+      expect(updated.status, ShotStatuses.confirmed);
+      expect(updated.outputType, 'image');
+    });
+
+    test('已取消任务不再轮询，镜头保持确认态', () async {
+      final shot = await prepareConfirmedShot();
+      final video = await fakeVideo();
+      final task = await service.submitVideo(
+        shotId: shot.id,
+        video: video,
+        params: const VideoGenParams(
+          modelId: 'vid',
+          durationSec: 5,
+          ratio: '16:9',
+          resolution: '480p',
+          generateAudio: false,
+          referenceCount: 0,
+        ),
+      );
+      await service.cancelVideoTask(task.id);
+
+      fakeVideoAdapter.nextStatus = 'success';
+      final still = await service.pollVideoTask(task.id);
+      expect(still.status, '已取消');
+      final updated = (await db.shotDao.find(shot.id))!;
+      expect(updated.status, ShotStatuses.confirmed);
+    });
+
+    test('切换视频版本：outputPath 指向历史成功任务产物', () async {
+      final shot = await prepareConfirmedShot();
+      final video = await fakeVideo();
+      final task = await service.submitVideo(
+        shotId: shot.id,
+        video: video,
+        params: const VideoGenParams(
+          modelId: 'vid',
+          durationSec: 5,
+          ratio: '16:9',
+          resolution: '480p',
+          generateAudio: false,
+          referenceCount: 0,
+        ),
+      );
+      fakeVideoAdapter.nextStatus = 'success';
+      final done = await service.pollVideoTask(task.id);
+      final versionPath = done.outputPath!;
+
+      await service.selectVideoVersion(shotId: shot.id, outputPath: versionPath);
+      final updated = (await db.shotDao.find(shot.id))!;
+      expect(updated.outputPath, versionPath);
+      expect(updated.status, ShotStatuses.videoDone);
+    });
+
+    test('替换视频：本地文件导入私有目录并更新镜头', () async {
+      final shot = await prepareConfirmedShot();
+      final src = File('${Directory.systemTemp.path}/newmove_replace_src.mp4');
+      await src.writeAsBytes(Uint8List.fromList([9, 8, 7, 6]));
+
+      await service.replaceVideo(shotId: shot.id, sourcePath: src.path);
+      final updated = (await db.shotDao.find(shot.id))!;
+      expect(updated.outputType, 'video');
+      expect(updated.status, ShotStatuses.videoDone);
+      expect(updated.outputPath, isNot(src.path));
+      expect(File(updated.outputPath!).existsSync(), isTrue);
+    });
   });
 
   group('ShotService.listTransitionIssues', () {

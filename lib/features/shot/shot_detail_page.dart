@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
@@ -398,6 +399,19 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
           submitting: _submitting,
           onSubmit: () => _submit(),
           onRetry: activeTask == null ? null : () => _retry(activeTask.id),
+          onCancel: (activeTask != null &&
+                  (activeTask.status == '排队' || activeTask.status == '生成中'))
+              ? () => _cancel(activeTask.id)
+              : null,
+        ),
+        const SizedBox(height: 16),
+
+        // ---- 历史版本 + 替换输出 ----
+        _HistoryVersions(
+          tasks: tasks,
+          currentPath: shot.outputPath,
+          onSelect: _selectVersion,
+          onImport: _importVideo,
         ),
         const SizedBox(height: 16),
 
@@ -500,6 +514,70 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  /// 取消进行中任务（本地取消，停轮询 + 回滚镜头状态）。
+  Future<void> _cancel(int videoTaskId) async {
+    setState(() => _submitting = true);
+    try {
+      await ref.read(shotServiceProvider).cancelVideoTask(videoTaskId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('已取消视频生成')));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('取消失败：$e')));
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  /// 切换镜头采用的视频版本（历史成功任务）。
+  Future<void> _selectVersion(String path) async {
+    try {
+      await ref.read(shotServiceProvider).selectVideoVersion(
+            shotId: widget.shot.id,
+            outputPath: path,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('已切换视频版本')));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('切换失败：$e')));
+      }
+    }
+  }
+
+  /// 用本地视频文件替换镜头产物（≤100MB）。
+  Future<void> _importVideo() async {
+    final result = await FilePicker.pickFiles(type: FileType.video);
+    if (result.isEmpty) return;
+    final path = result.single.path;
+    if (path == null) return;
+    try {
+      await ref.read(shotServiceProvider).replaceVideo(
+            shotId: widget.shot.id,
+            sourcePath: path,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('已替换视频')));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('替换失败：$e')));
+      }
     }
   }
 }
@@ -729,7 +807,7 @@ class _DurationSlider extends StatelessWidget {
   }
 }
 
-/// 操作行：生成/重试按钮。
+/// 操作行：生成/重试/取消按钮。
 class _ActionRow extends StatelessWidget {
   const _ActionRow({
     required this.shot,
@@ -737,6 +815,7 @@ class _ActionRow extends StatelessWidget {
     required this.submitting,
     required this.onSubmit,
     required this.onRetry,
+    required this.onCancel,
   });
 
   final Shot shot;
@@ -744,6 +823,7 @@ class _ActionRow extends StatelessWidget {
   final bool submitting;
   final VoidCallback onSubmit;
   final VoidCallback? onRetry;
+  final VoidCallback? onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -777,7 +857,84 @@ class _ActionRow extends StatelessWidget {
             label: const Text('重试'),
           ),
         ],
+        if (onCancel != null) ...[
+          const SizedBox(width: 12),
+          OutlinedButton.icon(
+            onPressed: submitting ? null : onCancel,
+            icon: const Icon(Icons.stop),
+            label: const Text('停止'),
+          ),
+        ],
       ],
+    );
+  }
+}
+
+/// 历史版本：成功任务产物列表（可切换采用版本）+ 替换输出入口。
+class _HistoryVersions extends StatelessWidget {
+  const _HistoryVersions({
+    required this.tasks,
+    required this.currentPath,
+    required this.onSelect,
+    required this.onImport,
+  });
+
+  final List<VideoTask> tasks;
+  final String? currentPath;
+  final ValueChanged<String> onSelect;
+  final VoidCallback onImport;
+
+  @override
+  Widget build(BuildContext context) {
+    final versions = [
+      for (final t in tasks)
+        if (t.outputPath != null && t.status == '成功') t,
+    ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('视频版本（${versions.length}）',
+                    style: Theme.of(context).textTheme.titleSmall),
+                TextButton.icon(
+                  onPressed: onImport,
+                  icon: const Icon(Icons.folder_open, size: 18),
+                  label: const Text('替换'),
+                ),
+              ],
+            ),
+            if (versions.isEmpty)
+              Text('暂无成功版本，可生成视频或从本地替换',
+                  style: Theme.of(context).textTheme.bodySmall)
+            else
+              for (final t in versions)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    currentPath == t.outputPath
+                        ? Icons.check_circle
+                        : Icons.video_library,
+                    size: 20,
+                  ),
+                  title: Text(
+                    '版本 ${t.id} · ${DateTime.fromMillisecondsSinceEpoch((t.createdAt.millisecondsSinceEpoch ~/ 1000) * 1000).toLocal()}'),
+                  subtitle: currentPath == t.outputPath
+                      ? const Text('当前采用')
+                      : null,
+                  onTap: currentPath == t.outputPath
+                      ? null
+                      : () => onSelect(t.outputPath!),
+                ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -535,7 +535,9 @@ class ShotService {
   Future<VideoTask> pollVideoTask(int videoTaskId) async {
     final task = await videoTaskDao.find(videoTaskId);
     if (task == null) throw StateError('视频任务不存在：$videoTaskId');
-    if (task.status == '成功' || task.status == '失败') return task;
+    if (task.status == '成功' || task.status == '失败' || task.status == '已取消') {
+      return task;
+    }
 
     // 恢复供应商配置与 Key。
     final provider = await _findProvider(task.providerId);
@@ -569,6 +571,7 @@ class ShotService {
           task.id,
           VideoTasksCompanion(
             status: const Value('成功'),
+            outputPath: Value(path),
             updatedAt: Value(DateTime.now()),
           ),
         );
@@ -646,6 +649,68 @@ class ShotService {
       shotId: task.shotId,
       video: video,
       params: params,
+    );
+  }
+
+  /// 取消进行中的视频任务（本地取消：停轮询 + 回滚镜头到分镜图已确认）。
+  ///
+  /// 供应商无取消端点，故仅置本地状态；已产生的远端任务结果不再拉取。
+  Future<VideoTask> cancelVideoTask(int videoTaskId) async {
+    final task = await videoTaskDao.find(videoTaskId);
+    if (task == null) throw StateError('视频任务不存在：$videoTaskId');
+    if (task.status != '排队' && task.status != '生成中') return task;
+    await videoTaskDao.updateById(
+      task.id,
+      VideoTasksCompanion(
+        status: const Value('已取消'),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+    await shotDao.updateById(
+      task.shotId,
+      ShotsCompanion(
+        status: const Value(ShotStatuses.confirmed),
+        outputType: const Value('image'),
+      ),
+    );
+    return (await videoTaskDao.find(task.id))!;
+  }
+
+  /// 切换镜头采用的视频版本（媒体历史，改 outputPath 指向历史成功任务）。
+  Future<void> selectVideoVersion({
+    required int shotId,
+    required String outputPath,
+  }) async {
+    if (!File(outputPath).existsSync()) throw StateError('视频文件不存在');
+    await shotDao.updateById(
+      shotId,
+      ShotsCompanion(
+        outputPath: Value(outputPath),
+        outputType: const Value('video'),
+        status: const Value(ShotStatuses.videoDone),
+      ),
+    );
+  }
+
+  /// 用本地文件替换镜头视频产物（≤100MB，导入私有目录）。
+  Future<void> replaceVideo({
+    required int shotId,
+    required String sourcePath,
+  }) async {
+    final file = File(sourcePath);
+    if (!file.existsSync()) throw StateError('文件不存在：$sourcePath');
+    final bytes = await file.readAsBytes();
+    if (bytes.length > 100 * 1024 * 1024) {
+      throw StateError('文件超过 100MB 上限');
+    }
+    final path = await videoFileStore.save(shotId, bytes);
+    await shotDao.updateById(
+      shotId,
+      ShotsCompanion(
+        outputPath: Value(path),
+        outputType: const Value('video'),
+        status: const Value(ShotStatuses.videoDone),
+      ),
     );
   }
 
