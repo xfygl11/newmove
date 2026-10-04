@@ -505,6 +505,7 @@ class ShotService {
         firstFramePath: firstFramePath,
         maxImageRefs: maxRefs,
         generateAudio: params.generateAudio,
+        protocol: video.protocol,
       );
       final id = await videoTaskDao.insert(
         VideoTasksCompanion.insert(
@@ -539,22 +540,28 @@ class ShotService {
       return task;
     }
 
-    // 恢复供应商配置与 Key。
-    final provider = await _findProvider(task.providerId);
-    if (provider == null) {
-      return _markVideoFailed(task, '供应商配置已删除，无法恢复轮询');
-    }
-    final apiKey = await readProviderKey?.call(task.providerId);
-    if (apiKey == null || apiKey.isEmpty) {
-      return _markVideoFailed(task, '供应商 API Key 不可用');
-    }
+      // 恢复供应商配置与 Key。
+      final provider = await _findProvider(task.providerId);
+      if (provider == null) {
+        return _markVideoFailed(task, '供应商配置已删除，无法恢复轮询');
+      }
+      final apiKey = await readProviderKey?.call(task.providerId);
+      if (apiKey == null || apiKey.isEmpty) {
+        return _markVideoFailed(task, '供应商 API Key 不可用');
+      }
 
-    try {
-      final snapshot = await videoAdapter.poll(
-        baseUrl: provider.baseUrl,
-        apiKey: apiKey,
-        taskId: task.taskId,
-      );
+      // 轮询需传 protocol + model（openai-videos 协议需要 model_name 参数）。
+      final decodedParams = VideoGenParams.decode(task.paramsJson);
+      final modelId = decodedParams.modelId;
+
+      try {
+        final snapshot = await videoAdapter.poll(
+          baseUrl: provider.baseUrl,
+          apiKey: apiKey,
+          taskId: task.taskId,
+          model: modelId,
+          protocol: provider.protocol,
+        );
 
       if (snapshot.isSuccess) {
         // 取产物字节并落盘。

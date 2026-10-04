@@ -69,6 +69,27 @@ class ModelPresets {
       imageSizes: ['1K', '2K', '4K'],
       imageRatios: ['1:1', '9:16', '16:9', '3:4', '4:3', '3:2', '2:3'],
     ),
+    // Agnes LLM：512K 上下文。
+    _Spec(
+      match: ['agnes-2.5', 'agnes 2.5', 'agnes-2.5-flash'],
+      contextWindow: 512000,
+      maxOutputTokens: 65536,
+    ),
+    // Agnes 图片：1K-4K 尺寸，多画幅。
+    _Spec(
+      match: ['agnes-image', 'agnes image'],
+      imageSizes: ['1K', '2K', '3K', '4K'],
+      imageRatios: ['1:1', '3:4', '4:3', '16:9', '9:16', '2:3', '3:2', '21:9'],
+    ),
+    // Agnes 视频 2.5：4-12s，720P/1080P/1K/2K，多参 + 首尾帧，12 个媒体文件上限。
+    _Spec(
+      match: ['agnes-video-2.5', 'agnes video 2.5'],
+      durationRange: (4, 12),
+      resolutions: ['720P', '1080P', '1K', '2K'],
+      videoModes: ['text', 'multiImage', 'startFrameOptional', 'startEndRequired'],
+      maxImageRefs: 8,
+      audio: 'optional',
+    ),
   ];
 
   /// 对单个模型套用预设（仅补空字段）。
@@ -98,6 +119,8 @@ class _Spec {
     this.videoModes,
     this.maxImageRefs,
     this.audio,
+    this.contextWindow,
+    this.maxOutputTokens,
   });
 
   final List<String> match;
@@ -111,6 +134,8 @@ class _Spec {
   final List<String>? videoModes;
   final int? maxImageRefs;
   final Object? audio;
+  final int? contextWindow;
+  final int? maxOutputTokens;
 
   bool matches(String key) => match.any(key.contains);
 
@@ -132,6 +157,8 @@ class _Spec {
       videoModes: m.videoModes ?? videoModes,
       maxImageRefs: m.maxImageRefs ?? maxImageRefs,
       audio: m.audio ?? audio,
+      contextWindow: m.contextWindow ?? contextWindow,
+      maxOutputTokens: m.maxOutputTokens ?? maxOutputTokens,
     );
   }
 }

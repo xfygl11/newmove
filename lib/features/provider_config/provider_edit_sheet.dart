@@ -91,7 +91,7 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
     return switch (group) {
       ProviderGroup.llm => const ['openai-completions'],
       ProviderGroup.image => const ['openai-images', 'async-task'],
-      ProviderGroup.video => const ['async-task'],
+      ProviderGroup.video => const ['async-task', 'openai-videos'],
     };
   }
 

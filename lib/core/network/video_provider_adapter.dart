@@ -53,6 +53,10 @@ class VideoProviderAdapter {
 
   /// 提交视频生成任务，返回 taskId。
   ///
+  /// [protocol] 决定端点格式：
+  ///   - `async-task`（默认）：`POST {base}/video/generateVideo`
+  ///   - `openai-videos`（Agnes）：`POST {base}/videos`
+  /// [model] 在 openai-videos 轮询时作 `model_name` 传参。
   /// [referencePaths] 为参考图本地路径（如分镜图/资产图），转 data URI 上传；
   /// [firstFramePath] 非空时以 `first_frame` 角色单独提交（首帧通道，A9.2）；
   /// [maxImageRefs] 为图片参考数量上限（模型能力，默认 9）。
@@ -68,6 +72,72 @@ class VideoProviderAdapter {
     String? firstFramePath,
     int maxImageRefs = 9,
     bool generateAudio = false,
+    String protocol = 'async-task',
+  }) async {
+    if (protocol == 'openai-videos') {
+      return _submitOpenAiVideos(
+        baseUrl: baseUrl,
+        apiKey: apiKey,
+        model: model,
+        prompt: prompt,
+        durationSec: durationSec,
+        ratio: ratio,
+        resolution: resolution,
+        referencePaths: referencePaths,
+        firstFramePath: firstFramePath,
+        maxImageRefs: maxImageRefs,
+      );
+    }
+    return _submitAsyncTask(
+      baseUrl: baseUrl,
+      apiKey: apiKey,
+      model: model,
+      prompt: prompt,
+      durationSec: durationSec,
+      ratio: ratio,
+      resolution: resolution,
+      referencePaths: referencePaths,
+      firstFramePath: firstFramePath,
+      maxImageRefs: maxImageRefs,
+      generateAudio: generateAudio,
+    );
+  }
+
+  /// 轮询一次任务状态；非终态返回 [VideoTaskSnapshot.isRunning]。
+  ///
+  /// [protocol] 与 [submit] 对应；[model] 在 `openai-videos` 协议时必填。
+  Future<VideoTaskSnapshot> poll({
+    required String baseUrl,
+    required String apiKey,
+    required String taskId,
+    String model = '',
+    String protocol = 'async-task',
+  }) async {
+    if (protocol == 'openai-videos') {
+      return _pollOpenAiVideos(
+        baseUrl: baseUrl,
+        apiKey: apiKey,
+        taskId: taskId,
+        model: model,
+      );
+    }
+    return _pollAsyncTask(baseUrl: baseUrl, apiKey: apiKey, taskId: taskId);
+  }
+
+  // ---- async-task 协议（现有行为，保持向后兼容） ----
+
+  Future<String> _submitAsyncTask({
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+    required String prompt,
+    required int durationSec,
+    required String ratio,
+    required String resolution,
+    required List<String> referencePaths,
+    String? firstFramePath,
+    required int maxImageRefs,
+    required bool generateAudio,
   }) async {
     final references = <Map<String, dynamic>>[];
     var budget = maxImageRefs < 1 ? 1 : maxImageRefs;
@@ -116,8 +186,7 @@ class VideoProviderAdapter {
     return data;
   }
 
-  /// 轮询一次任务状态；非终态返回 [VideoTaskSnapshot.isRunning]。
-  Future<VideoTaskSnapshot> poll({
+  Future<VideoTaskSnapshot> _pollAsyncTask({
     required String baseUrl,
     required String apiKey,
     required String taskId,
@@ -137,7 +206,6 @@ class VideoProviderAdapter {
     if (rawStatus == 'success' || rawStatus == 'completed') {
       final result = dataMap['data'];
       if (result is String && result.startsWith('data:')) {
-        // data:video/mp4;base64,xxxx
         final idx = result.indexOf(';base64,');
         return VideoTaskSnapshot(
           taskId: taskId,
@@ -160,6 +228,122 @@ class VideoProviderAdapter {
       );
     }
     return VideoTaskSnapshot(taskId: taskId, status: 'running');
+  }
+
+  // ---- openai-videos 协议（Agnes AI） ----
+  //
+  // 提交：POST {base}/videos
+  //   body: { model, prompt, size, seconds: "4"~"12", n: 1,
+  //           mode: text|keyframe|reference, images?: [dataUri...],
+  //           first_frame?: dataUri, last_frame?: dataUri }
+  //   response: { video_id, model_name, status, ... }
+  //
+  // 轮询：GET {baseWithoutV1}/agnesapi?video_id={id}&model_name={model}
+  //   response: { status: pending|processing|completed|failed, url }
+
+  Future<String> _submitOpenAiVideos({
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+    required String prompt,
+    required int durationSec,
+    required String ratio,
+    required String resolution,
+    required List<String> referencePaths,
+    String? firstFramePath,
+    required int maxImageRefs,
+  }) async {
+    final images = <dynamic>[];
+    if (firstFramePath != null) {
+      images.add(
+        'data:image/png;base64,${base64Encode(await File(firstFramePath).readAsBytes())}',
+      );
+    }
+    for (final p in referencePaths.take(maxImageRefs)) {
+      images.add(
+        'data:image/png;base64,${base64Encode(await File(p).readAsBytes())}',
+      );
+    }
+
+    final mode =
+        (images.isNotEmpty || firstFramePath != null) ? 'keyframe' : 'text';
+
+    final body = <String, dynamic>{
+      'model': model,
+      'prompt': prompt,
+      'size': resolution, // e.g. "720P", "1080P", "1K", "2K"
+      'seconds': durationSec.toString(), // "4"~"12"
+      'n': 1,
+      'mode': mode,
+      if (images.isNotEmpty) 'images': images,
+    };
+
+    final endpoint = _openAiVideosEndpoint(baseUrl);
+    final response = await _dio.post<Map<String, dynamic>>(
+      endpoint,
+      data: body,
+      options: _options(apiKey),
+    );
+
+    final map = response.data ?? const {};
+    // Agnes 返回顶层 video_id（兼容 task_id / id）。
+    final videoId = map['video_id'] ?? map['task_id'] ?? map['id'];
+    if (videoId == null || videoId.toString().isEmpty) {
+      throw StateError('Agnes 视频供应商未返回任务 ID: ${map.toString()}'
+          .substring(0, 200));
+    }
+    return videoId.toString();
+  }
+
+  Future<VideoTaskSnapshot> _pollOpenAiVideos({
+    required String baseUrl,
+    required String apiKey,
+    required String taskId,
+    required String model,
+  }) async {
+    // 轮询端点在 host 根路径（非 /v1 子路径），故 strip /v1。
+    final pollUrl =
+        '${_openAiVideosPollHost(baseUrl)}?video_id=${Uri.encodeComponent(taskId)}'
+        '&model_name=${Uri.encodeComponent(model)}';
+
+    final response = await _dio.get<Map<String, dynamic>>(
+      pollUrl,
+      options: _options(apiKey),
+    );
+
+    final map = response.data ?? const {};
+    final rawStatus = (map['status'] ?? 'running').toString().toLowerCase();
+
+    if (rawStatus == 'completed' || rawStatus == 'success') {
+      final url = map['url'];
+      if (url is! String || url.isEmpty) {
+        throw StateError('Agnes 轮询成功但未返回视频 URL');
+      }
+      return VideoTaskSnapshot(taskId: taskId, status: 'success', url: url);
+    }
+    if (rawStatus == 'failed' || rawStatus == 'failure') {
+      final reason = map['error'] ?? map['fail_reason'];
+      return VideoTaskSnapshot(
+        taskId: taskId,
+        status: 'failed',
+        error: reason?.toString() ?? '视频生成失败',
+      );
+    }
+    return VideoTaskSnapshot(taskId: taskId, status: 'running');
+  }
+
+  /// `{base}/videos`（base 含 `/v1`）。
+  static String _openAiVideosEndpoint(String baseUrl) =>
+      '${_strip(baseUrl)}/videos';
+
+  /// `{host}/agnesapi`（去掉 `/v1` 前缀，host 根路径）。
+  static String _openAiVideosPollHost(String baseUrl) {
+    final base = _strip(baseUrl);
+    // base 形如 https://host/v1，返回 https://host
+    if (base.endsWith('/v1')) {
+      return base.substring(0, base.length - 3);
+    }
+    return base;
   }
 
   /// 下载视频为字节。

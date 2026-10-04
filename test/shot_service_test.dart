@@ -186,6 +186,7 @@ class _FakeVideoAdapter extends VideoProviderAdapter {
     String? firstFramePath,
     int maxImageRefs = 9,
     bool generateAudio = false,
+    String protocol = 'async-task',
   }) async {
     if (submitError != null) throw submitError!;
     submitCount++;
@@ -201,6 +202,8 @@ class _FakeVideoAdapter extends VideoProviderAdapter {
     required String baseUrl,
     required String apiKey,
     required String taskId,
+    String model = '',
+    String protocol = 'async-task',
   }) async {
     switch (nextStatus) {
       case 'success':

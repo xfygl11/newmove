@@ -9,6 +9,7 @@ import '../../core/settings/app_settings.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
 import '../project/project_providers.dart';
+import 'agnes_presets.dart';
 import 'provider_config_providers.dart';
 import 'provider_edit_sheet.dart';
 import 'provider_models.dart';
@@ -32,6 +33,7 @@ class ProviderConfigPage extends ConsumerWidget {
             padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Text('模型供应商'),
           ),
+          const _AgnesPresetRow(),
           listAsync.when(
             loading: () => const Center(
               child: Padding(
@@ -321,5 +323,88 @@ class _ProviderCard extends ConsumerWidget {
         onTap: () => showProviderEditSheet(context, existing: provider),
       ),
     );
+  }
+}
+
+/// 一键添加 Agnes AI 预设（LLM + 图片 + 视频 3 个供应商条目）。
+class _AgnesPresetRow extends ConsumerWidget {
+  const _AgnesPresetRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: ListTile(
+        leading: const Icon(Icons.cloud_upload_outlined, color: Colors.blue),
+        title: const Text('一键添加 Agnes 预设'),
+        subtitle: const Text('Agnes LLM / 图片 / 视频 3 个供应商（中国服务）'),
+        trailing: const Icon(Icons.add),
+        onTap: () => _addAgnesPreset(context, ref),
+      ),
+    );
+  }
+
+  Future<void> _addAgnesPreset(BuildContext context, WidgetRef ref) async {
+    final keyController = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
+
+    final key = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('添加 Agnes AI 预设'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '将创建 3 个供应商条目：\n'
+              '  · Agnes LLM（agnes-2.5-flash）\n'
+              '  · Agnes 图片（agnes-image-2.5-flash）\n'
+              '  · Agnes 视频（agnes-video-2.5 + flash）\n\n'
+              'Base URL：https://apihub.agnes-ai.cn/v1',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: keyController,
+              decoration: const InputDecoration(
+                labelText: 'API Key（存系统 Keystore，不进 DB）',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, keyController.text.trim()),
+            child: const Text('确认'),
+          ),
+        ],
+      ),
+    );
+
+    if (key == null || key.isEmpty) return;
+
+    try {
+      final dao = ref.read(providerDaoProvider);
+      final keyStore = ref.read(secureKeyStoreProvider);
+      await AgnesPresets.apply(
+        dao: dao,
+        keyWriter: keyStore.writeKey,
+        apiKey: key,
+      );
+      ref.invalidate(providerConfigListProvider);
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('已添加 Agnes AI 预设（3 个供应商）')),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        messenger.showSnackBar(SnackBar(content: Text('添加失败：$e')));
+      }
+    }
   }
 }
