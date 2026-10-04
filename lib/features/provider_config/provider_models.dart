@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../core/json_values.dart';
+
 /// 供应商分组。
 enum ProviderGroup {
   llm('LLM 文本'),
@@ -178,9 +180,9 @@ class ProviderModel {
 
   static ProviderModel fromJson(Map<String, dynamic> json) {
     return ProviderModel(
-      id: json['id'] as String? ?? '',
-      label: json['label'] as String? ?? json['id'] as String? ?? '',
-      enabled: json['enabled'] as bool? ?? true,
+      id: jsonString(json['id']),
+      label: jsonStringOrNull(json['label']) ?? jsonString(json['id']),
+      enabled: jsonBool(json['enabled'], true),
       imageSizes: _stringList(json['imageSizes']),
       imageRatios: _stringList(json['imageRatios']),
       durationResolutions: _durationResolutions(json['durationResolutions']),
@@ -207,12 +209,11 @@ class ProviderModel {
     for (final item in raw) {
       if (item is! Map) continue;
       final duration = [
-        for (final d in (item['duration'] as List? ?? const []))
+        for (final d in jsonList(item['duration']))
           if (d is num) d.toInt(),
       ];
       final resolution = [
-        for (final r in (item['resolution'] as List? ?? const []))
-          if (r is String) r,
+        for (final r in jsonList(item['resolution'])) r.toString(),
       ];
       if (duration.isNotEmpty && resolution.isNotEmpty) {
         result.add((duration: duration, resolution: resolution));

@@ -70,10 +70,7 @@ class TruthFileStore {
 
   Future<void> _applyFacts(SettleDelta delta, int chapterNumber) async {
     final current = await read(TruthFileKind.worldFacts);
-    final facts = [
-      for (final f in (current['facts'] as List<dynamic>? ?? const []))
-        (f as Map).cast<String, dynamic>(),
-    ];
+    final facts = [for (final f in jsonList(current['facts'])) jsonMap(f)];
 
     // 失效：匹配未过期事实，设 validUntilChapter。
     for (final expire in delta.factExpire) {
