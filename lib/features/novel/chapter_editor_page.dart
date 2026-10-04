@@ -71,13 +71,14 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
   int _lastWordCount = 0;
 
   /// 安全构造 Quill 文档：空内容用默认单换行文档，避免
-  /// `DocumentDelta cannot be empty` 崩溃。
+  /// `DocumentDelta cannot be empty` 崩溃；非空内容必须补结尾换行，
+  /// 否则 `loadDocument` 断言 `endsWith('\n')` 失败。
   static Document _docFrom(String content) {
-    return content.isEmpty
-        ? Document()
-        : Document.fromJson([
-            {'insert': content},
-          ]);
+    if (content.isEmpty) return Document();
+    final text = content.endsWith('\n') ? content : '$content\n';
+    return Document.fromJson([
+      {'insert': text},
+    ]);
   }
 
   QuillController _ensureController(String content) {

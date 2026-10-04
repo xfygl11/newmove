@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart'
+    show FlutterQuillLocalizations;
 import 'package:go_router/go_router.dart';
 
 import 'features/asset/asset_detail_page.dart';
@@ -246,6 +248,9 @@ class NewmoveApp extends StatelessWidget {
     return MaterialApp.router(
       title: '小说动漫工坊',
       debugShowCheckedModeBanner: false,
+      // flutter_quill 工具栏按钮的 tooltip 依赖 FlutterQuillLocalizations，
+      // 未注册 delegate 时 QuillSimpleToolbar 构建即抛 MissingFlutterQuillLocalizationException。
+      localizationsDelegates: FlutterQuillLocalizations.localizationsDelegates,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: seed,
