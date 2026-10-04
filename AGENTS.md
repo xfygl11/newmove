@@ -125,6 +125,12 @@ lib/
 - 全库备份：`BackupService.exportAll()` 导出所有项目为单 zip（`scope: full`），`importProject` 兼容全库包与单项目包；导入前经 `findConflicts` 做同名项目检测，冲突时弹窗确认。
 - 章节导入/导出：章节编辑器支持导出 Markdown / HTML；书架页支持导入 `.md/.html/.txt` 为草稿章节（H1 提取标题，HTML 剥标签）。
 
+### P3 功能追加（M12 P3）
+
+- 多 Agent 协作写章（P3-13）：`NovelService.planChapter()` 先调 Planner Agent 生成本章规划（目标/关键事件/结尾变化/伏笔操作），再将规划注入 `writeChapter` 的 prompt；章节编辑器底部工具栏提供「规划后写」按钮，Writer 按 Planner 产出严格写正文，而非自由发挥。规划 Skill 文件：`assets/skills/novel/chapter_planning.md`。
+- 多作品类型（P3-15）：`NovelBooks` 表新增 `workType` 字段（默认「长篇」，可选「长篇/短篇/剧本/影游」），schema 升级到 v6；创建作品对话框提供类型下拉，非默认类型在书架页以徽章展示；`generateSetup` 将 workType 注入 Planner prompt。
+- 伏笔池管理（P3-14）：`hook_manager_page.dart` 独立页面（路由 `/novel/:projectId/hooks`），支持新增/编辑/回收/删除伏笔条目；书架页「伏笔」按钮 + 设定工坊「管理」卡片为入口；数据存 `hooks` TruthFile，与 Settler 定稿共用。
+
 ---
 
 ## 5. 数据与状态约定

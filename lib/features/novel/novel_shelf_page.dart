@@ -226,8 +226,29 @@ class _BookHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final workType = book.workType;
+    final isDefault = workType == '长篇';
     return ListTile(
-      title: Text(book.title),
+      title: Row(
+        children: [
+          if (!isDefault)
+            Container(
+              margin: const EdgeInsets.only(right: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                workType,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
+              ),
+            ),
+          Expanded(child: Text(book.title, overflow: TextOverflow.ellipsis)),
+        ],
+      ),
       subtitle: Text(
         book.premise?.isNotEmpty == true ? book.premise! : '尚未生成设定',
         maxLines: 2,
@@ -244,6 +265,10 @@ class _BookHeader extends StatelessWidget {
             onPressed: () =>
                 context.push('/novel/${book.projectId}/characters'),
             child: const Text('角色'),
+          ),
+          TextButton(
+            onPressed: () => context.push('/novel/${book.projectId}/hooks'),
+            child: const Text('伏笔'),
           ),
           TextButton(
             onPressed: () => context.push('/script/${book.projectId}'),
@@ -345,8 +370,10 @@ class _SetupDialog extends ConsumerStatefulWidget {
 }
 
 class _SetupDialogState extends ConsumerState<_SetupDialog> {
+  static const _workTypes = ['长篇', '短篇', '剧本', '影游'];
   final _idea = TextEditingController();
   final _genre = TextEditingController();
+  String _workType = _workTypes.first;
   bool _generating = false;
 
   @override
@@ -370,7 +397,13 @@ class _SetupDialogState extends ConsumerState<_SetupDialog> {
     try {
       final dao = ref.read(novelDaoProvider);
       final bookId = await dao.insertBook(
-        NovelBooksCompanion.insert(projectId: widget.projectId, title: '未命名作品'),
+        NovelBooksCompanion.insert(
+          projectId: widget.projectId,
+          title: '未命名作品',
+          workType: _workType != _workTypes.first
+              ? Value(_workType)
+              : const Value.absent(),
+        ),
       );
       await ref
           .read(novelServiceProvider)
@@ -379,6 +412,7 @@ class _SetupDialogState extends ConsumerState<_SetupDialog> {
             idea: idea,
             genre: _genre.text.trim(),
             llm: llm,
+            workType: _workType,
           );
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -410,6 +444,35 @@ class _SetupDialogState extends ConsumerState<_SetupDialog> {
           TextField(
             controller: _genre,
             decoration: const InputDecoration(labelText: '题材（可选）'),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text('类型', style: TextStyle(fontSize: 13)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _workType,
+                  items: _workTypes
+                      .map(
+                        (t) => DropdownMenuItem(
+                          value: t,
+                          child: Text(t, style: const TextStyle(fontSize: 13)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) =>
+                      setState(() => _workType = v ?? _workTypes.first),
+                  decoration: const InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

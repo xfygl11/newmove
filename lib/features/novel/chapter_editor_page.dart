@@ -135,6 +135,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
                 hasContent: _plainText.isNotEmpty,
                 wordCount: _lastWordCount,
                 onWrite: () => _write(chapter),
+                onWritePlan: () => _write(chapter, usePlanner: true),
                 onReview: () => _review(chapter),
                 onFinalize: () => _finalize(chapter),
                 onSave: () => _save(chapter),
@@ -220,21 +221,38 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
   }
 
   /// AI 写正文（空章节）或续写（已有内容），流式追加到编辑器。
-  Future<void> _write(Chapter chapter) async {
+  ///
+  /// [usePlanner] 为 P3-13 多 Agent 协作模式：先调 Planner 生成本章规划，
+  /// 再将规划注入 Writer 的 prompt，Writer 按规划写正文。
+  Future<void> _write(Chapter chapter, {bool usePlanner = false}) async {
     final llm = await _activeLlm();
     if (llm == null) return;
     setState(() => _busy = true);
     try {
+      final svc = ref.read(novelServiceProvider);
       final existing = _plainText;
-      final stream = ref
-          .read(novelServiceProvider)
-          .writeChapter(
-            bookId: chapter.bookId,
-            chapterNumber: chapter.seq,
-            targetWords: 2000,
-            existingContent: existing,
-            llm: llm,
-          );
+
+      // P3-13：Planner 先出本章规划（目标/事件/结尾/伏笔操作）。
+      Map<String, dynamic>? plan;
+      if (usePlanner && existing.isEmpty) {
+        if (mounted) _toast('Planner 规划中…');
+        plan = await svc.planChapter(
+          bookId: chapter.bookId,
+          chapterNumber: chapter.seq,
+          llm: llm,
+        );
+      }
+
+      if (!mounted) return;
+      if (mounted) _toast('Writer 写作中…');
+      final stream = svc.writeChapter(
+        bookId: chapter.bookId,
+        chapterNumber: chapter.seq,
+        targetWords: 2000,
+        existingContent: existing,
+        chapterPlan: plan,
+        llm: llm,
+      );
       await for (final chunk in stream) {
         _appendText(chunk);
       }
@@ -582,6 +600,7 @@ class _BottomBar extends StatelessWidget {
     required this.hasContent,
     required this.wordCount,
     required this.onWrite,
+    required this.onWritePlan,
     required this.onReview,
     required this.onFinalize,
     required this.onSave,
@@ -592,6 +611,7 @@ class _BottomBar extends StatelessWidget {
   final bool hasContent;
   final int wordCount;
   final VoidCallback onWrite;
+  final VoidCallback onWritePlan;
   final VoidCallback onReview;
   final VoidCallback onFinalize;
   final VoidCallback onSave;
@@ -629,6 +649,11 @@ class _BottomBar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
+                IconButton(
+                  tooltip: '规划后写',
+                  onPressed: busy ? null : onWritePlan,
+                  icon: const Icon(Icons.auto_stories_outlined),
+                ),
                 IconButton(
                   tooltip: '审校',
                   onPressed: busy ? null : onReview,

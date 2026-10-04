@@ -28,6 +28,8 @@ class NovelBooks extends Table {
   TextColumn get premise => text().nullable()();
   // 大纲（Markdown，逐章目标/事件/结尾）。
   TextColumn get outline => text().nullable()();
+  // P3-15 作品类型：长篇 / 短篇 / 剧本 / 影游，默认「长篇」。
+  TextColumn get workType => text().withDefault(const Constant('长篇'))();
   TextColumn get status => text().withDefault(const Constant('草稿'))();
 }
 

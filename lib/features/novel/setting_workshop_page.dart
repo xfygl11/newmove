@@ -287,7 +287,7 @@ class _TruthFileView extends StatelessWidget {
       TruthFileKind.worldFacts => _factCards(json),
       TruthFileKind.characterMatrix => _characterCards(context, json),
       TruthFileKind.resources => _resourceCards(json),
-      TruthFileKind.hooks => _hookCards(json),
+      TruthFileKind.hooks => _hookCards(context, json),
       TruthFileKind.chapterSummaries => _summaryCards(json),
       TruthFileKind.authorIntent ||
       TruthFileKind.currentFocus => [_textCard(json['text'] as String? ?? '')],
@@ -349,9 +349,20 @@ class _TruthFileView extends StatelessWidget {
     return [for (final i in items) _kvCard('${i['name']}', _compact(i))];
   }
 
-  List<Widget> _hookCards(Map<String, dynamic> json) {
+  List<Widget> _hookCards(BuildContext context, Map<String, dynamic> json) {
     final hooks = (json['hooks'] as List<dynamic>? ?? const []);
     return [
+      Card(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        color: Theme.of(context).colorScheme.secondaryContainer,
+        child: ListTile(
+          leading: const Icon(Icons.explore_outlined, size: 22),
+          title: Text('伏笔池（${hooks.length} 条）'),
+          subtitle: const Text('点按管理可登记/回收伏笔'),
+          trailing: const Icon(Icons.chevron_right, size: 18),
+          onTap: () => context.push('/novel/$bookId/hooks'),
+        ),
+      ),
       for (final h in hooks)
         _kvCard('${h['id'] ?? ''}（${h['status'] ?? 'open'}）', _compact(h)),
     ];

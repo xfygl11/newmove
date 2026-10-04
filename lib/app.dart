@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'features/asset/asset_detail_page.dart';
 import 'features/asset/asset_gallery_page.dart';
 import 'features/novel/character_manager_page.dart';
+import 'features/novel/hook_manager_page.dart';
 import 'features/novel/outline_editor_page.dart';
 import 'features/novel/chapter_editor_page.dart';
 import 'features/novel/novel_shelf_page.dart';
@@ -73,6 +74,12 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/novel/:projectId/characters',
       builder: (_, state) => CharacterManagerPage(
+        projectId: int.parse(state.pathParameters['projectId']!),
+      ),
+    ),
+    GoRoute(
+      path: '/novel/:projectId/hooks',
+      builder: (_, state) => HookManagerPage(
         projectId: int.parse(state.pathParameters['projectId']!),
       ),
     ),

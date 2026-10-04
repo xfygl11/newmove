@@ -12,6 +12,7 @@ class NovelAgents {
   final LlmProviderAdapter adapter;
 
   static const _planning = 'novel/planning.md';
+  static const _chapterPlanning = 'novel/chapter_planning.md';
   static const _writing = 'novel/writing.md';
   static const _review = 'novel/review.md';
   static const _settling = 'novel/settling.md';
@@ -22,19 +23,45 @@ class NovelAgents {
     required String idea,
     required String genre,
     required ActiveLlm llm,
+    String workType = '长篇',
   }) async {
     final system = await SkillLoader.load(_planning);
+    final typeNote = workType != '长篇' ? '\n【作品类型】$workType' : '';
     final reply = await adapter.chat(
       baseUrl: llm.baseUrl,
       apiKey: llm.apiKey,
       model: llm.modelId,
       messages: [
         (role: ChatRole.system, content: system),
-        (role: ChatRole.user, content: '【创意】$idea\n【题材】$genre\n请按规则产出设定 JSON。'),
+        (
+          role: ChatRole.user,
+          content: '【创意】$idea\n【题材】$genre$typeNote\n请按规则产出设定 JSON。',
+        ),
       ],
       temperature: 0.7,
     );
     return SetupResult.fromJson(_extractJson(reply));
+  }
+
+  // ---- 章节规划（Planner，P3-13） ----
+
+  /// 为指定章节生成写作规划（目标/关键事件/结尾变化/伏笔操作）。
+  Future<Map<String, dynamic>> planChapter({
+    required String prompt,
+    required ActiveLlm llm,
+  }) async {
+    final system = await SkillLoader.load(_chapterPlanning);
+    final reply = await adapter.chat(
+      baseUrl: llm.baseUrl,
+      apiKey: llm.apiKey,
+      model: llm.modelId,
+      messages: [
+        (role: ChatRole.system, content: system),
+        (role: ChatRole.user, content: prompt),
+      ],
+      temperature: 0.5,
+    );
+    return _extractJson(reply);
   }
 
   // ---- 章节写作（Writer，流式） ----

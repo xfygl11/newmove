@@ -36,11 +36,13 @@ class NovelService {
     required String idea,
     required String genre,
     required ActiveLlm llm,
+    String workType = '长篇',
   }) async {
     final result = await agents.generateSetup(
       idea: idea,
       genre: genre,
       llm: llm,
+      workType: workType,
     );
 
     final book = await novelDao.findBook(bookId);
@@ -68,20 +70,48 @@ class NovelService {
   // ---- 章节写作（T1.3） ----
 
   /// 构建写作 prompt 并返回流式正文。
+  ///
+  /// [chapterPlan] 为 P3-13 多 Agent 协作的 Planner 产出（可选），
+  /// 注入后 Writer 按规划写正文，而非自由发挥。
   Stream<String> writeChapter({
     required int bookId,
     required int chapterNumber,
     required int targetWords,
     required ActiveLlm llm,
     String? existingContent,
+    Map<String, dynamic>? chapterPlan,
   }) async* {
     final prompt = await buildWritePrompt(
       bookId: bookId,
       chapterNumber: chapterNumber,
       targetWords: targetWords,
       existingContent: existingContent,
+      chapterPlan: chapterPlan,
     );
     yield* agents.writeChapter(prompt: prompt, llm: llm);
+  }
+
+  /// Planner 步骤（P3-13）：为指定章节生成写作规划。
+  ///
+  /// 调用 [agents.planChapter]，产出目标/关键事件/结尾变化/伏笔操作，
+  /// 供后续 Writer 注入使用。
+  Future<Map<String, dynamic>> planChapter({
+    required int bookId,
+    required int chapterNumber,
+    required ActiveLlm llm,
+  }) async {
+    final book = await novelDao.findBook(bookId);
+    final texts = await storeFor(bookId).readAllText();
+    final prompt = StringBuffer()
+      ..writeln('【故事命题】${book?.premise ?? ''}')
+      ..writeln('【世界观】${book?.world ?? ''}')
+      ..writeln('【大纲】${book?.outline ?? ''}')
+      ..writeln('【角色矩阵】${texts[TruthFileKind.characterMatrix] ?? '{}'}')
+      ..writeln('【世界事实】${texts[TruthFileKind.worldFacts] ?? '{}'}')
+      ..writeln('【未闭合伏笔】${texts[TruthFileKind.hooks] ?? '{}'}')
+      ..writeln('【前情摘要】${texts[TruthFileKind.chapterSummaries] ?? '{}'}')
+      ..writeln('请为第 $chapterNumber 章输出规划 JSON。');
+    return agents.planChapter(prompt: prompt.toString(), llm: llm);
   }
 
   Future<String> buildWritePrompt({
@@ -89,6 +119,7 @@ class NovelService {
     required int chapterNumber,
     required int targetWords,
     String? existingContent,
+    Map<String, dynamic>? chapterPlan,
   }) async {
     final book = await novelDao.findBook(bookId);
     final texts = await storeFor(bookId).readAllText();
@@ -104,6 +135,21 @@ class NovelService {
     buf.writeln('【未闭合伏笔】${texts[TruthFileKind.hooks] ?? '{}'}');
     buf.writeln('【前情摘要】${texts[TruthFileKind.chapterSummaries] ?? '{}'}');
     buf.writeln('【当前焦点】${texts[TruthFileKind.currentFocus] ?? '{}'}');
+
+    // P3-13：Planner 产出注入，Writer 按规划写。
+    if (chapterPlan != null && chapterPlan.isNotEmpty) {
+      buf.writeln('');
+      buf.writeln('【本章规划（Planner 产出，请严格遵循）】');
+      buf.writeln('目标：${chapterPlan['chapterGoal'] ?? ''}');
+      final events = chapterPlan['keyEvents'] as List<dynamic>? ?? const [];
+      buf.writeln('关键事件：${events.join(' → ')}');
+      buf.writeln('结尾变化：${chapterPlan['endingChange'] ?? ''}');
+      final styleNotes = chapterPlan['styleNotes']?.toString() ?? '';
+      if (styleNotes.isNotEmpty) {
+        buf.writeln('文风注意：$styleNotes');
+      }
+    }
+
     if (existingContent != null && existingContent.isNotEmpty) {
       buf.writeln('【已有正文】$existingContent');
       buf.writeln('请从已有正文结尾继续往下写，不重复已写内容。');

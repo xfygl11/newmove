@@ -63,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -90,6 +90,10 @@ class AppDatabase extends _$AppDatabase {
         // M7 追加轮：视频任务产物路径（媒体历史）、供应商说明。
         await m.addColumn(videoTasks, videoTasks.outputPath);
         await m.addColumn(providerConfigs, providerConfigs.readme);
+      }
+      if (from < 6) {
+        // P3-15：小说书表新增 workType 字段（长篇/短篇/剧本/影游）。
+        await m.addColumn(novelBooks, novelBooks.workType);
       }
     },
     beforeOpen: (details) async {
