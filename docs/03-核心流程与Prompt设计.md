@@ -375,3 +375,51 @@ skills/
 3. ~~**A12 细则未成文**~~ → **已成文**：首帧锁定/出镜锁定/微表情数量上限/表演通道适配表进 `storyboard.md`；道具状态链硬规则 + 穿帮风险审计（人物/道具/空间三类 + 修正边界）进 `continuity.md`。
 
 剩余次要差异（有意保留）：Timeline 内 HARD CUT 以「（00:06 结束，HARD CUT）」标注在帧块间（模型侧按帧时间窗独立生成，无需 Toonflow 式跨段硬切规则）；A9.1（2.0 资产标识外壳）未做双路由——本项目视频模型统一走 async-task 协议的 Objective 外壳，模型差异由 UI 参数（时长/分辨率）承载。
+
+---
+
+### 6.4 M8 扩展 · 供应商能力联动 + 体验补全 + 成片合成 + 检查更新
+
+> 借鉴 Toonflow 桌面版（`videoGenerationNode`/`generationSettings` 联动 + `MediaModel` 扩展 + FFmpeg 成片合成 + 桌面 updateServer→安卓 GitHub Releases）。以下为本轮新增功能的 Prompt/Skill 设计说明。
+
+#### 6.4.1 视频参数能力联动（`ModelPresets` + 归一化）
+
+Toonflow `videoGenerationNode` 的 `generationSettings` 根据 `MediaModel` 能力动态收敛 UI 选项。本项目等价实现：
+
+- `ModelPresets.apply(modelId)`：在拉取新模型后自动补全 `videoModes`/`maxImageRefs`/`durationResolutions`（不覆盖用户已填字段）；支持 seedance 2.5/2.0、wan-3、minimax-hailuo、kling-1.6、seedream 4/4.5 系列。
+- `normalizeDuration(int sec)`：模型能力变更时回落到合法值（最接近目标时长的合法档位）；能力未知时返回原值。
+- `normalizeResolution(int sec, String resolution)`：按时长命中组合的合法分辨率并集，无匹配时取首个；能力未知时返回原值。
+- UI 联动效果（`shot_detail_page.dart` `_ParamCard`）：切换模型后自动归一化时长/分辨率；分辨率 chips 改为 `selectedModel.resolutionsFor(duration)` 动态生成；音频三态（`audioDisabled`/`audioRequired`/`audioOptional`）决定音频开关是否禁用；首帧开关仅 `supportsStartFrame` 时显示。
+
+#### 6.4.2 首帧通道（`first_frame` role）
+
+Toonflow `videoGenerationNode` 中首帧/尾帧参考走独立 `first_frame`/`last_frame` role，与普通参考图（`reference_image`）分开计费与处理。本项目实现：
+
+- `VideoGenParams.useFirstFrame`（bool，默认 false）：`true` 时分镜图作 `firstFramePath` 传入 `submit`；提交体中 `first_frame` 优先入 `metadata.references[0]`，余图按 `maxImageRefs` 取上限（缺省 9）。
+- `shot_service.submitVideo`：先查 `ProviderModel.maxImageRefs`（按 params.modelId），将 `firstFramePath` 占 1 个参考位，`referenceImages` 取余量（`maxImageRefs - 1`）。
+
+#### 6.4.3 媒体历史（版本切换 + 替换）
+
+- `VideoTasks.outputPath`：每次成功轮询回填 `outputPath`（同镜头可有多条成功任务记录）。
+- `shot_detail_page._HistoryVersions`：该镜头的成功任务列表（按 `createdAt` 倒序），当前版本（`shot.outputPath`）高亮显示；点击可调用 `selectVideoVersion` 切换（改 `shot.outputPath`）。
+- `replaceVideo`：通过 `FilePicker.pickFiles(type: video)` 本地选取 ≤100MB 视频，经 `videoFileStore.save` 落应用私有目录，更新 `shot.outputPath/video/videoDone`。
+
+#### 6.4.4 停止生成（本地取消）
+
+- `cancelVideoTask(int videoTaskId)`：将该任务状态置为「已取消」，回滚对应 shot 到「分镜图已确认」状态；任务中心轮询自动跳过非「生成中/排队」任务，无需特殊处理。
+
+#### 6.4.5 供应商 readme
+
+- `ProviderConfigs.readme`（自由文本）：供应商说明，在设置页供应商卡片副标题区直接展示；支持一键备份导出（`backup_service.dart` 将 readme 包含在 zip 内）。
+
+#### 6.4.6 FFmpeg 成片合成（`ShotComposeService`）
+
+- 取脚本下所有 `videoDone=true` 且 `outputPath` 非空的 shot，按 `seq` 顺序本地 FFmpeg `-c copy` 快拼；任一缺失则整体失败并定位到首个缺失镜头。
+- 快拼失败时自动回落逐段重编码 720p/24fps + concat filter；`manifest.json` 落档（输入列表 + 命令 + 时间戳）。
+- `ffmpeg_kit_flutter_new` 社区 fork（上游 `ffmpeg_kit_flutter` 已归档）；`ReturnCode.isSuccess` 判成功，`getOutput()` 取错误日志。
+- UI 入口：`script_detail_page` 底部「合成成片」按钮（`_ComposeRow`），合成完成后可 `SharePlus` 分享 mp4。
+
+#### 6.4.7 检查更新（GitHub Releases）
+
+- `UpdateChecker.checkLatest()`：GET `api.github.com/repos/xfygl11/newmove/releases/latest`，与本地 `PackageInfo.version` 做 semver 比较（仅 major.minor.patch 前三段），离线静默返回占位不报错。
+- 有更新时设置页 `_UpdateCheckTile` 高亮，点击 `url_launcher` 跳转 release 下载页。
