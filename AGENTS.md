@@ -131,6 +131,13 @@ lib/
 - 多作品类型（P3-15）：`NovelBooks` 表新增 `workType` 字段（默认「长篇」，可选「长篇/短篇/剧本/影游」），schema 升级到 v6；创建作品对话框提供类型下拉，非默认类型在书架页以徽章展示；`generateSetup` 将 workType 注入 Planner prompt。
 - 伏笔池管理（P3-14）：`hook_manager_page.dart` 独立页面（路由 `/novel/:projectId/hooks`），支持新增/编辑/回收/删除伏笔条目；书架页「伏笔」按钮 + 设定工坊「管理」卡片为入口；数据存 `hooks` TruthFile，与 Settler 定稿共用。
 
+### 健壮性约定（M13）
+
+- **宽容 JSON 解析**：解析 AI 输出 / 落库 JSON 一律走 `lib/core/json_values.dart` 的 `jsonString` / `jsonStringOrNull` / `jsonInt` / `jsonBool` / `jsonList` / `jsonMap`，**禁止对外部数据直接 `as` 强转**（LLM 常把数字写成字符串、布尔写成 `"true"`，强转会抛 TypeError 让整段生成结果解析失败）。
+- **网络层**：供应商响应先做 `is List` / `is Map` 类型守卫再取字段；SSE 用 `utf8.decode(bytes, allowMalformed: true)`；错误提示截断按实际长度判断，勿直接 `substring(0, N)`。
+- **列表页加载**：异步数据在 `initState` 加载一次 + `_loading`/`_error`/`_reload` 状态；禁止 `build` 里 `FutureBuilder(future: _load())`。
+- **APK 体积**：`build.gradle.kts` 只打 `arm64-v8a` 单 ABI（`splits.abi`），FFmpeg 用 `ffmpeg_kit_flutter_new_min_gpl`；CI 产物路径为 `app-{release,debug}-arm64-v8a.apk`。
+
 ---
 
 ## 5. 数据与状态约定
