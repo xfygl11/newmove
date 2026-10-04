@@ -48,7 +48,13 @@ Entries discovered by the Agent during task execution should follow this format:
   - Release 签名在 CI 完成，签名材料走仓库 Secret：`KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD`
   - CI 产物路径为 `app-release.apk` / `app-debug.apk`（单 ABI 单 APK，无 ABI 后缀）
   - ABI 只打 `arm64-v8a`：用 `defaultConfig.ndk.abiFilters`，CI 构建命令带 `-P disable-abi-filtering=true`。**禁止用 `splits.abi`**——Flutter Gradle 插件（`FlutterPlugin.kt` 的 `configureAbis()`）在未传 `-P split-per-abi` 时会把 `armeabi-v7a/arm64-v8a/x86_64` 写进 `defaultConfig.ndk.abiFilters`，与 `splits.abi` 互斥，configure 阶段报 `Conflicting configuration` 直接失败
-  - CI 状态轮询：`curl -s -H "Accept: application/vnd.github+json" api.github.com/repos/xfygl11/newmove/commits/<sha>/check-runs`；遇 API rate limit 跳过，以本地验证为准
+  - CI 日志拉取（需 PAT，带 `actions: read` + `contents: read`）：
+    1. `GET /repos/xfygl11/newmove/actions/runs?branch=main&per_page=40`，用每项的 `id`（不是 `run_number`）
+    2. `GET /repos/{owner}/{repo}/actions/runs/{id}` 看 status/conclusion
+    3. `curl -sL .../actions/runs/{id}/logs` 得 zip，解开后单步日志在 `Analyze, Test & Build APK/<步号>_<步名>.txt`
+    4. `GET .../actions/runs/{id}/artifacts` 取 `archive_download_url` 下载 APK（zip 内含 `app-*.apk`）
+  - 注意：token 必须直接内联到 `curl -H "Authorization: Bearer ..."`，本环境里赋给 shell 变量会被截断；unauthenticated 调用很快触发 403 rate limit
+  - 未配置签名 Secret 时 CI 仍会绿，但只产出 `app-debug.apk`（约 131 MB），日志有 `::warning::未配置签名 Secret` 提示；`if-no-files-found: warn` 会掩盖缺失的 release APK
 
 [Flutter / Dart 命令路径]
 - Date: 2026-10-04
