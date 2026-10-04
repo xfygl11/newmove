@@ -46,32 +46,59 @@ class _CharacterList extends ConsumerStatefulWidget {
 /// 内部 State：读取并管理角色列表。
 class _CharacterListState extends ConsumerState<_CharacterList> {
   List<CharacterSpec> _characters = [];
+  bool _loading = true;
+  String? _error;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.bookId >= 0) {
+      _reload();
+    } else {
+      _loading = false;
+    }
+  }
+
+  Future<void> _reload() async {
+    try {
+      final chars = await _load();
+      if (!mounted) return;
+      setState(() {
+        _characters = chars;
+        _loading = false;
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = '$e';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     if (widget.bookId < 0) return const SizedBox.shrink();
 
-    return FutureBuilder<List<CharacterSpec>>(
-      future: _load(),
-      builder: (context, snap) {
-        if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(child: Text('加载失败：$_error'));
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _characters.length + 1, // +1 为底部「新增角色」行
+      itemBuilder: (context, i) {
+        if (i >= _characters.length) {
+          return _AddCharacterTile(onTap: () => _showEditDialog(null));
         }
-        _characters = snap.data!;
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: _characters.length + 1, // +1 为底部「新增角色」行
-          itemBuilder: (context, i) {
-            if (i >= _characters.length) {
-              return _AddCharacterTile(onTap: () => _showEditDialog(null));
-            }
-            return _CharacterCard(
-              character: _characters[i],
-              onEdit: () => _showEditDialog(_characters[i]),
-              onDelete: () => _confirmDelete(_characters[i]),
-            );
-          },
+        return _CharacterCard(
+          character: _characters[i],
+          onEdit: () => _showEditDialog(_characters[i]),
+          onDelete: () => _confirmDelete(_characters[i]),
         );
       },
     );
