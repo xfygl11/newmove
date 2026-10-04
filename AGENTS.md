@@ -112,7 +112,12 @@ lib/
 
 - LLM 统一走 OpenAI 兼容 `/v1/chat/completions` + SSE 流式；**不要在业务代码里硬编码某家 SDK**，统一经 `core/network/` 的 `LlmProviderAdapter`。
 - 图片/视频生成走 `ImageProviderAdapter` / `VideoProviderAdapter`，异步任务统一进**生成任务队列**。
+- 视频协议由 `ProviderConfig.protocol` 字段路由：
+  - `async-task`（默认）：`POST {base}/video/generateVideo` + `POST {base}/video/getVideoStatus`，借鉴 Toonflow Seedance 三步流。
+  - `openai-videos`（Agnes AI）：`POST {base}/videos` + `GET {host}/agnesapi?video_id=&model_name=`（轮询端点在 host 根路径，去掉 `/v1` 前缀）。
+  - 新增协议时在 `VideoProviderAdapter` 按 protocol 分支实现，`ShotService` 透传 `protocol` + `model`。
 - 供应商配置（Base URL / API Key / 模型）由用户配置，存安全存储，**API Key 严禁落明文 DB、严禁打印日志**。
+- 一键预设：`AgnesPresets`（`lib/features/provider_config/agnes_presets.dart`）可一键创建 Agnes AI 的 LLM/图片/视频 3 个供应商条目（协议分别为 `openai-chat` / `openai-images` / `openai-videos`），Base URL 固定 `https://apihub.agnes-ai.cn/v1`。
 - Agent 系统提示词从 `skills/` 资源加载，与业务代码分离；修改 Prompt 不触碰业务逻辑。
 
 ---
