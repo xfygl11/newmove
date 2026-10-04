@@ -46,6 +46,8 @@ class _ShotDetailPageState extends ConsumerState<ShotDetailPage>
   @override
   void initState() {
     super.initState();
+    // 预初始化，避免镜头不存在（shot == null）时 dispose 触发 LateInitializationError。
+    _promptCtrl = TextEditingController();
     _tabCtrl = TabController(length: 2, vsync: this);
   }
 
@@ -86,7 +88,7 @@ class _ShotDetailPageState extends ConsumerState<ShotDetailPage>
 
             // 首次构建时同步提示词到编辑器。
             if (!_initialized) {
-              _promptCtrl = TextEditingController(text: shot.prompt);
+              _promptCtrl.text = shot.prompt;
               _initialized = true;
             }
 

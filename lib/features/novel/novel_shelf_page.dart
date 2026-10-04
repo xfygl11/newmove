@@ -170,15 +170,19 @@ class _BookView extends ConsumerWidget {
     );
     if (picked.isEmpty || picked.single.path == null) return;
 
+    final fileName = picked.single.name;
+    final isHtml = fileName.toLowerCase().endsWith('.html');
     final raw = await File(picked.single.path!).readAsString();
-    // 简单剥离 HTML 标签得到纯文本（支持 .html 导入）。
-    var content = raw
-        .replaceAll(RegExp(r'<[^>]+>'), '\n')
-        .replaceAll('&amp;', '&')
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>')
-        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
-        .trim();
+    // 仅对 .html 剥离标签；.md / .txt 保留原文（避免误删 `<` `>` 内容）。
+    var content = isHtml
+        ? raw
+              .replaceAll(RegExp(r'<[^>]+>'), '\n')
+              .replaceAll('&amp;', '&')
+              .replaceAll('&lt;', '<')
+              .replaceAll('&gt;', '>')
+              .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+              .trim()
+        : raw.trim();
     if (content.isEmpty) {
       if (context.mounted) {
         _toast(context, '文件内容为空，导入失败');
@@ -186,9 +190,8 @@ class _BookView extends ConsumerWidget {
       return;
     }
 
-    // 标题取文件名（去扩展名）或内容首行「# 标题」。
+    // 标题取内容首行「# 标题」，否则用文件名（去扩展名）。
     String title;
-    final fileName = picked.single.name;
     title = fileName.replaceAll(RegExp(r'\.(md|markdown|html|txt)$'), '');
     final headingMatch = RegExp(
       r'^#\s+(.+)$',

@@ -79,6 +79,15 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
     super.dispose();
   }
 
+  /// 若当前 `_protocol` 值不在 [_protocolOptions] 里（历史数据/预设），
+  /// 返回第一项兜底，避免 DropdownButton 断言崩溃。
+  String _safeProtocol() {
+    final current = _protocol.text;
+    final options = _protocolOptions(_group);
+    if (options.contains(current)) return current;
+    return options.first;
+  }
+
   static String _defaultProtocol(ProviderGroup group) {
     return switch (group) {
       ProviderGroup.llm => 'openai-completions',
@@ -89,7 +98,7 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
 
   static List<String> _protocolOptions(ProviderGroup group) {
     return switch (group) {
-      ProviderGroup.llm => const ['openai-completions'],
+      ProviderGroup.llm => const ['openai-completions', 'openai-chat'],
       ProviderGroup.image => const ['openai-images', 'async-task'],
       ProviderGroup.video => const ['async-task', 'openai-videos'],
     };
@@ -343,7 +352,7 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                initialValue: _protocol.text,
+                initialValue: _safeProtocol(),
                 decoration: const InputDecoration(labelText: '协议'),
                 items: [
                   for (final p in _protocolOptions(_group))

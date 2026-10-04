@@ -23,6 +23,31 @@ import 'features/task/task_page.dart';
 /// 根路由：三 Tab（项目 / 任务 / 设置），分支各自维护导航栈。
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
+  // 非法/损坏的深链（如参数非数字）不白屏，显示可返回的错误页。
+  errorBuilder: (context, state) => Scaffold(
+    appBar: AppBar(title: const Text('页面不存在')),
+    body: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline, size: 48),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              '无法打开：${state.uri}\n${state.error ?? ''}',
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: () => context.go('/'),
+            child: const Text('返回首页'),
+          ),
+        ],
+      ),
+    ),
+  ),
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>

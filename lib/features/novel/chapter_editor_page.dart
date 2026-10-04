@@ -59,6 +59,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
   }
 
   void _refreshWordCount() {
+    if (!mounted || _controller == null) return;
     final plain = _plainText;
     if (plain.length != _lastWordCount) {
       setState(() => _lastWordCount = plain.length);
@@ -67,16 +68,25 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
 
   int _lastWordCount = 0;
 
+  /// 安全构造 Quill 文档：空内容用默认单换行文档，避免
+  /// `DocumentDelta cannot be empty` 崩溃。
+  static Document _docFrom(String content) {
+    return content.isEmpty
+        ? Document()
+        : Document.fromJson([
+            {'insert': content},
+          ]);
+  }
+
   QuillController _ensureController(String content) {
     return _controller ??= QuillController(
-      document: Document.fromJson([
-        {'insert': content},
-      ]),
+      document: _docFrom(content),
       selection: const TextSelection.collapsed(offset: 0),
     );
   }
 
-  String get _plainText => _controller!.document.toPlainText().trimRight();
+  String get _plainText =>
+      _controller?.document.toPlainText().trimRight() ?? '';
 
   @override
   Widget build(BuildContext context) {
@@ -343,7 +353,8 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
   }
 
   void _appendText(String chunk) {
-    final controller = _controller!;
+    final controller = _controller;
+    if (controller == null) return;
     final plain = controller.document.toPlainText();
     final insertAt = plain.isEmpty ? 0 : plain.length - 1;
     controller.replaceText(
@@ -428,10 +439,9 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
   }
 
   void _replaceContent(String content) {
-    final controller = _controller!;
-    controller.document = Document.fromJson([
-      {'insert': content},
-    ]);
+    final controller = _controller;
+    if (controller == null) return;
+    controller.document = _docFrom(content);
     controller.updateSelection(
       TextSelection.collapsed(offset: content.length),
       ChangeSource.local,

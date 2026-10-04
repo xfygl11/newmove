@@ -45,68 +45,91 @@ class _HookList extends ConsumerStatefulWidget {
 
 class _HookListState extends ConsumerState<_HookList> {
   List<Map<String, dynamic>> _hooks = [];
+  bool _loading = true;
+  String? _error;
   bool _saving = false;
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _load(),
-      builder: (context, snap) {
-        if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  Future<void> _reload() async {
+    try {
+      final data = await _load();
+      if (!mounted) return;
+      setState(() {
         _hooks = [
-          for (final h in (snap.data!['hooks'] as List<dynamic>? ?? const []))
+          for (final h in (data['hooks'] as List<dynamic>? ?? const []))
             (h as Map).cast<String, dynamic>(),
         ];
-        return Column(
-          children: [
-            _statusFilterBar(),
-            Expanded(
-              child: _hooks.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.explore_outlined,
-                            size: 48,
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                          const SizedBox(height: 8),
-                          const Text('暂无伏笔登记'),
-                          const SizedBox(height: 4),
-                          Text(
-                            '章节定稿后 Settler 自动登记，也可手动添加',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
+        _loading = false;
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = '$e';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(child: Text('加载失败：$_error'));
+    }
+    return Column(
+      children: [
+        _statusFilterBar(),
+        Expanded(
+          child: _hooks.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.explore_outlined,
+                        size: 48,
+                        color: Theme.of(context).colorScheme.outline,
                       ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _hooks.length,
-                      itemBuilder: (context, i) => _HookCard(
-                        hook: _hooks[i],
-                        onResolve: () => _resolveHook(_hooks[i]),
-                        onEdit: () => _showEditDialog(_hooks[i]),
-                        onRemove: () => _removeHook(_hooks[i]),
+                      const SizedBox(height: 8),
+                      const Text('暂无伏笔登记'),
+                      const SizedBox(height: 4),
+                      Text(
+                        '章节定稿后 Settler 自动登记，也可手动添加',
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
-                    ),
-            ),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: FilledButton.icon(
-                  onPressed: _saving ? null : () => _showEditDialog(null),
-                  icon: const Icon(Icons.add),
-                  label: const Text('登记伏笔'),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _hooks.length,
+                  itemBuilder: (context, i) => _HookCard(
+                    hook: _hooks[i],
+                    onResolve: () => _resolveHook(_hooks[i]),
+                    onEdit: () => _showEditDialog(_hooks[i]),
+                    onRemove: () => _removeHook(_hooks[i]),
+                  ),
                 ),
-              ),
+        ),
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: FilledButton.icon(
+              onPressed: _saving ? null : () => _showEditDialog(null),
+              icon: const Icon(Icons.add),
+              label: const Text('登记伏笔'),
             ),
-          ],
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
 
@@ -117,12 +140,12 @@ class _HookListState extends ConsumerState<_HookList> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          _statusChip('未闭合', openCount, isActive: true),
+          _statusChip('未闭合', openCount),
           const SizedBox(width: 8),
-          _statusChip('已回收', resolvedCount, isActive: false),
+          _statusChip('已回收', resolvedCount),
           const Spacer(),
           TextButton(
-            onPressed: _saving ? null : _refresh,
+            onPressed: _saving ? null : _reload,
             child: const Text('刷新'),
           ),
         ],
@@ -130,16 +153,11 @@ class _HookListState extends ConsumerState<_HookList> {
     );
   }
 
-  Widget _statusChip(String label, int count, {required bool isActive}) {
+  Widget _statusChip(String label, int count) {
     return Chip(
       label: Text('$label $count'),
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
     );
-  }
-
-  Future<void> _refresh() async {
-    if (!mounted) return;
-    setState(() {});
   }
 
   Future<Map<String, dynamic>> _load() async {
