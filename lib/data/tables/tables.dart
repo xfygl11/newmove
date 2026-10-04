@@ -222,6 +222,8 @@ class VideoTasks extends Table {
   // 提交时的参数快照（模型/时长/画幅/分辨率/参考数），重试与详情展示用。
   TextColumn get paramsJson => text().withDefault(const Constant('{}'))();
   TextColumn get error => text().nullable()();
+  // 成功任务的产物路径（媒体历史：保留每次生成，可回退选择）。
+  TextColumn get outputPath => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
@@ -239,6 +241,8 @@ class ProviderConfigs extends Table {
   TextColumn get protocol => text()();
   // JSON 数组：模型列表 [{ id, label }]。
   TextColumn get models => text().withDefault(const Constant('[]'))();
+  // 供应商说明（借鉴 Toonflow provider readme，展示在设置卡片）。
+  TextColumn get readme => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 

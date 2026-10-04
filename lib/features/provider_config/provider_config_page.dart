@@ -245,12 +245,14 @@ class _ProviderCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final models = ProviderModelCodec.decode(provider.models);
+    final readme = provider.readme?.trim() ?? '';
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
         title: Text(provider.label),
         subtitle: Text(
-          '${provider.baseUrl}\n${provider.protocol} · ${models.length} 个模型',
+          '${provider.baseUrl}\n${provider.protocol} · ${models.length} 个模型'
+          '${readme.isEmpty ? '' : '\n$readme'}',
         ),
         isThreeLine: true,
         trailing: const Icon(Icons.chevron_right),

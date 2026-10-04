@@ -34,6 +34,8 @@ class ProviderModel {
     this.imageRatios,
     this.durationResolutions,
     this.audio,
+    this.videoModes,
+    this.maxImageRefs,
     this.contextWindow,
     this.maxOutputTokens,
   });
@@ -55,8 +57,52 @@ class ProviderModel {
   /// 音频能力：true 必带 / false 不带 / "optional" 可选；null 未知。
   final Object? audio;
 
+  /// 视频生成模式（借鉴 Toonflow `MediaModel.mode` 的可用子集）：
+  /// `text` 文生 / `multiImage` 多图参考 / `startFrameOptional` 首帧可选
+  /// （分镜图可作首帧）。null 表示未知，按旧行为处理（仅多图参考）。
+  final List<String>? videoModes;
+
+  /// 图片参考数量上限（借鉴 `imageReference:N`）；null 时回退全局硬上限 9。
+  final int? maxImageRefs;
+
   final int? contextWindow;
   final int? maxOutputTokens;
+
+  /// 模型支持的视频时长（秒，升序去重）；无能力数据时返回空。
+  List<int> get supportedDurations {
+    final data = durationResolutions;
+    if (data == null) return const [];
+    final set = <int>{};
+    for (final item in data) {
+      set.addAll(item.duration);
+    }
+    return set.toList()..sort();
+  }
+
+  /// 指定时长下支持的分辨率；无能力数据或该时长无匹配时返回空。
+  List<String> resolutionsFor(int durationSec) {
+    final data = durationResolutions;
+    if (data == null) return const [];
+    final set = <String>{};
+    for (final item in data) {
+      if (item.duration.contains(durationSec)) set.addAll(item.resolution);
+    }
+    return set.toList();
+  }
+
+  /// 是否支持把分镜图作为首帧提交（A9.2 首帧通道）。
+  bool get supportsStartFrame {
+    final modes = videoModes;
+    if (modes == null) return false;
+    return modes.contains('startFrameOptional') ||
+        modes.contains('startEndRequired') ||
+        modes.contains('endFrameOptional');
+  }
+
+  /// 音频三态：true 强制开 / false 强制关 / 其余（null、"optional"）可选。
+  bool get audioRequired => identical(audio, true);
+  bool get audioDisabled => identical(audio, false);
+  bool get audioOptional => !audioRequired && !audioDisabled;
 
   ProviderModel copyWith({
     String? id,
@@ -67,17 +113,27 @@ class ProviderModel {
     List<({List<int> duration, List<String> resolution})>?
     durationResolutions,
     Object? audio,
+    List<String>? videoModes,
+    int? maxImageRefs,
     int? contextWindow,
     int? maxOutputTokens,
+    bool clearVideoModes = false,
+    bool clearDurationResolutions = false,
+    bool clearImageSizes = false,
+    bool clearImageRatios = false,
   }) {
     return ProviderModel(
       id: id ?? this.id,
       label: label ?? this.label,
       enabled: enabled ?? this.enabled,
-      imageSizes: imageSizes ?? this.imageSizes,
-      imageRatios: imageRatios ?? this.imageRatios,
-      durationResolutions: durationResolutions ?? this.durationResolutions,
+      imageSizes: clearImageSizes ? null : (imageSizes ?? this.imageSizes),
+      imageRatios: clearImageRatios ? null : (imageRatios ?? this.imageRatios),
+      durationResolutions: clearDurationResolutions
+          ? null
+          : (durationResolutions ?? this.durationResolutions),
       audio: audio ?? this.audio,
+      videoModes: clearVideoModes ? null : (videoModes ?? this.videoModes),
+      maxImageRefs: maxImageRefs ?? this.maxImageRefs,
       contextWindow: contextWindow ?? this.contextWindow,
       maxOutputTokens: maxOutputTokens ?? this.maxOutputTokens,
     );
@@ -95,6 +151,8 @@ class ProviderModel {
           {'duration': d.duration, 'resolution': d.resolution},
       ],
     if (audio != null) 'audio': audio,
+    if (videoModes != null) 'videoModes': videoModes,
+    if (maxImageRefs != null) 'maxImageRefs': maxImageRefs,
     if (contextWindow != null) 'contextWindow': contextWindow,
     if (maxOutputTokens != null) 'maxOutputTokens': maxOutputTokens,
   };
@@ -108,6 +166,8 @@ class ProviderModel {
       imageRatios: _stringList(json['imageRatios']),
       durationResolutions: _durationResolutions(json['durationResolutions']),
       audio: json['audio'],
+      videoModes: _stringList(json['videoModes']),
+      maxImageRefs: (json['maxImageRefs'] as num?)?.toInt(),
       contextWindow: (json['contextWindow'] as num?)?.toInt(),
       maxOutputTokens: (json['maxOutputTokens'] as num?)?.toInt(),
     );

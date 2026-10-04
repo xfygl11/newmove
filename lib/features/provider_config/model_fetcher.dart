@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import 'model_presets.dart';
 import 'provider_models.dart';
 
 /// 拉取结果：去重后的模型列表。
@@ -98,7 +99,8 @@ class ModelFetcher {
   /// 把拉取结果合并进现有模型列表（docs/02 §4.1.1 合并策略）。
   ///
   /// 同 id 保留既有勾选态与能力字段，仅补 label（现有 label 优先）；
-  /// 新模型默认 `enabled: false`，由用户勾选后进入生成链路。
+  /// 新模型默认 `enabled: false`，并套用 [ModelPresets] 补全已知能力，
+  /// 由用户勾选后进入生成链路。
   static List<ProviderModel> mergeFetched({
     required List<ProviderModel> existing,
     required List<FetchedModel> fetched,
@@ -110,7 +112,9 @@ class ModelFetcher {
             ? byId[f.id]!.copyWith(
                 label: byId[f.id]!.label.trim().isEmpty ? f.label : null,
               )
-            : ProviderModel(id: f.id, label: f.label, enabled: false),
+            : ModelPresets.apply(
+                ProviderModel(id: f.id, label: f.label, enabled: false),
+              ),
     ];
     // 保留拉取结果里没有的手填模型，追加在尾部。
     final fetchedIds = {for (final f in fetched) f.id};

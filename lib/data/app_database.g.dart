@@ -7289,6 +7289,17 @@ class $VideoTasksTable extends VideoTasks
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _outputPathMeta = const VerificationMeta(
+    'outputPath',
+  );
+  @override
+  late final GeneratedColumn<String> outputPath = GeneratedColumn<String>(
+    'output_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -7322,6 +7333,7 @@ class $VideoTasksTable extends VideoTasks
     status,
     paramsJson,
     error,
+    outputPath,
     createdAt,
     updatedAt,
   ];
@@ -7382,6 +7394,12 @@ class $VideoTasksTable extends VideoTasks
         error.isAcceptableOrUnknown(data['error']!, _errorMeta),
       );
     }
+    if (data.containsKey('output_path')) {
+      context.handle(
+        _outputPathMeta,
+        outputPath.isAcceptableOrUnknown(data['output_path']!, _outputPathMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -7431,6 +7449,10 @@ class $VideoTasksTable extends VideoTasks
         DriftSqlType.string,
         data['${effectivePrefix}error'],
       ),
+      outputPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}output_path'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -7456,6 +7478,7 @@ class VideoTask extends DataClass implements Insertable<VideoTask> {
   final String status;
   final String paramsJson;
   final String? error;
+  final String? outputPath;
   final DateTime createdAt;
   final DateTime updatedAt;
   const VideoTask({
@@ -7466,6 +7489,7 @@ class VideoTask extends DataClass implements Insertable<VideoTask> {
     required this.status,
     required this.paramsJson,
     this.error,
+    this.outputPath,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -7480,6 +7504,9 @@ class VideoTask extends DataClass implements Insertable<VideoTask> {
     map['params_json'] = Variable<String>(paramsJson);
     if (!nullToAbsent || error != null) {
       map['error'] = Variable<String>(error);
+    }
+    if (!nullToAbsent || outputPath != null) {
+      map['output_path'] = Variable<String>(outputPath);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -7497,6 +7524,9 @@ class VideoTask extends DataClass implements Insertable<VideoTask> {
       error: error == null && nullToAbsent
           ? const Value.absent()
           : Value(error),
+      outputPath: outputPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(outputPath),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -7515,6 +7545,7 @@ class VideoTask extends DataClass implements Insertable<VideoTask> {
       status: serializer.fromJson<String>(json['status']),
       paramsJson: serializer.fromJson<String>(json['paramsJson']),
       error: serializer.fromJson<String?>(json['error']),
+      outputPath: serializer.fromJson<String?>(json['outputPath']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -7530,6 +7561,7 @@ class VideoTask extends DataClass implements Insertable<VideoTask> {
       'status': serializer.toJson<String>(status),
       'paramsJson': serializer.toJson<String>(paramsJson),
       'error': serializer.toJson<String?>(error),
+      'outputPath': serializer.toJson<String?>(outputPath),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -7543,6 +7575,7 @@ class VideoTask extends DataClass implements Insertable<VideoTask> {
     String? status,
     String? paramsJson,
     Value<String?> error = const Value.absent(),
+    Value<String?> outputPath = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => VideoTask(
@@ -7553,6 +7586,7 @@ class VideoTask extends DataClass implements Insertable<VideoTask> {
     status: status ?? this.status,
     paramsJson: paramsJson ?? this.paramsJson,
     error: error.present ? error.value : this.error,
+    outputPath: outputPath.present ? outputPath.value : this.outputPath,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -7569,6 +7603,9 @@ class VideoTask extends DataClass implements Insertable<VideoTask> {
           ? data.paramsJson.value
           : this.paramsJson,
       error: data.error.present ? data.error.value : this.error,
+      outputPath: data.outputPath.present
+          ? data.outputPath.value
+          : this.outputPath,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -7584,6 +7621,7 @@ class VideoTask extends DataClass implements Insertable<VideoTask> {
           ..write('status: $status, ')
           ..write('paramsJson: $paramsJson, ')
           ..write('error: $error, ')
+          ..write('outputPath: $outputPath, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -7599,6 +7637,7 @@ class VideoTask extends DataClass implements Insertable<VideoTask> {
     status,
     paramsJson,
     error,
+    outputPath,
     createdAt,
     updatedAt,
   );
@@ -7613,6 +7652,7 @@ class VideoTask extends DataClass implements Insertable<VideoTask> {
           other.status == this.status &&
           other.paramsJson == this.paramsJson &&
           other.error == this.error &&
+          other.outputPath == this.outputPath &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -7625,6 +7665,7 @@ class VideoTasksCompanion extends UpdateCompanion<VideoTask> {
   final Value<String> status;
   final Value<String> paramsJson;
   final Value<String?> error;
+  final Value<String?> outputPath;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const VideoTasksCompanion({
@@ -7635,6 +7676,7 @@ class VideoTasksCompanion extends UpdateCompanion<VideoTask> {
     this.status = const Value.absent(),
     this.paramsJson = const Value.absent(),
     this.error = const Value.absent(),
+    this.outputPath = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -7646,6 +7688,7 @@ class VideoTasksCompanion extends UpdateCompanion<VideoTask> {
     this.status = const Value.absent(),
     this.paramsJson = const Value.absent(),
     this.error = const Value.absent(),
+    this.outputPath = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   }) : shotId = Value(shotId),
@@ -7659,6 +7702,7 @@ class VideoTasksCompanion extends UpdateCompanion<VideoTask> {
     Expression<String>? status,
     Expression<String>? paramsJson,
     Expression<String>? error,
+    Expression<String>? outputPath,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -7670,6 +7714,7 @@ class VideoTasksCompanion extends UpdateCompanion<VideoTask> {
       if (status != null) 'status': status,
       if (paramsJson != null) 'params_json': paramsJson,
       if (error != null) 'error': error,
+      if (outputPath != null) 'output_path': outputPath,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -7683,6 +7728,7 @@ class VideoTasksCompanion extends UpdateCompanion<VideoTask> {
     Value<String>? status,
     Value<String>? paramsJson,
     Value<String?>? error,
+    Value<String?>? outputPath,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
   }) {
@@ -7694,6 +7740,7 @@ class VideoTasksCompanion extends UpdateCompanion<VideoTask> {
       status: status ?? this.status,
       paramsJson: paramsJson ?? this.paramsJson,
       error: error ?? this.error,
+      outputPath: outputPath ?? this.outputPath,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -7723,6 +7770,9 @@ class VideoTasksCompanion extends UpdateCompanion<VideoTask> {
     if (error.present) {
       map['error'] = Variable<String>(error.value);
     }
+    if (outputPath.present) {
+      map['output_path'] = Variable<String>(outputPath.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -7742,6 +7792,7 @@ class VideoTasksCompanion extends UpdateCompanion<VideoTask> {
           ..write('status: $status, ')
           ..write('paramsJson: $paramsJson, ')
           ..write('error: $error, ')
+          ..write('outputPath: $outputPath, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -7818,6 +7869,15 @@ class $ProviderConfigsTable extends ProviderConfigs
     requiredDuringInsert: false,
     defaultValue: const Constant('[]'),
   );
+  static const VerificationMeta _readmeMeta = const VerificationMeta('readme');
+  @override
+  late final GeneratedColumn<String> readme = GeneratedColumn<String>(
+    'readme',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -7850,6 +7910,7 @@ class $ProviderConfigsTable extends ProviderConfigs
     baseUrl,
     protocol,
     models,
+    readme,
     createdAt,
     updatedAt,
   ];
@@ -7908,6 +7969,12 @@ class $ProviderConfigsTable extends ProviderConfigs
         models.isAcceptableOrUnknown(data['models']!, _modelsMeta),
       );
     }
+    if (data.containsKey('readme')) {
+      context.handle(
+        _readmeMeta,
+        readme.isAcceptableOrUnknown(data['readme']!, _readmeMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -7953,6 +8020,10 @@ class $ProviderConfigsTable extends ProviderConfigs
         DriftSqlType.string,
         data['${effectivePrefix}models'],
       )!,
+      readme: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}readme'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -7977,6 +8048,7 @@ class ProviderConfig extends DataClass implements Insertable<ProviderConfig> {
   final String baseUrl;
   final String protocol;
   final String models;
+  final String? readme;
   final DateTime createdAt;
   final DateTime updatedAt;
   const ProviderConfig({
@@ -7986,6 +8058,7 @@ class ProviderConfig extends DataClass implements Insertable<ProviderConfig> {
     required this.baseUrl,
     required this.protocol,
     required this.models,
+    this.readme,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -7998,6 +8071,9 @@ class ProviderConfig extends DataClass implements Insertable<ProviderConfig> {
     map['base_url'] = Variable<String>(baseUrl);
     map['protocol'] = Variable<String>(protocol);
     map['models'] = Variable<String>(models);
+    if (!nullToAbsent || readme != null) {
+      map['readme'] = Variable<String>(readme);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -8011,6 +8087,9 @@ class ProviderConfig extends DataClass implements Insertable<ProviderConfig> {
       baseUrl: Value(baseUrl),
       protocol: Value(protocol),
       models: Value(models),
+      readme: readme == null && nullToAbsent
+          ? const Value.absent()
+          : Value(readme),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -8028,6 +8107,7 @@ class ProviderConfig extends DataClass implements Insertable<ProviderConfig> {
       baseUrl: serializer.fromJson<String>(json['baseUrl']),
       protocol: serializer.fromJson<String>(json['protocol']),
       models: serializer.fromJson<String>(json['models']),
+      readme: serializer.fromJson<String?>(json['readme']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -8042,6 +8122,7 @@ class ProviderConfig extends DataClass implements Insertable<ProviderConfig> {
       'baseUrl': serializer.toJson<String>(baseUrl),
       'protocol': serializer.toJson<String>(protocol),
       'models': serializer.toJson<String>(models),
+      'readme': serializer.toJson<String?>(readme),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -8054,6 +8135,7 @@ class ProviderConfig extends DataClass implements Insertable<ProviderConfig> {
     String? baseUrl,
     String? protocol,
     String? models,
+    Value<String?> readme = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => ProviderConfig(
@@ -8063,6 +8145,7 @@ class ProviderConfig extends DataClass implements Insertable<ProviderConfig> {
     baseUrl: baseUrl ?? this.baseUrl,
     protocol: protocol ?? this.protocol,
     models: models ?? this.models,
+    readme: readme.present ? readme.value : this.readme,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -8074,6 +8157,7 @@ class ProviderConfig extends DataClass implements Insertable<ProviderConfig> {
       baseUrl: data.baseUrl.present ? data.baseUrl.value : this.baseUrl,
       protocol: data.protocol.present ? data.protocol.value : this.protocol,
       models: data.models.present ? data.models.value : this.models,
+      readme: data.readme.present ? data.readme.value : this.readme,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -8088,6 +8172,7 @@ class ProviderConfig extends DataClass implements Insertable<ProviderConfig> {
           ..write('baseUrl: $baseUrl, ')
           ..write('protocol: $protocol, ')
           ..write('models: $models, ')
+          ..write('readme: $readme, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -8102,6 +8187,7 @@ class ProviderConfig extends DataClass implements Insertable<ProviderConfig> {
     baseUrl,
     protocol,
     models,
+    readme,
     createdAt,
     updatedAt,
   );
@@ -8115,6 +8201,7 @@ class ProviderConfig extends DataClass implements Insertable<ProviderConfig> {
           other.baseUrl == this.baseUrl &&
           other.protocol == this.protocol &&
           other.models == this.models &&
+          other.readme == this.readme &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -8126,6 +8213,7 @@ class ProviderConfigsCompanion extends UpdateCompanion<ProviderConfig> {
   final Value<String> baseUrl;
   final Value<String> protocol;
   final Value<String> models;
+  final Value<String?> readme;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -8136,6 +8224,7 @@ class ProviderConfigsCompanion extends UpdateCompanion<ProviderConfig> {
     this.baseUrl = const Value.absent(),
     this.protocol = const Value.absent(),
     this.models = const Value.absent(),
+    this.readme = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -8147,6 +8236,7 @@ class ProviderConfigsCompanion extends UpdateCompanion<ProviderConfig> {
     required String baseUrl,
     required String protocol,
     this.models = const Value.absent(),
+    this.readme = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -8162,6 +8252,7 @@ class ProviderConfigsCompanion extends UpdateCompanion<ProviderConfig> {
     Expression<String>? baseUrl,
     Expression<String>? protocol,
     Expression<String>? models,
+    Expression<String>? readme,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -8173,6 +8264,7 @@ class ProviderConfigsCompanion extends UpdateCompanion<ProviderConfig> {
       if (baseUrl != null) 'base_url': baseUrl,
       if (protocol != null) 'protocol': protocol,
       if (models != null) 'models': models,
+      if (readme != null) 'readme': readme,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -8186,6 +8278,7 @@ class ProviderConfigsCompanion extends UpdateCompanion<ProviderConfig> {
     Value<String>? baseUrl,
     Value<String>? protocol,
     Value<String>? models,
+    Value<String?>? readme,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -8197,6 +8290,7 @@ class ProviderConfigsCompanion extends UpdateCompanion<ProviderConfig> {
       baseUrl: baseUrl ?? this.baseUrl,
       protocol: protocol ?? this.protocol,
       models: models ?? this.models,
+      readme: readme ?? this.readme,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -8224,6 +8318,9 @@ class ProviderConfigsCompanion extends UpdateCompanion<ProviderConfig> {
     if (models.present) {
       map['models'] = Variable<String>(models.value);
     }
+    if (readme.present) {
+      map['readme'] = Variable<String>(readme.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -8245,6 +8342,7 @@ class ProviderConfigsCompanion extends UpdateCompanion<ProviderConfig> {
           ..write('baseUrl: $baseUrl, ')
           ..write('protocol: $protocol, ')
           ..write('models: $models, ')
+          ..write('readme: $readme, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -14658,6 +14756,7 @@ typedef $$VideoTasksTableCreateCompanionBuilder = VideoTasksCompanion Function({
   Value<String> status,
   Value<String> paramsJson,
   Value<String?> error,
+  Value<String?> outputPath,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -14669,6 +14768,7 @@ typedef $$VideoTasksTableUpdateCompanionBuilder = VideoTasksCompanion Function({
   Value<String> status,
   Value<String> paramsJson,
   Value<String?> error,
+  Value<String?> outputPath,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -14731,6 +14831,11 @@ class $$VideoTasksTableFilterComposer
 
   ColumnFilters<String> get error => $composableBuilder(
     column: $table.error,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get outputPath => $composableBuilder(
+    column: $table.outputPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14807,6 +14912,11 @@ class $$VideoTasksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get outputPath => $composableBuilder(
+    column: $table.outputPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -14871,6 +14981,11 @@ class $$VideoTasksTableAnnotationComposer
 
   GeneratedColumn<String> get error =>
       $composableBuilder(column: $table.error, builder: (column) => column);
+
+  GeneratedColumn<String> get outputPath => $composableBuilder(
+    column: $table.outputPath,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -14937,6 +15052,7 @@ class $$VideoTasksTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<String> paramsJson = const Value.absent(),
                 Value<String?> error = const Value.absent(),
+                Value<String?> outputPath = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => VideoTasksCompanion(
@@ -14947,6 +15063,7 @@ class $$VideoTasksTableTableManager
                 status: status,
                 paramsJson: paramsJson,
                 error: error,
+                outputPath: outputPath,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -14959,6 +15076,7 @@ class $$VideoTasksTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<String> paramsJson = const Value.absent(),
                 Value<String?> error = const Value.absent(),
+                Value<String?> outputPath = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => VideoTasksCompanion.insert(
@@ -14969,6 +15087,7 @@ class $$VideoTasksTableTableManager
                 status: status,
                 paramsJson: paramsJson,
                 error: error,
+                outputPath: outputPath,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -15045,6 +15164,7 @@ typedef $$ProviderConfigsTableCreateCompanionBuilder =
       required String baseUrl,
       required String protocol,
       Value<String> models,
+      Value<String?> readme,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -15057,6 +15177,7 @@ typedef $$ProviderConfigsTableUpdateCompanionBuilder =
       Value<String> baseUrl,
       Value<String> protocol,
       Value<String> models,
+      Value<String?> readme,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -15098,6 +15219,11 @@ class $$ProviderConfigsTableFilterComposer
 
   ColumnFilters<String> get models => $composableBuilder(
     column: $table.models,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get readme => $composableBuilder(
+    column: $table.readme,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15151,6 +15277,11 @@ class $$ProviderConfigsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get readme => $composableBuilder(
+    column: $table.readme,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -15188,6 +15319,9 @@ class $$ProviderConfigsTableAnnotationComposer
 
   GeneratedColumn<String> get models =>
       $composableBuilder(column: $table.models, builder: (column) => column);
+
+  GeneratedColumn<String> get readme =>
+      $composableBuilder(column: $table.readme, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -15239,6 +15373,7 @@ class $$ProviderConfigsTableTableManager
                 Value<String> baseUrl = const Value.absent(),
                 Value<String> protocol = const Value.absent(),
                 Value<String> models = const Value.absent(),
+                Value<String?> readme = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -15249,6 +15384,7 @@ class $$ProviderConfigsTableTableManager
                 baseUrl: baseUrl,
                 protocol: protocol,
                 models: models,
+                readme: readme,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -15261,6 +15397,7 @@ class $$ProviderConfigsTableTableManager
                 required String baseUrl,
                 required String protocol,
                 Value<String> models = const Value.absent(),
+                Value<String?> readme = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -15271,6 +15408,7 @@ class $$ProviderConfigsTableTableManager
                 baseUrl: baseUrl,
                 protocol: protocol,
                 models: models,
+                readme: readme,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

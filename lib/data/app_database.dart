@@ -63,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -85,6 +85,11 @@ class AppDatabase extends _$AppDatabase {
       if (from < 4) {
         // M6：视频生成任务表（断点续跑）。
         await m.createTable(videoTasks);
+      }
+      if (from < 5) {
+        // M7 追加轮：视频任务产物路径（媒体历史）、供应商说明。
+        await m.addColumn(videoTasks, videoTasks.outputPath);
+        await m.addColumn(providerConfigs, providerConfigs.readme);
       }
     },
     beforeOpen: (details) async {

@@ -114,6 +114,7 @@ class BackupService {
           }
           for (final v in await db.videoTaskDao.listByShot(sh.id)) {
             videoTasksJson.add(v.toJson());
+            _collectMedia(mediaFiles, v.outputPath);
           }
         }
         for (final r in await db.scriptRevisionDao.listByScript(s.id)) {
@@ -280,6 +281,7 @@ class BackupService {
       await insertRows<VideoTasks, VideoTask>(db.videoTasks, 'videoTasks', (r) {
         final remapped = _remap(r, const {});
         remapped['shotId'] = mapped('shots', r['shotId']);
+        remapped['outputPath'] = _media(r['outputPath'], mediaMap);
         return remapped;
       });
       await insertRows<ScriptRevisions, ScriptRevision>(

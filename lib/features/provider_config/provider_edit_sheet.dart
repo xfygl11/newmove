@@ -39,6 +39,7 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
   late final TextEditingController _baseUrl;
   late final TextEditingController _apiKey;
   late final TextEditingController _protocol;
+  late final TextEditingController _readme;
 
   late ProviderGroup _group;
   late List<ProviderModel> _models;
@@ -62,6 +63,7 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
     _protocol = TextEditingController(
       text: existing?.protocol ?? _defaultProtocol(_group),
     );
+    _readme = TextEditingController(text: existing?.readme ?? '');
     _models = existing != null
         ? ProviderModelCodec.decode(existing.models)
         : [ProviderModel(id: '', label: '')];
@@ -73,6 +75,7 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
     _baseUrl.dispose();
     _apiKey.dispose();
     _protocol.dispose();
+    _readme.dispose();
     super.dispose();
   }
 
@@ -138,6 +141,9 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
           baseUrl: _baseUrl.text.trim(),
           protocol: _protocol.text.trim(),
           models: Value(ProviderModelCodec.encode(validModels)),
+          readme: Value(
+            _readme.text.trim().isEmpty ? null : _readme.text.trim(),
+          ),
         ),
       );
 
@@ -340,6 +346,15 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
                   if (v != null) _protocol.text = v;
                 },
               ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _readme,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: '说明（可选）',
+                  hintText: '如：768P 仅 0.09 元/秒，前往平台获取密钥',
+                ),
+              ),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -368,6 +383,7 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
                 _ModelRow(
                   key: ValueKey('model_$i'),
                   model: _models[i],
+                  group: _group,
                   onChanged: (m) => setState(() => _models[i] = m),
                   onRemove: _models.length > 1
                       ? () => setState(() => _models.removeAt(i))
@@ -431,59 +447,305 @@ class _ModelRow extends StatelessWidget {
   const _ModelRow({
     super.key,
     required this.model,
+    required this.group,
     required this.onChanged,
     required this.onRemove,
   });
 
   final ProviderModel model;
+  final ProviderGroup group;
   final ValueChanged<ProviderModel> onChanged;
   final VoidCallback? onRemove;
+
+  /// 能力摘要（用于编辑对话框入口副标题）。
+  String get _capabilitySummary {
+    final parts = <String>[];
+    final durations = model.supportedDurations;
+    if (durations.isNotEmpty) {
+      parts.add('${durations.first}-${durations.last}s');
+    }
+    final res = model.durationResolutions;
+    if (res != null && res.isNotEmpty) {
+      parts.add(res.first.resolution.join('/'));
+    }
+    if (model.maxImageRefs != null) parts.add('参考≤${model.maxImageRefs}');
+    if (model.supportsStartFrame) parts.add('首帧');
+    return parts.isEmpty ? '未设置能力（点此补全）' : parts.join(' · ');
+  }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 勾选态：是否启用进生成链路（docs/02 §4.1.2）。
-          SizedBox(
-            width: 40,
-            child: Checkbox(
-              value: model.enabled,
-              onChanged: (v) =>
-                  onChanged(model.copyWith(enabled: v ?? false)),
-            ),
-          ),
-          Expanded(
-            child: TextFormField(
-              initialValue: model.id,
-              decoration: const InputDecoration(
-                labelText: '模型 ID',
-                hintText: 'deepseek-chat',
-                isDense: true,
+          Row(
+            children: [
+              // 勾选态：是否启用进生成链路（docs/02 §4.1.2）。
+              SizedBox(
+                width: 40,
+                child: Checkbox(
+                  value: model.enabled,
+                  onChanged: (v) =>
+                      onChanged(model.copyWith(enabled: v ?? false)),
+                ),
               ),
-              onChanged: (v) => onChanged(model.copyWith(id: v)),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextFormField(
-              initialValue: model.label,
-              decoration: const InputDecoration(
-                labelText: '显示名',
-                hintText: 'DeepSeek Chat',
-                isDense: true,
+              Expanded(
+                child: TextFormField(
+                  initialValue: model.id,
+                  decoration: const InputDecoration(
+                    labelText: '模型 ID',
+                    hintText: 'deepseek-chat',
+                    isDense: true,
+                  ),
+                  onChanged: (v) => onChanged(model.copyWith(id: v)),
+                ),
               ),
-              onChanged: (v) => onChanged(model.copyWith(label: v)),
-            ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  initialValue: model.label,
+                  decoration: const InputDecoration(
+                    labelText: '显示名',
+                    hintText: 'DeepSeek Chat',
+                    isDense: true,
+                  ),
+                  onChanged: (v) => onChanged(model.copyWith(label: v)),
+                ),
+              ),
+              IconButton(
+                tooltip: '能力设置',
+                onPressed: () async {
+                  final updated = await showDialog<ProviderModel>(
+                    context: context,
+                    builder: (_) =>
+                        _ModelCapabilityDialog(model: model, group: group),
+                  );
+                  if (updated != null) onChanged(updated);
+                },
+                icon: const Icon(Icons.tune, size: 20),
+              ),
+              IconButton(
+                onPressed: onRemove,
+                icon: const Icon(Icons.close),
+                tooltip: '删除模型',
+              ),
+            ],
           ),
-          IconButton(
-            onPressed: onRemove,
-            icon: const Icon(Icons.close),
-            tooltip: '删除模型',
+          Padding(
+            padding: const EdgeInsets.only(left: 40),
+            child: Text(
+              _capabilitySummary,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 模型能力编辑对话框（借鉴 Toonflow `MediaModel` 能力字段）。
+///
+/// 视频：时长/分辨率/支持模式/最大参考图/音频三态；
+/// 图片：尺寸/画幅。用逗号分隔文本录入，空表示未知。
+class _ModelCapabilityDialog extends StatefulWidget {
+  const _ModelCapabilityDialog({required this.model, required this.group});
+
+  final ProviderModel model;
+  final ProviderGroup group;
+
+  @override
+  State<_ModelCapabilityDialog> createState() => _ModelCapabilityDialogState();
+}
+
+class _ModelCapabilityDialogState extends State<_ModelCapabilityDialog> {
+  late final TextEditingController _durations;
+  late final TextEditingController _resolutions;
+  late final TextEditingController _imageSizes;
+  late final TextEditingController _imageRatios;
+  late final TextEditingController _maxRefs;
+  late Set<String> _modes;
+  late int _audio; // 0 可选 / 1 强制开 / 2 强制关
+
+  bool get _isVideo => widget.group == ProviderGroup.video;
+
+  @override
+  void initState() {
+    super.initState();
+    final m = widget.model;
+    final durations = m.supportedDurations;
+    final res = m.durationResolutions;
+    _durations = TextEditingController(text: durations.join(','));
+    _resolutions = TextEditingController(
+      text: res == null
+          ? ''
+          : (res.expand((e) => e.resolution).toSet().toList()).join(','),
+    );
+    _imageSizes = TextEditingController(text: m.imageSizes?.join(',') ?? '');
+    _imageRatios = TextEditingController(text: m.imageRatios?.join(',') ?? '');
+    _maxRefs = TextEditingController(text: m.maxImageRefs?.toString() ?? '');
+    _modes = {...?m.videoModes};
+    _audio = m.audioRequired ? 1 : (m.audioDisabled ? 2 : 0);
+  }
+
+  @override
+  void dispose() {
+    _durations.dispose();
+    _resolutions.dispose();
+    _imageSizes.dispose();
+    _imageRatios.dispose();
+    _maxRefs.dispose();
+    super.dispose();
+  }
+
+  List<String> _split(String raw) => [
+        for (final p in raw.split(RegExp(r'[,，]')))
+          if (p.trim().isNotEmpty) p.trim(),
+      ];
+
+  void _save() {
+    final m = widget.model;
+    var updated = m;
+    if (_isVideo) {
+      final durations = [
+        for (final p in _split(_durations.text))
+          if (int.tryParse(p) != null) int.parse(p),
+      ]..sort();
+      final resolutions = _split(_resolutions.text);
+      updated = updated.copyWith(
+        durationResolutions: durations.isEmpty || resolutions.isEmpty
+            ? null
+            : [(duration: durations, resolution: resolutions)],
+        clearDurationResolutions: durations.isEmpty || resolutions.isEmpty,
+        videoModes: _modes.isEmpty ? null : _modes.toList(),
+        clearVideoModes: _modes.isEmpty,
+        maxImageRefs: int.tryParse(_maxRefs.text.trim()),
+        audio: switch (_audio) {
+          1 => true,
+          2 => false,
+          _ => 'optional',
+        },
+      );
+    } else {
+      final sizes = _split(_imageSizes.text);
+      final ratios = _split(_imageRatios.text);
+      updated = updated.copyWith(
+        imageSizes: sizes.isEmpty ? null : sizes,
+        clearImageSizes: sizes.isEmpty,
+        imageRatios: ratios.isEmpty ? null : ratios,
+        clearImageRatios: ratios.isEmpty,
+      );
+    }
+    Navigator.of(context).pop(updated);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('模型能力'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '留空表示未知，生成页会回退通用词表。',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            if (_isVideo) ...[
+              TextField(
+                controller: _durations,
+                decoration: const InputDecoration(
+                  labelText: '支持时长（秒，逗号分隔）',
+                  hintText: '4,5,6,...,15',
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _resolutions,
+                decoration: const InputDecoration(
+                  labelText: '支持分辨率（逗号分隔）',
+                  hintText: '480p,720p,1080p',
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text('支持模式', style: Theme.of(context).textTheme.bodySmall),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final entry in const {
+                    'text': '文生',
+                    'multiImage': '多图参考',
+                    'startFrameOptional': '首帧可选',
+                  }.entries)
+                    FilterChip(
+                      label: Text(entry.value),
+                      selected: _modes.contains(entry.key),
+                      onSelected: (sel) => setState(() {
+                        if (sel) {
+                          _modes.add(entry.key);
+                        } else {
+                          _modes.remove(entry.key);
+                        }
+                      }),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _maxRefs,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: '最大参考图数（默认 9）',
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text('音频能力', style: Theme.of(context).textTheme.bodySmall),
+              SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 0, label: Text('可选')),
+                  ButtonSegment(value: 1, label: Text('强制开')),
+                  ButtonSegment(value: 2, label: Text('强制关')),
+                ],
+                selected: {_audio},
+                showSelectedIcon: false,
+                onSelectionChanged: (s) => setState(() => _audio = s.first),
+              ),
+            ] else ...[
+              TextField(
+                controller: _imageSizes,
+                decoration: const InputDecoration(
+                  labelText: '支持尺寸（逗号分隔）',
+                  hintText: '1K,2K,4K',
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _imageRatios,
+                decoration: const InputDecoration(
+                  labelText: '支持画幅（逗号分隔）',
+                  hintText: '16:9,9:16,1:1',
+                  isDense: true,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        FilledButton(onPressed: _save, child: const Text('确定')),
+      ],
     );
   }
 }
