@@ -138,7 +138,7 @@ lib/
 - **列表页加载**：异步数据在 `initState` 加载一次 + `_loading`/`_error`/`_reload` 状态；禁止 `build` 里 `FutureBuilder(future: _load())`。
 - **await 后 Toast**：任何 `_toast` 类方法必须首行 `if (!mounted) return;`，长耗时 AI 调用期间用户可能已离开页面（"Looking up a deactivated widget's ancestor is unsafe"）。同理，弹窗 / 导航 / Controller 持有也需检查。
 - **压缩包导入**：解压条目名一律经 `BackupService._resolveMediaPath` 解析——拒绝绝对路径、`..`/`.`/空段，并校验解析后绝对路径前缀（防 zip slip 越界写文件）。任何接收用户提供的 zip/文件名并落盘的路径都必须做同等校验。
-- **APK 体积**：`build.gradle.kts` 只打 `arm64-v8a` 单 ABI（`splits.abi`），FFmpeg 用 `ffmpeg_kit_flutter_new_min_gpl`；CI 产物路径为 `app-{release,debug}-arm64-v8a.apk`。
+- **APK 体积**：`build.gradle.kts` 的 `defaultConfig` 用 `ndk.abiFilters = ["arm64-v8a"]` 只打单 ABI，FFmpeg 用 `ffmpeg_kit_flutter_new_min_gpl`；CI 构建命令带 `-P disable-abi-filtering=true`，产物为 `app-{release,debug}.apk`。**不要用 `splits.abi`**：Flutter Gradle 插件在未传 `-P split-per-abi` 时会把 `armeabi-v7a/arm64-v8a/x86_64` 写进 `defaultConfig.ndk.abiFilters`，与 `splits.abi` 互斥，Gradle configure 阶段直接报 `Conflicting configuration` 使 CI 构建失败。
 
 ---
 

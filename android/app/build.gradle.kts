@@ -36,16 +36,16 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-    }
 
-    // 仅保留 arm64-v8a，减少约 3/4 native 库体积（ffmpeg-kit full-gpl 是主要来源）。
-    // minSdk 24 = Android 7.0，所有主流目标设备均为 64 位。
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("arm64-v8a")
-            isUniversalApk = false
+        // 仅打包 arm64-v8a，减少约 3/4 native 库体积（ffmpeg-kit 是主要来源）。
+        // minSdk 24 = Android 7.0，目标设备均为 64 位。
+        //
+        // 注意不能用 splits.abi：Flutter Gradle 插件在未传 -P split-per-abi 时会把
+        // armeabi-v7a/arm64-v8a/x86_64 写进 defaultConfig.ndk.abiFilters，与 splits.abi
+        // 互斥，configure 阶段直接报 "Conflicting configuration" 使 CI 构建失败。
+        ndk {
+            abiFilters.clear()
+            abiFilters.add("arm64-v8a")
         }
     }
 

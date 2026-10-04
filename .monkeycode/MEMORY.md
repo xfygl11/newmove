@@ -46,7 +46,8 @@ Entries discovered by the Agent during task execution should follow this format:
   - APK 构建一律走 GitHub Actions CI，push 后在 Actions 产出/下载 APK
   - 本地跑 `flutter build apk` 会失败或拖垮机器，本地只做 `flutter analyze` + `flutter test`
   - Release 签名在 CI 完成，签名材料走仓库 Secret：`KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD`
-  - CI 产物路径已改为 `app-release-arm64-v8a.apk` / `app-debug-arm64-v8a.apk`（单 ABI）
+  - CI 产物路径为 `app-release.apk` / `app-debug.apk`（单 ABI 单 APK，无 ABI 后缀）
+  - ABI 只打 `arm64-v8a`：用 `defaultConfig.ndk.abiFilters`，CI 构建命令带 `-P disable-abi-filtering=true`。**禁止用 `splits.abi`**——Flutter Gradle 插件（`FlutterPlugin.kt` 的 `configureAbis()`）在未传 `-P split-per-abi` 时会把 `armeabi-v7a/arm64-v8a/x86_64` 写进 `defaultConfig.ndk.abiFilters`，与 `splits.abi` 互斥，configure 阶段报 `Conflicting configuration` 直接失败
   - CI 状态轮询：`curl -s -H "Accept: application/vnd.github+json" api.github.com/repos/xfygl11/newmove/commits/<sha>/check-runs`；遇 API rate limit 跳过，以本地验证为准
 
 [Flutter / Dart 命令路径]
