@@ -23,6 +23,17 @@ class VideoFileStore {
     return file.path;
   }
 
+  /// 从源文件复制视频（流式复制，不整包载入内存），返回目标绝对路径。
+  Future<String> saveFromPath(int shotId, String sourcePath) async {
+    final dir = await _baseDir();
+    final target = File('${dir.path}/shot_$shotId.mp4');
+    if (await target.exists()) {
+      await target.delete();
+    }
+    await File(sourcePath).copy(target.path);
+    return target.path;
+  }
+
   /// 删除单个视频文件。
   Future<void> delete(String? path) async {
     if (path == null || path.isEmpty) return;

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/network/protocols.dart';
 import '../../core/network/providers.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
@@ -89,19 +90,11 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
   }
 
   static String _defaultProtocol(ProviderGroup group) {
-    return switch (group) {
-      ProviderGroup.llm => 'openai-completions',
-      ProviderGroup.image => 'openai-images',
-      ProviderGroup.video => 'async-task',
-    };
+    return Protocols.optionsFor(group.name).first;
   }
 
   static List<String> _protocolOptions(ProviderGroup group) {
-    return switch (group) {
-      ProviderGroup.llm => const ['openai-completions', 'openai-chat'],
-      ProviderGroup.image => const ['openai-images', 'async-task'],
-      ProviderGroup.video => const ['async-task', 'openai-videos'],
-    };
+    return Protocols.optionsFor(group.name);
   }
 
   String _newId() {
@@ -130,6 +123,13 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
       _showMessage('请至少勾选启用一个模型');
       return;
     }
+    // 协议必须属于当前分组，避免生成链路静默落到默认分支。
+    final protocol = _protocol.text.trim();
+    if (!Protocols.isSupported(_group.name, protocol)) {
+      _showMessage('协议「$protocol」不支持该分组');
+      return;
+    }
+
     // 新建时 API Key 必填。
     if (!_isEdit && _apiKey.text.trim().isEmpty) {
       _showMessage('请填写 API Key');
@@ -148,7 +148,7 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
           group: _group.name,
           label: _label.text.trim(),
           baseUrl: _baseUrl.text.trim(),
-          protocol: _protocol.text.trim(),
+          protocol: protocol,
           models: Value(ProviderModelCodec.encode(validModels)),
           readme: Value(
             _readme.text.trim().isEmpty ? null : _readme.text.trim(),

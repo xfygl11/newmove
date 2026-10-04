@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/network/protocols.dart';
 import '../core/storage/providers.dart';
 import '../data/app_database.dart';
 import '../features/provider_config/provider_models.dart';
@@ -24,6 +25,8 @@ class ActiveImage {
 final activeImageProvider = FutureProvider<ActiveImage?>((ref) async {
   final providers = await ref.watch(providerDaoProvider).listByGroup('image');
   for (final p in providers) {
+    // 协议不在支持列表内的配置直接跳过，不让 protocol 变成死字段。
+    if (!Protocols.isSupported('image', p.protocol)) continue;
     final key = await ref.watch(secureKeyStoreProvider).readKey(p.id);
     // 只使用勾选启用的模型（docs/02 §4.1.2）。
     final models = ProviderModelCodec.decode(p.models)

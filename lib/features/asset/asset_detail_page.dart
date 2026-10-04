@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../agent/active_image.dart';
 import '../../data/app_database.dart';
-import 'asset_models.dart';
+import '../../widgets/status_badge.dart';
 import 'asset_providers.dart';
 
 /// 资产详情：大图预览、外观锚点、变体列表、生成/验收操作。
@@ -181,7 +181,7 @@ class _DetailBody extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const Spacer(),
-                    _StatusBadge(status: asset.status),
+                    StatusBadge(status: asset.status),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -258,31 +258,5 @@ class _DetailBody extends StatelessWidget {
       // 忽略，回退原文。
     }
     return json;
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (status) {
-      AssetStatuses.pending => Colors.grey,
-      AssetStatuses.generating => Colors.blue,
-      AssetStatuses.reviewing => Colors.orange,
-      AssetStatuses.accepted => Colors.green,
-      AssetStatuses.discarded => Colors.red,
-      _ => Colors.grey,
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(status, style: TextStyle(color: color)),
-    );
   }
 }

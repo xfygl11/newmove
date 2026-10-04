@@ -237,6 +237,7 @@ class AssetService {
           model: image.modelId,
           prompt: asset.prompt,
           referencePath: reference,
+          protocol: image.protocol,
         );
         return _resolveBytes(result);
       }
@@ -247,6 +248,7 @@ class AssetService {
       apiKey: image.apiKey,
       model: image.modelId,
       prompt: asset.prompt,
+      protocol: image.protocol,
     );
     return _resolveBytes(result);
   }

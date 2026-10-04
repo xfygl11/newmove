@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import 'protocols.dart';
+
 /// 视频生成任务的三态快照（提交后 → 轮询中 → 终态）。
 class VideoTaskSnapshot {
   const VideoTaskSnapshot({
@@ -72,9 +74,10 @@ class VideoProviderAdapter {
     String? firstFramePath,
     int maxImageRefs = 9,
     bool generateAudio = false,
-    String protocol = 'async-task',
+    String protocol = Protocols.asyncTask,
   }) async {
-    if (protocol == 'openai-videos') {
+    Protocols.require('video', protocol);
+    if (protocol == Protocols.openaiVideos) {
       return _submitOpenAiVideos(
         baseUrl: baseUrl,
         apiKey: apiKey,
@@ -111,9 +114,10 @@ class VideoProviderAdapter {
     required String apiKey,
     required String taskId,
     String model = '',
-    String protocol = 'async-task',
+    String protocol = Protocols.asyncTask,
   }) async {
-    if (protocol == 'openai-videos') {
+    Protocols.require('video', protocol);
+    if (protocol == Protocols.openaiVideos) {
       return _pollOpenAiVideos(
         baseUrl: baseUrl,
         apiKey: apiKey,

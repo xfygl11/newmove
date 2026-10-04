@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../agent/active_llm.dart';
 import '../../data/app_database.dart';
+import '../../widgets/confirm_sheet.dart';
 import '../script/script_providers.dart';
 import 'skeleton_models.dart';
 import 'skeleton_providers.dart';
@@ -101,40 +102,35 @@ class _SkeletonPageState extends ConsumerState<SkeletonPage> {
         ref.read(shotsByScriptProvider(widget.scriptId)).value ?? const [];
     final beats =
         ref.read(beatsByScriptProvider(widget.scriptId)).value ?? const [];
-
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('确认重新提取'),
-        content: Text(
-          '将覆盖现有 ${beats.length} 个节拍与 ${shots.length} 个分段，'
-          '已绑定的下游参考关系可能失效，确定继续？',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('重新提取'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-
     final llm = await ref.read(activeLlmProvider.future);
+    if (!mounted) return;
     if (llm == null) {
       _toast('请先在「设置」配置可用的 LLM 供应商');
+      return;
+    }
+    final svc = ref.read(skeletonServiceProvider);
+    if (!await ConfirmSheet.confirm(
+      context,
+      objectName: '骨架提取',
+      quantity: '${scenes.length} 场',
+      promptPreview: svc.buildExtractionPrompt(script: script, scenes: scenes),
+      params: ['供应商：${llm.provider.label}', '模型：${llm.modelId}'],
+      note:
+          '将覆盖现有 ${beats.length} 个节拍与 ${shots.length} 个分段，'
+          '已绑定的下游参考关系可能失效。',
+      title: '确认重新提取',
+      confirmLabel: '重新提取',
+    )) {
       return;
     }
 
     setState(() => _busy = true);
     try {
-      final summary = await ref
-          .read(skeletonServiceProvider)
-          .extract(script: script, scenes: scenes, llm: llm);
+      final summary = await svc.extract(
+        script: script,
+        scenes: scenes,
+        llm: llm,
+      );
       if (mounted) {
         _toast(
           '骨架已更新：${summary.segmentCount} 段 / '

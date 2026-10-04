@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../app.dart';
 import '../../data/app_database.dart';
 import '../novel/novel_providers.dart';
+import '../shot/shot_compose_service.dart';
 import '../shot/shot_providers.dart';
 import 'script_adapt_sheet.dart';
 import 'script_models.dart';
@@ -246,26 +248,45 @@ class _ComposeRow extends ConsumerWidget {
     final script = ref.watch(scriptProvider(scriptId)).value;
     final outName =
         'compose_${script?.title ?? 'script'}_${DateTime.now().millisecondsSinceEpoch}.mp4';
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            SizedBox(width: 12),
-            Expanded(child: Text('正在合成…（FFmpeg 本地拼接）')),
-          ],
+
+    // 合成耗时可达数分钟：用可取消的 SnackBar 逐阶段刷新，
+    // 且服务侧带超时兜底，不会再出现永久进度条挡住操作。
+    final token = ComposeCancelToken();
+    final messenger = rootMessenger;
+    void showPhase(String phase) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Text('正在合成：$phase')),
+            ],
+          ),
+          action: SnackBarAction(
+            label: '取消',
+            onPressed: () {
+              token.cancel();
+            },
+          ),
         ),
-      ),
-    );
+      );
+    }
+
     try {
       final path = await ref
           .read(shotComposeServiceProvider)
-          .composeScript(scriptId: scriptId, outputName: outName);
+          .composeScript(
+            scriptId: scriptId,
+            outputName: outName,
+            cancelToken: token,
+            onProgress: showPhase,
+          );
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(SnackBar(content: Text('已合成：$path')));
       final file = XFile(path);

@@ -9,7 +9,9 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../agent/active_llm.dart';
 import '../../core/storage/providers.dart';
+import '../../core/text/chapter_import.dart';
 import '../../data/app_database.dart';
+import '../../widgets/confirm_sheet.dart';
 import 'novel_models.dart';
 import 'novel_providers.dart';
 
@@ -62,7 +64,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
     if (!mounted || _controller == null) return;
     final plain = _plainText;
     if (plain.length != _lastWordCount) {
-      setState(() => _lastWordCount = plain.length);
+      setState(() => _lastWordCount = ChapterImport.countWords(plain));
     }
   }
 
@@ -208,10 +210,14 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
           .replaceAll('<', '&lt;')
           .replaceAll('>', '&gt;')
           .replaceAll('\n', '</p><p>');
+      final escapedTitle = title
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;');
       body =
           '<!DOCTYPE html>\n<html>\n<head><meta charset="utf-8">'
-          '<title>$title</title></head>\n'
-          '<body>\n<h1>$title</h1>\n<p>$escaped</p>\n</body>\n</html>';
+          '<title>$escapedTitle</title></head>\n'
+          '<body>\n<h1>$escapedTitle</h1>\n<p>$escaped</p>\n</body>\n</html>';
     }
 
     final tmpDir = await _tmpDir();
@@ -237,24 +243,49 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
   Future<void> _write(Chapter chapter, {bool usePlanner = false}) async {
     final llm = await _activeLlm();
     if (llm == null) return;
+    final svc = ref.read(novelServiceProvider);
+    final existing = _plainText;
+
+    // P3-13：Planner 先出本章规划（目标/事件/结尾/伏笔操作）。
+    Map<String, dynamic>? plan;
+    if (usePlanner && existing.isEmpty) {
+      if (!mounted) return;
+      _toast('Planner 规划中…');
+      plan = await svc.planChapter(
+        bookId: chapter.bookId,
+        chapterNumber: chapter.seq,
+        llm: llm,
+      );
+    }
+
+    final prompt = await svc.buildWritePrompt(
+      bookId: chapter.bookId,
+      chapterNumber: chapter.seq,
+      targetWords: 2000,
+      existingContent: existing,
+      chapterPlan: plan,
+      maxTokens: llm.budgetTokens,
+    );
+    if (!mounted) return;
+    if (!await ConfirmSheet.confirm(
+      context,
+      objectName: '第 ${chapter.seq} 章正文',
+      quantity: '目标约 2000 字',
+      promptPreview: prompt,
+      params: [
+        '供应商：${llm.provider.label}',
+        '模型：${llm.modelId}',
+        if (plan != null) 'Planner 规划：已注入本章目标与关键事件',
+      ],
+      title: existing.isEmpty ? '确认写作' : '确认续写',
+    )) {
+      return;
+    }
+
     setState(() => _busy = true);
     try {
-      final svc = ref.read(novelServiceProvider);
-      final existing = _plainText;
-
-      // P3-13：Planner 先出本章规划（目标/事件/结尾/伏笔操作）。
-      Map<String, dynamic>? plan;
-      if (usePlanner && existing.isEmpty) {
-        if (mounted) _toast('Planner 规划中…');
-        plan = await svc.planChapter(
-          bookId: chapter.bookId,
-          chapterNumber: chapter.seq,
-          llm: llm,
-        );
-      }
-
       if (!mounted) return;
-      if (mounted) _toast('Writer 写作中…');
+      _toast('Writer 写作中…');
       final stream = svc.writeChapter(
         bookId: chapter.bookId,
         chapterNumber: chapter.seq,
@@ -277,11 +308,31 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
   Future<void> _review(Chapter chapter) async {
     final llm = await _activeLlm();
     if (llm == null) return;
+    final svc = ref.read(novelServiceProvider);
+    final prompt = await svc.buildReviewPrompt(
+      bookId: chapter.bookId,
+      content: _plainText,
+      maxTokens: llm.budgetTokens,
+    );
+    if (!mounted) return;
+    if (!await ConfirmSheet.confirm(
+      context,
+      objectName: '章节审校',
+      quantity: '1 次审校',
+      promptPreview: prompt,
+      params: ['供应商：${llm.provider.label}', '模型：${llm.modelId}'],
+      title: '确认审校',
+    )) {
+      return;
+    }
+
     setState(() => _busy = true);
     try {
-      final issues = await ref
-          .read(novelServiceProvider)
-          .reviewChapter(bookId: chapter.bookId, content: _plainText, llm: llm);
+      final issues = await svc.reviewChapter(
+        bookId: chapter.bookId,
+        content: _plainText,
+        llm: llm,
+      );
       if (!mounted) return;
       await _showReviewSheet(chapter, issues);
     } catch (e) {
@@ -348,7 +399,10 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
     await ref
         .read(novelDaoProvider)
         .updateChapter(
-          chapter.copyWith(content: Value(content), wordCount: content.length),
+          chapter.copyWith(
+            content: Value(content),
+            wordCount: ChapterImport.countWords(content),
+          ),
         );
   }
 

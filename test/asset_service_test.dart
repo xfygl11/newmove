@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,7 @@ import 'package:newmove/agent/active_image.dart';
 import 'package:newmove/agent/active_llm.dart';
 import 'package:newmove/core/network/image_provider_adapter.dart';
 import 'package:newmove/core/network/llm_provider_adapter.dart';
+import 'package:newmove/core/network/protocols.dart';
 import 'package:newmove/core/storage/asset_file_store.dart';
 import 'package:newmove/data/app_database.dart';
 import 'package:newmove/features/asset/asset_agents.dart';
@@ -81,6 +83,8 @@ class _FakeImageAdapter extends ImageProviderAdapter {
     required String model,
     required String prompt,
     String size = '1024x1024',
+    String protocol = Protocols.openaiImages,
+    CancelToken? cancelToken,
   }) async {
     return ImageGenerationResult(bytes: Uint8List.fromList([1, 2, 3]));
   }
@@ -93,12 +97,14 @@ class _FakeImageAdapter extends ImageProviderAdapter {
     required String prompt,
     required String referencePath,
     String size = '1024x1024',
+    String protocol = Protocols.openaiImages,
+    CancelToken? cancelToken,
   }) async {
     return ImageGenerationResult(bytes: Uint8List.fromList([4, 5, 6]));
   }
 
   @override
-  Future<Uint8List> downloadUrl(String url) async {
+  Future<Uint8List> downloadUrl(String url, {CancelToken? cancelToken}) async {
     return Uint8List.fromList([7, 8, 9]);
   }
 }
@@ -144,7 +150,11 @@ void main() {
       ),
     );
     scriptId = await db.scriptDao.insert(
-      ScriptsCompanion.insert(bookId: bookId, title: '剧本A', status: Value('定稿')),
+      ScriptsCompanion.insert(
+        bookId: bookId,
+        title: '剧本A',
+        status: Value('定稿'),
+      ),
     );
   });
 
@@ -307,7 +317,10 @@ void main() {
       expect((await db.assetDao.find(base.id))!.status, AssetStatuses.accepted);
 
       await service.discard(base.id);
-      expect((await db.assetDao.find(base.id))!.status, AssetStatuses.discarded);
+      expect(
+        (await db.assetDao.find(base.id))!.status,
+        AssetStatuses.discarded,
+      );
     });
   });
 }

@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../agent/active_llm.dart';
 import '../../data/app_database.dart';
+import '../../widgets/confirm_sheet.dart';
+import '../../widgets/status_badge.dart';
 import 'asset_models.dart';
 import 'asset_providers.dart';
 
@@ -98,11 +100,27 @@ class _AssetGalleryPageState extends ConsumerState<AssetGalleryPage> {
       _showMessage('请先在设置中配置 LLM 供应商');
       return;
     }
+    final svc = ref.read(assetServiceProvider);
+    final prompt = await svc.buildSkeletonContext(widget.scriptId);
+    if (!mounted) return;
+    if (!await ConfirmSheet.confirm(
+      context,
+      objectName: '资产清单提取',
+      quantity: '1 次提取',
+      promptPreview: prompt,
+      params: ['供应商：${llm.provider.label}', '模型：${llm.modelId}'],
+      note: '同 stableId 的资产会复用已有条目，不重复创建。',
+      title: '确认提取资产',
+    )) {
+      return;
+    }
+
     setState(() => _extracting = true);
     try {
-      final summary = await ref
-          .read(assetServiceProvider)
-          .extractAndSave(scriptId: widget.scriptId, llm: llm);
+      final summary = await svc.extractAndSave(
+        scriptId: widget.scriptId,
+        llm: llm,
+      );
       _showMessage(
         '提取完成：新建 ${summary.created}，复用 ${summary.reused}，变体 ${summary.variants}',
       );
@@ -202,7 +220,7 @@ class _AssetCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       const Spacer(),
-                      _StatusBadge(status: asset.status),
+                      StatusBadge(status: asset.status),
                     ],
                   ),
                 ],
@@ -211,32 +229,6 @@ class _AssetCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (status) {
-      AssetStatuses.pending => Colors.grey,
-      AssetStatuses.generating => Colors.blue,
-      AssetStatuses.reviewing => Colors.orange,
-      AssetStatuses.accepted => Colors.green,
-      AssetStatuses.discarded => Colors.red,
-      _ => Colors.grey,
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(status, style: TextStyle(fontSize: 11, color: color)),
     );
   }
 }

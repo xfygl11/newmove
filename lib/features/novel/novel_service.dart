@@ -4,11 +4,13 @@ import 'package:drift/drift.dart' show Value;
 
 import '../../agent/active_llm.dart';
 import '../../core/json_values.dart';
+import '../../core/text/chapter_import.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/chapter_revision_dao.dart';
 import '../../data/daos/novel_dao.dart';
 import '../../data/daos/truth_file_dao.dart';
 import 'novel_agents.dart';
+import 'context_budget.dart';
 import 'novel_models.dart';
 import 'truth_file_kinds.dart';
 import 'truth_file_store.dart';
@@ -88,6 +90,7 @@ class NovelService {
       targetWords: targetWords,
       existingContent: existingContent,
       chapterPlan: chapterPlan,
+      maxTokens: llm.budgetTokens,
     );
     yield* agents.writeChapter(prompt: prompt, llm: llm);
   }
@@ -103,14 +106,15 @@ class NovelService {
   }) async {
     final book = await novelDao.findBook(bookId);
     final texts = await storeFor(bookId).readAllText();
-    final prompt = StringBuffer()
+    final head = StringBuffer()
       ..writeln('【故事命题】${book?.premise ?? ''}')
       ..writeln('【世界观】${book?.world ?? ''}')
-      ..writeln('【大纲】${book?.outline ?? ''}')
-      ..writeln('【角色矩阵】${texts[TruthFileKind.characterMatrix] ?? '{}'}')
-      ..writeln('【世界事实】${texts[TruthFileKind.worldFacts] ?? '{}'}')
-      ..writeln('【未闭合伏笔】${texts[TruthFileKind.hooks] ?? '{}'}')
-      ..writeln('【前情摘要】${texts[TruthFileKind.chapterSummaries] ?? '{}'}')
+      ..writeln('【大纲】${book?.outline ?? ''}');
+    final budget = _budgetFor(llm)
+        .budgetTruthFiles(texts, fixedContext: head.toString());
+    final prompt = StringBuffer()
+      ..write(head)
+      ..write(kindBlocks(budget))
       ..writeln('请为第 $chapterNumber 章输出规划 JSON。');
     return agents.planChapter(prompt: prompt.toString(), llm: llm);
   }
@@ -121,21 +125,22 @@ class NovelService {
     required int targetWords,
     String? existingContent,
     Map<String, dynamic>? chapterPlan,
+    int? maxTokens,
   }) async {
     final book = await novelDao.findBook(bookId);
     final texts = await storeFor(bookId).readAllText();
-    final outline = book?.outline ?? '';
+    final head = StringBuffer()
+      ..writeln('【故事命题】${book?.premise ?? ''}')
+      ..writeln('【世界观】${book?.world ?? ''}')
+      ..writeln('【风格指南】${book?.styleGuide ?? ''}')
+      ..writeln('【大纲】${book?.outline ?? ''}');
+    final budget = ContextBudget(
+      maxTokens: maxTokens ?? ContextBudget.defaultMaxTokens,
+    ).budgetTruthFiles(texts, fixedContext: head.toString());
 
     final buf = StringBuffer();
-    buf.writeln('【故事命题】${book?.premise ?? ''}');
-    buf.writeln('【世界观】${book?.world ?? ''}');
-    buf.writeln('【风格指南】${book?.styleGuide ?? ''}');
-    buf.writeln('【大纲】$outline');
-    buf.writeln('【角色矩阵】${texts[TruthFileKind.characterMatrix] ?? '{}'}');
-    buf.writeln('【世界事实】${texts[TruthFileKind.worldFacts] ?? '{}'}');
-    buf.writeln('【未闭合伏笔】${texts[TruthFileKind.hooks] ?? '{}'}');
-    buf.writeln('【前情摘要】${texts[TruthFileKind.chapterSummaries] ?? '{}'}');
-    buf.writeln('【当前焦点】${texts[TruthFileKind.currentFocus] ?? '{}'}');
+    buf.write(head);
+    buf.write(kindBlocks(budget));
 
     // P3-13：Planner 产出注入，Writer 按规划写。
     if (chapterPlan != null && chapterPlan.isNotEmpty) {
@@ -164,14 +169,16 @@ class NovelService {
   Future<String> buildReviewPrompt({
     required int bookId,
     required String content,
+    int? maxTokens,
   }) async {
     final texts = await storeFor(bookId).readAllText();
+    final head = StringBuffer()..writeln('【正文】$content');
+    final budget = ContextBudget(
+      maxTokens: maxTokens ?? ContextBudget.defaultMaxTokens,
+    ).budgetTruthFiles(texts, fixedContext: head.toString());
     final buf = StringBuffer();
-    buf.writeln('【正文】$content');
-    buf.writeln('【角色矩阵】${texts[TruthFileKind.characterMatrix] ?? '{}'}');
-    buf.writeln('【世界事实】${texts[TruthFileKind.worldFacts] ?? '{}'}');
-    buf.writeln('【未闭合伏笔】${texts[TruthFileKind.hooks] ?? '{}'}');
-    buf.writeln('【资源状态】${texts[TruthFileKind.resources] ?? '{}'}');
+    buf.write(head);
+    buf.write(kindBlocks(budget));
     buf.writeln('请审校并输出问题清单 JSON。');
     return buf.toString();
   }
@@ -181,7 +188,11 @@ class NovelService {
     required String content,
     required ActiveLlm llm,
   }) async {
-    final prompt = await buildReviewPrompt(bookId: bookId, content: content);
+    final prompt = await buildReviewPrompt(
+      bookId: bookId,
+      content: content,
+      maxTokens: llm.budgetTokens,
+    );
     return agents.review(prompt: prompt, llm: llm);
   }
 
@@ -212,7 +223,7 @@ class NovelService {
     await novelDao.updateChapter(
       chapter.copyWith(
         content: Value(revised),
-        wordCount: revised.length,
+        wordCount: ChapterImport.countWords(revised),
         revision: chapter.revision + 1,
       ),
     );
@@ -229,11 +240,25 @@ class NovelService {
   }) async {
     final store = storeFor(bookId);
     final texts = await store.readAllText();
-    final prompt = StringBuffer()
+    final head = StringBuffer()
       ..writeln('【正文】${chapter.content ?? ''}')
       ..writeln('【章节号】${chapter.seq}')
-      ..writeln('【标题】${chapter.title}')
-      ..writeln('【现有状态（7 类 JSON）】${jsonEncode(texts)}')
+      ..writeln('【标题】${chapter.title}');
+    // 固化需要看到现有状态才能避免重复；超预算时按分级裁剪，并在提示词里说明。
+    final budget = _budgetFor(llm)
+        .budgetTruthFiles(texts, fixedContext: head.toString());
+    final state = <String, dynamic>{};
+    for (final entry in budget.texts.entries) {
+      try {
+        state[entry.key] = jsonDecode(entry.value);
+      } on FormatException {
+        state[entry.key] = <String, dynamic>{};
+      }
+    }
+    final prompt = StringBuffer()
+      ..write(head)
+      ..writeln('【现有状态（7 类 JSON）】${jsonEncode(state)}')
+      ..writeln(budget.note.isEmpty ? '' : '【预算说明】${budget.note}，请勿重复合并已有条目。')
       ..writeln('请输出固化 delta JSON。');
 
     final delta = await agents.settle(prompt: prompt.toString(), llm: llm);
@@ -241,6 +266,44 @@ class NovelService {
   }
 
   // ---- 内部辅助 ----
+
+  ContextBudget _budgetFor(ActiveLlm llm) =>
+      ContextBudget(maxTokens: llm.budgetTokens);
+
+  /// TruthFile 在提示词中的中文标签（与既有措辞保持一致）。
+  static const Map<String, String> _kindLabels = {
+    TruthFileKind.characterMatrix: '角色矩阵',
+    TruthFileKind.worldFacts: '世界事实',
+    TruthFileKind.hooks: '未闭合伏笔',
+    TruthFileKind.resources: '资源状态',
+    TruthFileKind.chapterSummaries: '前情摘要',
+    TruthFileKind.currentFocus: '当前焦点',
+    TruthFileKind.authorIntent: '作者意图',
+  };
+
+  static const List<String> _kindOrder = [
+    TruthFileKind.characterMatrix,
+    TruthFileKind.worldFacts,
+    TruthFileKind.hooks,
+    TruthFileKind.resources,
+    TruthFileKind.chapterSummaries,
+    TruthFileKind.currentFocus,
+    TruthFileKind.authorIntent,
+  ];
+
+  /// 把预算裁剪结果写成带标签的提示词条块，供各构建方法复用。
+  static String kindBlocks(Budgeted budget) {
+    final buf = StringBuffer();
+    for (final kind in _kindOrder) {
+      final v = budget.texts[kind];
+      if (v == null || v.trim().isEmpty) continue;
+      buf.writeln('【${_kindLabels[kind] ?? TruthFileKind.label(kind)}】$v');
+    }
+    if (budget.note.isNotEmpty) {
+      buf.writeln('【预算说明】${budget.note}');
+    }
+    return buf.toString();
+  }
 
   String _revisePrompt({
     required String content,

@@ -7,8 +7,8 @@ import 'package:video_player/video_player.dart';
 
 import '../../agent/active_image.dart';
 import '../../agent/active_video.dart';
-import '../../core/settings/app_settings.dart';
 import '../../data/app_database.dart';
+import '../../widgets/confirm_sheet.dart';
 import '../asset/asset_providers.dart';
 import '../provider_config/provider_models.dart';
 import 'shot_models.dart';
@@ -245,28 +245,19 @@ class _ShotDetailPageState extends ConsumerState<ShotDetailPage>
           .showSnackBar(const SnackBar(content: Text('请先在「设置」配置可用的图片供应商')));
       return;
     }
-    // 「生成前确认」开关关闭时直接提交（设置页 T9.3）。
-    if (ref.read(appSettingsProvider).confirmBeforeGenerate) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('确认生成'),
-          content: Text(
-            '将生成本镜分镜图（${refsHint(shot)}），供应商 ${image.provider.label} / 模型 ${image.modelId}。',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('开始生成'),
-            ),
-          ],
-        ),
-      );
-      if (ok != true) return;
+    // 统一走 ConfirmSheet：开关关闭时直接放行（设置页 T9.3）。
+    if (!await ConfirmSheet.confirm(
+      context,
+      objectName: '分镜图 · 镜头 ${shot.globalSeq}',
+      quantity: '1 次生成',
+      promptPreview: shot.prompt,
+      params: [
+        '供应商：${image.provider.label}',
+        '模型：${image.modelId}',
+        refsHint(shot),
+      ],
+    )) {
+      return;
     }
 
     setState(() => _generating = true);
@@ -442,30 +433,20 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
     }
     // 「生成前确认」开关关闭时直接提交（设置页 T9.3）。
     final (_, params) = _effective(video);
-    if (ref.read(appSettingsProvider).confirmBeforeGenerate) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('确认生成视频'),
-          content: Text(
-            '将为本镜头生成视频（${params.durationSec}s · ${params.ratio} · '
-            '${params.resolution}${params.generateAudio ? ' · 含音频' : ''}'
-            '${params.useFirstFrame ? ' · 首帧锁定' : ''}），'
-            '供应商 ${video.provider.label} / 模型 ${params.modelId}。',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('开始生成'),
-            ),
-          ],
-        ),
-      );
-      if (ok != true) return;
+    if (!await ConfirmSheet.confirm(
+      context,
+      objectName: '镜头视频 · ${widget.shot.globalSeq}',
+      quantity: '1 次生成',
+      promptPreview: widget.shot.prompt,
+      params: [
+        '时长 ${params.durationSec}s · 比例 ${params.ratio} · 分辨率 ${params.resolution}',
+        '音频：${params.generateAudio ? '含音频' : '无音频'}',
+        '首帧：${params.useFirstFrame ? '锁定分镜图为首帧' : '不锁定'}',
+        '供应商：${video.provider.label}',
+        '模型：${params.modelId}',
+      ],
+    )) {
+      return;
     }
 
     setState(() => _submitting = true);

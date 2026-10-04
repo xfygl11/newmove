@@ -269,10 +269,23 @@ class BackupService {
 
   // ---- 冲突检测（P2-11） ----
 
+  /// 备份包导入上限 500MB（备份含被引用媒体，超大包全量载入内存有 OOM 风险）。
+  static const int maxImportBytes = 500 * 1024 * 1024;
+
+  /// 校验备份包大小，超限抛 [StateError]（先校验再读取，避免全量读入内存）。
+  static Future<void> _guardImportSize(String zipPath) async {
+    final file = File(zipPath);
+    if (!file.existsSync()) throw StateError('文件不存在：$zipPath');
+    if (file.lengthSync() > maxImportBytes) {
+      throw StateError('备份包超过 500MB 上限，请只导出部分项目后重试');
+    }
+  }
+
   /// 解析 zip 中的项目名列表（不写入 DB），用于导入前冲突提示。
   ///
   /// 返回包内所有项目名；单项目包返回 1 项，全库包返回 N 项。
   Future<List<String>> peekProjectNames(String zipPath) async {
+    await _guardImportSize(zipPath);
     final bytes = await File(zipPath).readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
     final jsonFile = archive.findFile('backup.json');
@@ -313,6 +326,7 @@ class BackupService {
   /// `scope: full`）。全库包中各子表行携带原始 `projectId`/`bookId` 等
   /// 外键，导入时按映射链重写。
   Future<int> importProject(String zipPath) async {
+    await _guardImportSize(zipPath);
     final bytes = await File(zipPath).readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
 

@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 
+import '../../core/network/protocols.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/provider_dao.dart';
 import 'provider_models.dart';
@@ -26,7 +27,7 @@ class AgnesPresets {
         id: 'agnes-llm',
         group: 'llm',
         label: 'Agnes LLM',
-        protocol: 'openai-chat',
+        protocol: Protocols.openaiChat,
         models: [
           const ProviderModel(
             id: 'agnes-2.5-flash',
@@ -41,7 +42,7 @@ class AgnesPresets {
         id: 'agnes-image',
         group: 'image',
         label: 'Agnes 图片',
-        protocol: 'openai-images',
+        protocol: Protocols.openaiImages,
         models: [
           const ProviderModel(
             id: 'agnes-image-2.5-flash',
@@ -65,7 +66,7 @@ class AgnesPresets {
         id: 'agnes-video',
         group: 'video',
         label: 'Agnes 视频',
-        protocol: 'openai-videos',
+        protocol: Protocols.openaiVideos,
         models: [
           ProviderModel(
             id: 'agnes-video-2.5',

@@ -11,7 +11,8 @@ import '../../data/daos/scene_dao.dart';
 import '../../data/daos/script_dao.dart';
 import '../../data/daos/script_revision_dao.dart';
 import '../../data/daos/truth_file_dao.dart';
-import '../novel/truth_file_kinds.dart';
+import '../novel/context_budget.dart';
+import '../novel/novel_service.dart';
 import '../novel/truth_file_store.dart';
 import 'script_agents.dart';
 import 'script_models.dart';
@@ -44,6 +45,7 @@ class ScriptService {
     required int bookId,
     required List<String> sourceTexts,
     required String fidelityMode,
+    int? maxTokens,
   }) async {
     final book = await novelDao.findBook(bookId);
     final texts = await TruthFileStore(
@@ -51,19 +53,34 @@ class ScriptService {
       bookId: bookId,
     ).readAllText();
 
+    final head = StringBuffer()
+      ..writeln('【作品命题】${book?.premise ?? ''}')
+      ..writeln('【世界观】${book?.world ?? ''}')
+      ..writeln('【风格指南】${book?.styleGuide ?? ''}')
+      ..writeln('【忠实度模式】$fidelityMode');
+    final ctx = ContextBudget(
+      maxTokens: maxTokens ?? ContextBudget.defaultMaxTokens,
+    );
+    final budget = ctx.budgetTruthFiles(texts, fixedContext: head.toString());
+    // 原文按剩余预算整章切片，避免整册拼接导致请求超长。
+    final source = ctx.fitSourceTexts(
+      sourceTexts,
+      reservedTokens: budget.tokens,
+    );
+
     final buf = StringBuffer();
-    buf.writeln('【作品命题】${book?.premise ?? ''}');
-    buf.writeln('【世界观】${book?.world ?? ''}');
-    buf.writeln('【风格指南】${book?.styleGuide ?? ''}');
-    buf.writeln('【角色矩阵】${texts[TruthFileKind.characterMatrix] ?? '{}'}');
-    buf.writeln('【世界事实】${texts[TruthFileKind.worldFacts] ?? '{}'}');
-    buf.writeln('【未闭合伏笔】${texts[TruthFileKind.hooks] ?? '{}'}');
-    buf.writeln('【资源状态】${texts[TruthFileKind.resources] ?? '{}'}');
-    buf.writeln('【忠实度模式】$fidelityMode');
+    buf.write(head);
+    buf.write(NovelService.kindBlocks(budget));
     buf.writeln('【改编原文】');
-    for (final t in sourceTexts) {
+    for (final t in source.texts) {
       buf.writeln(t);
       buf.writeln('---');
+    }
+    if (source.droppedCount > 0) {
+      buf.writeln(
+        '【原文裁剪说明】原文超出上下文预算，已省略 ${source.droppedCount} 篇，'
+        '请先完成已适配部分再分批处理。',
+      );
     }
     buf.writeln('请按规则把以上原文改编为分场剧本 JSON。');
     return buf.toString();
@@ -82,6 +99,7 @@ class ScriptService {
       bookId: bookId,
       sourceTexts: sourceTexts,
       fidelityMode: fidelityMode,
+      maxTokens: llm.budgetTokens,
     );
     final result = await agents.adapt(prompt: prompt, llm: llm);
 

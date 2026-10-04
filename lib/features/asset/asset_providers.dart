@@ -21,6 +21,14 @@ final assetServiceProvider = Provider<AssetService>(
   ),
 );
 
+/// 全部进行中/待验收的资产（任务中心用）。
+///
+/// 用 StreamProvider 持有 Stream 实例：在 build 里直接 `.watch()` 每次都会新建
+/// Stream，StreamBuilder 会反复取消重订阅并闪烁。
+final activeAssetsProvider = StreamProvider<List<Asset>>(
+  (ref) => ref.watch(assetDaoProvider).watchActive(),
+);
+
 /// 某剧本的资产列表（类型升序、id 升序）。
 final assetsByScriptProvider = StreamProvider.family<List<Asset>, int>(
   (ref, scriptId) => ref.watch(assetDaoProvider).watchByScript(scriptId),

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../core/network/protocols.dart';
 import 'model_presets.dart';
 import 'provider_models.dart';
 
@@ -51,7 +52,7 @@ class ModelFetcher {
     required String protocol,
     required ProviderGroup group,
   }) async {
-    final isAnthropic = protocol == 'anthropic-messages';
+    final isAnthropic = protocol == Protocols.anthropicMessages;
     final headers = <String, String>{'Accept': 'application/json'};
     if (isAnthropic) {
       headers['x-api-key'] = apiKey;

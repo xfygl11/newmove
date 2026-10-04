@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:drift/drift.dart' show Value;
 
 import '../../agent/active_image.dart';
@@ -29,6 +31,7 @@ import 'video_prompt.dart';
 /// 分镜图的业务编排：上下文构建、导演落库、多参考图生成、衔接校验、视频生成。
 class ShotService {
   ShotService({
+    required this.db,
     required this.scriptDao,
     required this.sceneDao,
     required this.beatDao,
@@ -59,6 +62,21 @@ class ShotService {
   final VideoFileStore videoFileStore;
   final VideoTaskDao videoTaskDao;
   final ProviderDao providerDao;
+
+  /// 数据库实例：多表重建统一走 [AppDatabase.transaction]。
+  final AppDatabase db;
+
+  /// 单次轮询超时：网络半连接不返回时不阻塞整轮轮询。
+  static const pollTimeout = Duration(seconds: 30);
+
+  /// 一次轮询总时长上限（含下载产物），防止下载卡死拖住后台刷新。
+  static const pollAllTimeout = Duration(seconds: 90);
+
+  /// 任务存活上限：超过仍无进展即判超时，避免「生成中」永久挂起。
+  static const pollStaleAfter = Duration(hours: 3);
+
+  /// 正在轮询的任务：taskId → 进行中的 Future（去重锁）。
+  static final Map<int, Future<VideoTask>> _pollingTasks = {};
 
   // ---- 分镜提示词（T6.2 / T6.3） ----
 
@@ -141,60 +159,71 @@ class ShotService {
     var frameCount = 0;
     var refCount = 0;
 
-    for (final draft in drafts) {
-      final shot = shots.firstWhere((s) => s.globalSeq == draft.globalSeq);
+    // 重建整体包进一个事务：任一镜头的删帧/删绑定中断时全部回滚，
+    // 不留「提示词已更新但帧为空」的半截状态。
+    return db.transaction(() async {
+      for (final draft in drafts) {
+        final shot = shots.firstWhere((s) => s.globalSeq == draft.globalSeq);
 
-      await shotDao.updateById(
-        shot.id,
-        ShotsCompanion(
-          shotType: Value(ShotDraft.normalizeShotType(draft.shotType)),
-          prompt: Value(draft.prompt),
-          status: const Value(ShotStatuses.awaitingImage),
-        ),
+        // 幂等：已出视频（或视频仍在生成中）的镜头不因重导降级，
+        // 否则对应视频任务仍「成功」而镜头回退到待分镜图，状态自相矛盾。
+        final nextStatus =
+            shot.status == ShotStatuses.videoDone ||
+                shot.status == ShotStatuses.videoGenerating
+            ? shot.status
+            : ShotStatuses.awaitingImage;
+        await shotDao.updateById(
+          shot.id,
+          ShotsCompanion(
+            shotType: Value(ShotDraft.normalizeShotType(draft.shotType)),
+            prompt: Value(draft.prompt),
+            status: Value(nextStatus),
+          ),
+        );
+
+        // 帧与参考绑定整体替换。
+        await shotFrameDao.deleteByShot(shot.id);
+        for (final f in draft.frames) {
+          await shotFrameDao.insert(
+            ShotFramesCompanion.insert(
+              shotId: shot.id,
+              seq: f.seq,
+              timeRange: f.timeRange.isEmpty ? '-' : f.timeRange,
+              subject: f.subject.isEmpty ? '未指定' : f.subject,
+              shotSize: f.shotSize.isEmpty ? draft.shotType : f.shotSize,
+              angle: f.angle,
+              camera: Value(f.camera),
+              blocking: Value(f.blocking),
+              performance: Value(f.performance),
+              dialogue: Value(f.dialogue),
+            ),
+          );
+          frameCount++;
+        }
+
+        await assetRefDao.deleteByShot(shot.id);
+        for (final r in draft.refs) {
+          final asset = assets[r.stableId];
+          // stableId 解析失败时跳过，不编造绑定。
+          if (asset == null) continue;
+          await assetRefDao.insert(
+            AssetRefsCompanion.insert(
+              shotId: shot.id,
+              assetId: asset.id,
+              role: r.role,
+              order: Value(refCount),
+            ),
+          );
+          refCount++;
+        }
+      }
+
+      return ShotDirectionSummary(
+        shotCount: drafts.length,
+        frameCount: frameCount,
+        refCount: refCount,
       );
-
-      // 帧与参考绑定整体替换。
-      await shotFrameDao.deleteByShot(shot.id);
-      for (final f in draft.frames) {
-        await shotFrameDao.insert(
-          ShotFramesCompanion.insert(
-            shotId: shot.id,
-            seq: f.seq,
-            timeRange: f.timeRange.isEmpty ? '-' : f.timeRange,
-            subject: f.subject.isEmpty ? '未指定' : f.subject,
-            shotSize: f.shotSize.isEmpty ? draft.shotType : f.shotSize,
-            angle: f.angle,
-            camera: Value(f.camera),
-            blocking: Value(f.blocking),
-            performance: Value(f.performance),
-            dialogue: Value(f.dialogue),
-          ),
-        );
-        frameCount++;
-      }
-
-      await assetRefDao.deleteByShot(shot.id);
-      for (final r in draft.refs) {
-        final asset = assets[r.stableId];
-        // stableId 解析失败时跳过，不编造绑定。
-        if (asset == null) continue;
-        await assetRefDao.insert(
-          AssetRefsCompanion.insert(
-            shotId: shot.id,
-            assetId: asset.id,
-            role: r.role,
-            order: Value(refCount),
-          ),
-        );
-        refCount++;
-      }
-    }
-
-    return ShotDirectionSummary(
-      shotCount: drafts.length,
-      frameCount: frameCount,
-      refCount: refCount,
-    );
+    });
   }
 
   // ---- 分镜图生成（T6.4） ----
@@ -203,6 +232,7 @@ class ShotService {
   Future<Shot> generate({
     required int shotId,
     required ActiveImage image,
+    GenerationCancelToken? cancelToken,
   }) async {
     final shot = await shotDao.find(shotId);
     if (shot == null) throw StateError('镜头不存在：$shotId');
@@ -214,8 +244,11 @@ class ShotService {
     );
 
     try {
-      final bytes = await _generateBytes(shot, image);
+      cancelToken?.throwIfCancelled();
+      final bytes = await _generateBytes(shot, image, cancelToken: cancelToken);
+      cancelToken?.throwIfCancelled();
       final path = await fileStore.save(shotId, bytes);
+      cancelToken?.throwIfCancelled();
       await shotDao.updateById(
         shotId,
         ShotsCompanion(
@@ -224,6 +257,16 @@ class ShotService {
         ),
       );
       return (await shotDao.find(shotId))!;
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) {
+        cancelToken?.cancel();
+      }
+      // 失败回滚到「待分镜图」，保留提示词便于重试。
+      await shotDao.updateById(
+        shotId,
+        ShotsCompanion(status: const Value(ShotStatuses.awaitingImage)),
+      );
+      rethrow;
     } catch (_) {
       // 失败回滚到「待分镜图」，保留提示词便于重试。
       await shotDao.updateById(
@@ -257,8 +300,20 @@ class ShotService {
       }
       onProgress?.call(i, total, shotIds[i]);
       try {
-        await generate(shotId: shotIds[i], image: image);
+        await generate(
+          shotId: shotIds[i],
+          image: image,
+          cancelToken: cancelToken,
+        );
+        cancelToken?.throwIfCancelled();
         success++;
+      } on StateError catch (_) {
+        if (cancelToken?.cancelled ?? false) {
+          cancelled = true;
+          pending = total - i - 1;
+          break;
+        }
+        failed++;
       } catch (_) {
         failed++;
       }
@@ -276,7 +331,11 @@ class ShotService {
   }
 
   /// 组装参考图并按需替换 {{ref N}}，调用适配器生成图片字节。
-  Future<Uint8List> _generateBytes(Shot shot, ActiveImage image) async {
+  Future<Uint8List> _generateBytes(
+    Shot shot,
+    ActiveImage image, {
+    GenerationCancelToken? cancelToken,
+  }) async {
     final refs = await assetRefDao.listByShot(shot.id);
     final prompt = await _resolvePrompt(shot, refs);
 
@@ -286,13 +345,17 @@ class ShotService {
         apiKey: image.apiKey,
         model: image.modelId,
         prompt: prompt,
+        protocol: image.protocol,
+        cancelToken: cancelToken?.dioToken,
       );
+      cancelToken?.throwIfCancelled();
       return _bytesOf(result);
     }
 
     // 参考图仅取已采用或已生成图（待验收）的资产；无图资产跳过。
     final paths = <String>[];
     for (final ref in refs) {
+      cancelToken?.throwIfCancelled();
       final asset = await assetDao.find(ref.assetId);
       final path = asset?.imagePath;
       if (path == null || path.isEmpty || !File(path).existsSync()) continue;
@@ -305,7 +368,10 @@ class ShotService {
         apiKey: image.apiKey,
         model: image.modelId,
         prompt: prompt,
+        protocol: image.protocol,
+        cancelToken: cancelToken?.dioToken,
       );
+      cancelToken?.throwIfCancelled();
       return _bytesOf(result);
     }
 
@@ -316,7 +382,10 @@ class ShotService {
         model: image.modelId,
         prompt: prompt,
         referencePath: paths.single,
+        protocol: image.protocol,
+        cancelToken: cancelToken?.dioToken,
       );
+      cancelToken?.throwIfCancelled();
       return _bytesOf(result);
     }
 
@@ -326,7 +395,10 @@ class ShotService {
       model: image.modelId,
       prompt: prompt,
       referencePaths: paths,
+      protocol: image.protocol,
+      cancelToken: cancelToken?.dioToken,
     );
+    cancelToken?.throwIfCancelled();
     return _bytesOf(result);
   }
 
@@ -548,18 +620,44 @@ class ShotService {
 
   /// 轮询一次视频任务；完成时回填产物路径与镜头状态。
   ///
-  /// 返回更新后的任务；仍在生成中返回原状态。
-  Future<VideoTask> pollVideoTask(int videoTaskId) async {
+  /// 去重锁下沉到本方法：同一任务的并发轮询共享同一个 Future，任务中心与镜头
+  /// 详情页同时触发时不会重复下载覆盖产物。
+  /// 单次请求超时见 [pollTimeout]，整个任务（含下载）上限见 [pollAllTimeout]。
+  Future<VideoTask> pollVideoTask(int videoTaskId) {
+    final existing = _pollingTasks[videoTaskId];
+    if (existing != null) return existing;
+    final future = _pollVideoTaskOnce(videoTaskId)
+        .timeout(pollAllTimeout)
+        .whenComplete(() {
+          _pollingTasks.remove(videoTaskId);
+        });
+    _pollingTasks[videoTaskId] = future;
+    return future;
+  }
+
+  Future<VideoTask> _pollVideoTaskOnce(int videoTaskId) async {
     final task = await videoTaskDao.find(videoTaskId);
     if (task == null) throw StateError('视频任务不存在：$videoTaskId');
     if (task.status == '成功' || task.status == '失败' || task.status == '已取消') {
       return task;
     }
 
+    // 僵尸检测：超过存活上限仍无进展即判失败，不永久挂起在「生成中」。
+    if (task.updatedAt.isBefore(DateTime.now().subtract(pollStaleAfter))) {
+      return _markVideoFailed(
+        task,
+        '任务超时未返回结果（超过 ${pollStaleAfter.inHours} 小时）',
+      );
+    }
+
     // 恢复供应商配置与 Key。
     final provider = await _findProvider(task.providerId);
     if (provider == null) {
       return _markVideoFailed(task, '供应商配置已删除，无法恢复轮询');
+    }
+    // 供应商配置在任务提交后被改动（含换 Key）时置失败，避免用错凭据轮询。
+    if (provider.updatedAt.isAfter(task.updatedAt)) {
+      return _markVideoFailed(task, '供应商配置已变更，请重新生成');
     }
     final apiKey = await readProviderKey?.call(task.providerId);
     if (apiKey == null || apiKey.isEmpty) {
@@ -571,48 +669,54 @@ class ShotService {
     final modelId = decodedParams.modelId;
 
     try {
-      final snapshot = await videoAdapter.poll(
-        baseUrl: provider.baseUrl,
-        apiKey: apiKey,
-        taskId: task.taskId,
-        model: modelId,
-        protocol: provider.protocol,
-      );
+      final snapshot = await videoAdapter
+          .poll(
+            baseUrl: provider.baseUrl,
+            apiKey: apiKey,
+            taskId: task.taskId,
+            model: modelId,
+            protocol: provider.protocol,
+          )
+          .timeout(pollTimeout);
 
       if (snapshot.isSuccess) {
-        // 取产物字节并落盘。
-        final Uint8List bytes;
-        if (snapshot.base64 != null) {
-          bytes = base64Decode(snapshot.base64!);
-        } else if (snapshot.url != null) {
-          bytes = await videoAdapter.downloadUrl(snapshot.url!);
-        } else {
-          return await _markVideoFailed(task, '供应商未返回视频数据');
-        }
-        final path = await videoFileStore.save(task.shotId, bytes);
-        await videoTaskDao.updateById(
-          task.id,
-          VideoTasksCompanion(
-            status: const Value('成功'),
-            outputPath: Value(path),
-            updatedAt: Value(DateTime.now()),
-          ),
-        );
-        await shotDao.updateById(
-          task.shotId,
-          ShotsCompanion(
-            outputPath: Value(path),
-            status: const Value(ShotStatuses.videoDone),
-          ),
-        );
-        return (await videoTaskDao.find(task.id))!;
+        return await db.transaction(() async {
+          // 取产物字节并落盘。
+          final Uint8List bytes;
+          if (snapshot.base64 != null) {
+            bytes = base64Decode(snapshot.base64!);
+          } else if (snapshot.url != null) {
+            bytes = await videoAdapter
+                .downloadUrl(snapshot.url!)
+                .timeout(pollTimeout);
+          } else {
+            return _markVideoFailed(task, '供应商未返回视频数据');
+          }
+          final path = await videoFileStore.save(task.shotId, bytes);
+          await videoTaskDao.updateById(
+            task.id,
+            VideoTasksCompanion(
+              status: const Value('成功'),
+              outputPath: Value(path),
+              updatedAt: Value(DateTime.now()),
+            ),
+          );
+          await shotDao.updateById(
+            task.shotId,
+            ShotsCompanion(
+              outputPath: Value(path),
+              status: const Value(ShotStatuses.videoDone),
+            ),
+          );
+          return (await videoTaskDao.find(task.id))!;
+        });
       }
 
       if (snapshot.isFailed) {
         return await _markVideoFailed(task, snapshot.error ?? '视频生成失败');
       }
 
-      // 仍在生成中。
+      // 仍在生成中：刷新 updatedAt 作为存活证明。
       await videoTaskDao.updateById(
         task.id,
         VideoTasksCompanion(
@@ -621,10 +725,29 @@ class ShotService {
         ),
       );
       return (await videoTaskDao.find(task.id))!;
-    } catch (e) {
+    } on DioException catch (e) {
+      // 供应商明确报错（非网络层）标记失败，其余网络异常保持生成中待重试。
+      final isNetwork =
+          e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.cancel;
+      if (isNetwork) return task;
+      return await _markVideoFailed(task, '供应商返回错误：${_describeError(e)}');
+    } on TimeoutException {
+      // 单次请求超时：标记失败，避免下一周期反复卡住整轮轮询。
+      return _markVideoFailed(task, '查询超时（${pollTimeout.inSeconds}s 无响应）');
+    } catch (_) {
       // 网络异常不标记失败，保持生成中，下次轮询重试。
       return task;
     }
+  }
+
+  String _describeError(DioException e) {
+    final raw = e.response?.data;
+    final message = raw is Map ? (raw['error'] ?? raw['message']) : raw;
+    final text = message?.toString() ?? e.message ?? e.type.name;
+    return text.length > 300 ? text.substring(0, 300) : text;
   }
 
   /// 标记任务失败并回滚镜头状态到「分镜图已确认」。
@@ -674,6 +797,10 @@ class ShotService {
   /// 取消进行中的视频任务（本地取消：停轮询 + 回滚镜头到分镜图已确认）。
   ///
   /// 供应商无取消端点，故仅置本地状态；已产生的远端任务结果不再拉取。
+  /// 取消视频任务：仅本地停止追踪。
+  ///
+  /// 通用视频协议没有标准取消端点，远端任务可能仍在运行并继续计费，
+  /// 因此把这一点写进 error 字段由 UI 展示，而不是假装远端已停。
   Future<VideoTask> cancelVideoTask(int videoTaskId) async {
     final task = await videoTaskDao.find(videoTaskId);
     if (task == null) throw StateError('视频任务不存在：$videoTaskId');
@@ -682,6 +809,7 @@ class ShotService {
       task.id,
       VideoTasksCompanion(
         status: const Value('已取消'),
+        error: const Value('已取消：本地停止追踪，远端任务可能仍在运行'),
         updatedAt: Value(DateTime.now()),
       ),
     );
@@ -718,11 +846,11 @@ class ShotService {
   }) async {
     final file = File(sourcePath);
     if (!file.existsSync()) throw StateError('文件不存在：$sourcePath');
-    final bytes = await file.readAsBytes();
-    if (bytes.length > 100 * 1024 * 1024) {
+    // 先校验大小再复制，避免超大文件先全量载入内存导致 OOM。
+    if (file.lengthSync() > 100 * 1024 * 1024) {
       throw StateError('文件超过 100MB 上限');
     }
-    final path = await videoFileStore.save(shotId, bytes);
+    final path = await videoFileStore.saveFromPath(shotId, sourcePath);
     await shotDao.updateById(
       shotId,
       ShotsCompanion(
@@ -810,7 +938,28 @@ class ShotBatchResult {
   final int pending;
 }
 
-/// 批量生成取消令牌：UI 侧持有引用并置位 [cancelled] 以中断循环。
+/// 批量生成取消令牌。
+///
+/// UI 侧持有引用并置位；循环检查点与在途 Dio 请求都能感知取消，
+/// 而不是只在 for 循环顶部判断一次。
 class GenerationCancelToken {
   bool cancelled = false;
+  final CancelToken _dio = CancelToken();
+  bool _cancelled = false;
+
+  /// 透传给 Dio 的取消令牌。
+  CancelToken get dioToken => _dio;
+
+  /// 置位取消。可重复调用，只有第一次会真正中断在途请求。
+  void cancel([Object? reason]) {
+    cancelled = true;
+    if (_cancelled) return;
+    _cancelled = true;
+    _dio.cancel(reason ?? '用户取消');
+  }
+
+  /// 被取消时抛 [StateError]，由生成流程按普通失败处理并回滚状态。
+  void throwIfCancelled() {
+    if (cancelled) throw StateError('已取消');
+  }
 }

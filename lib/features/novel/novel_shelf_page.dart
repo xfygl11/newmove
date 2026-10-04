@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart' show Value;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../agent/active_llm.dart';
 import '../../core/storage/providers.dart';
+import '../../core/text/chapter_import.dart';
 import '../../data/app_database.dart';
 import 'novel_providers.dart';
 
@@ -171,53 +170,38 @@ class _BookView extends ConsumerWidget {
     if (picked.isEmpty || picked.single.path == null) return;
 
     final fileName = picked.single.name;
-    final isHtml = fileName.toLowerCase().endsWith('.html');
-    final raw = await File(picked.single.path!).readAsString();
-    // 仅对 .html 剥离标签；.md / .txt 保留原文（避免误删 `<` `>` 内容）。
-    var content = isHtml
-        ? raw
-              .replaceAll(RegExp(r'<[^>]+>'), '\n')
-              .replaceAll('&amp;', '&')
-              .replaceAll('&lt;', '<')
-              .replaceAll('&gt;', '>')
-              .replaceAll(RegExp(r'\n{3,}'), '\n\n')
-              .trim()
-        : raw.trim();
-    if (content.isEmpty) {
-      if (context.mounted) {
-        _toast(context, '文件内容为空，导入失败');
+    final path = picked.single.path!;
+    try {
+      final raw = await ChapterImport.readText(path);
+      final content = ChapterImport.cleanText(raw, fileName: fileName);
+      if (content.isEmpty) {
+        if (context.mounted) {
+          _toast(context, '文件内容为空，导入失败');
+        }
+        return;
       }
-      return;
-    }
-
-    // 标题取内容首行「# 标题」，否则用文件名（去扩展名）。
-    String title;
-    title = fileName.replaceAll(RegExp(r'\.(md|markdown|html|txt)$'), '');
-    final headingMatch = RegExp(
-      r'^#\s+(.+)$',
-      multiLine: true,
-    ).firstMatch(content);
-    if (headingMatch != null) {
-      title = headingMatch.group(1)!.trim();
-      // 去掉正文中的首行 H1 避免重复。
-      content = content.replaceFirst(RegExp(r'^#\s+.+$\n?'), '').trimLeft();
-    }
-
-    final dao = ref.read(novelDaoProvider);
-    final seq = await dao.maxSeq(book.id) + 1;
-    await dao.insertChapter(
-      ChaptersCompanion.insert(
-        bookId: book.id,
-        seq: seq,
-        title: title.isNotEmpty ? title : '第 $seq 章（导入）',
-        content: Value(content),
-        wordCount: Value(content.length),
-        status: const Value('草稿'),
-      ),
-    );
-    if (context.mounted) {
-      _toast(context, '已导入为第 $seq 章');
-      ref.invalidate(chaptersByBookProvider(book.id));
+      // 标题取首段 H1，否则用文件名（去扩展名），并去掉正文中重复的首行标题。
+      final extracted = ChapterImport.extractTitle(content, fileName: fileName);
+      final dao = ref.read(novelDaoProvider);
+      final seq = await dao.maxSeq(book.id) + 1;
+      await dao.insertChapter(
+        ChaptersCompanion.insert(
+          bookId: book.id,
+          seq: seq,
+          title: extracted.title.isNotEmpty ? extracted.title : '第 $seq 章（导入）',
+          content: Value(extracted.content),
+          wordCount: Value(ChapterImport.countWords(extracted.content)),
+          status: const Value('草稿'),
+        ),
+      );
+      if (context.mounted) {
+        _toast(context, '已导入为第 $seq 章');
+        ref.invalidate(chaptersByBookProvider(book.id));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        _toast(context, '导入失败：$e');
+      }
     }
   }
 }

@@ -9,7 +9,10 @@ import '../../agent/active_video.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
+import '../../widgets/status_badge.dart';
+import '../asset/asset_providers.dart';
 import '../shot/shot_providers.dart';
+import '../shot/shot_service.dart';
 import '../shot/video_prompt.dart';
 
 /// 任务中心：跨剧本汇总进行中的生成任务（M5 图片链路 + M6 视频链路）。
@@ -105,7 +108,8 @@ class _TaskPageState extends ConsumerState<TaskPage>
     }
   }
 
-  /// 轮询所有活跃视频任务一次（逐个 try，单个失败不影响其余）。
+  /// 轮询所有活跃视频任务一次：并发发起，单任务异常不影响其余，
+  /// 并发发起，单任务异常不影响其余；整轮时长受服务层单任务上限约束。
   Future<void> _pollAllActive() async {
     // 防重入：上一轮未结束时不再叠加。
     if (_polling) return;
@@ -113,22 +117,27 @@ class _TaskPageState extends ConsumerState<TaskPage>
     try {
       final dao = ref.read(videoTaskDaoProvider);
       final active = await dao.listActive();
-      for (final task in active) {
-        try {
-          await ref.read(shotServiceProvider).pollVideoTask(task.id);
-        } catch (_) {
-          // 单任务轮询异常忽略，下个周期重试。
-        }
-      }
+      final service = ref.read(shotServiceProvider);
+      await Future.wait<void>([
+        for (final task in active) _pollOne(service, task),
+      ]);
     } finally {
       _polling = false;
     }
   }
 
+  Future<void> _pollOne(ShotService service, VideoTask task) async {
+    try {
+      await service.pollVideoTask(task.id);
+    } catch (_) {
+      // 单任务轮询异常忽略，下个周期重试。
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final shotsAsync = ref.watch(shotDaoProvider).watchActive();
-    final assetsAsync = ref.watch(assetDaoProvider).watchActive();
+    final shotsAsync = ref.watch(activeShotsProvider);
+    final assetsAsync = ref.watch(activeAssetsProvider);
     final videoTasksAsync = ref.watch(activeVideoTasksProvider);
 
     return Scaffold(
@@ -137,85 +146,73 @@ class _TaskPageState extends ConsumerState<TaskPage>
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('加载失败：$e')),
         data: (videoTasks) {
-          return StreamBuilder<List<Shot>>(
-            stream: shotsAsync,
-            builder: (context, shotSnap) {
-              return StreamBuilder<List<Asset>>(
-                stream: assetsAsync,
-                builder: (context, assetSnap) {
-                  final shots = shotSnap.data ?? const <Shot>[];
-                  final assets = assetSnap.data ?? const <Asset>[];
+          final shots = shotsAsync.value ?? const <Shot>[];
+          final assets = assetsAsync.value ?? const <Asset>[];
 
-                  if (shotSnap.connectionState == ConnectionState.waiting &&
-                      assetSnap.connectionState == ConnectionState.waiting &&
-                      videoTasksAsync.isLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+          if (shotsAsync.isLoading &&
+              assetsAsync.isLoading &&
+              videoTasksAsync.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-                  if (shots.isEmpty && assets.isEmpty && videoTasks.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.task_outlined,
-                            size: 48,
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                          const SizedBox(height: 12),
-                          const Text('暂无任务'),
-                          const SizedBox(height: 4),
-                          Text(
-                            '图片 / 视频生成任务将在这里展示',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    );
-                  }
+          if (shots.isEmpty && assets.isEmpty && videoTasks.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.task_outlined,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('暂无任务'),
+                  const SizedBox(height: 4),
+                  Text(
+                    '图片 / 视频生成任务将在这里展示',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            );
+          }
 
-                  return ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      if (videoTasks.isNotEmpty) ...[
-                        Text(
-                          '视频任务（${videoTasks.length}）',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 4),
-                        _RetryFailedVideoRow(
-                          tasks: videoTasks,
-                          onRetryAll: () =>
-                              _retryAllFailed(context, ref, videoTasks),
-                        ),
-                        const SizedBox(height: 8),
-                        for (final t in videoTasks)
-                          _VideoTaskTile(task: t, onPoll: _pollAllActive),
-                        const SizedBox(height: 16),
-                      ],
-                      if (shots.isNotEmpty) ...[
-                        Text(
-                          '分镜任务（${shots.length}）',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        for (final shot in shots) _ShotTaskTile(shot: shot),
-                        const SizedBox(height: 16),
-                      ],
-                      if (assets.isNotEmpty) ...[
-                        Text(
-                          '资产任务（${assets.length}）',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        for (final asset in assets)
-                          _AssetTaskTile(asset: asset),
-                      ],
-                    ],
-                  );
-                },
-              );
-            },
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              if (videoTasks.isNotEmpty) ...[
+                Text(
+                  '视频任务（${videoTasks.length}）',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                _RetryFailedVideoRow(
+                  tasks: videoTasks,
+                  onRetryAll: () => _retryAllFailed(context, ref, videoTasks),
+                ),
+                const SizedBox(height: 8),
+                for (final t in videoTasks)
+                  _VideoTaskTile(task: t, onPoll: _pollAllActive),
+                const SizedBox(height: 16),
+              ],
+              if (shots.isNotEmpty) ...[
+                Text(
+                  '分镜任务（${shots.length}）',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                for (final shot in shots) _ShotTaskTile(shot: shot),
+                const SizedBox(height: 16),
+              ],
+              if (assets.isNotEmpty) ...[
+                Text(
+                  '资产任务（${assets.length}）',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                for (final asset in assets) _AssetTaskTile(asset: asset),
+              ],
+            ],
           );
         },
       ),
@@ -268,7 +265,7 @@ class _VideoTaskTile extends ConsumerWidget {
               ),
           ],
         ),
-        trailing: _TaskBadge(status: task.status),
+        trailing: StatusBadge(status: task.status),
         onTap: () async {
           final route = await _shotRouteByShotId(ref, task.shotId);
           if (route != null && context.mounted) context.push(route);
@@ -321,7 +318,7 @@ class _AssetTaskTile extends ConsumerWidget {
         ),
         title: Text(asset.name),
         subtitle: Text('${asset.type} · ${asset.status}'),
-        trailing: _TaskBadge(status: asset.status),
+        trailing: StatusBadge(status: asset.status),
         onTap: () async {
           final route = await _assetRoute(ref, asset);
           if (route != null && context.mounted) context.push(route);
@@ -357,55 +354,12 @@ class _ShotTaskTile extends ConsumerWidget {
         ),
         title: Text('${shot.globalSeq} 分镜图'),
         subtitle: Text('${shot.globalTimeRange} · ${shot.status}'),
-        trailing: _TaskBadge(status: shot.status),
+        trailing: StatusBadge(status: shot.status),
         onTap: () async {
           final route = await _shotRoute(ref, shot);
           if (route != null && context.mounted) context.push(route);
         },
       ),
-    );
-  }
-}
-
-/// 任务状态徽章：生成中转圈，待验收青色，成功绿，失败红，排队灰。
-class _TaskBadge extends StatelessWidget {
-  const _TaskBadge({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color color;
-    final Widget child;
-    switch (status) {
-      case '生成中':
-        color = Colors.blue;
-        child = const SizedBox(
-          width: 16,
-          height: 16,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        );
-      case '待验收':
-        color = Colors.teal;
-        child = Icon(Icons.check_circle_outline, color: color, size: 20);
-      case '成功':
-        color = Colors.green;
-        child = Icon(Icons.check_circle_outline, color: color, size: 20);
-      case '失败':
-        color = Colors.red;
-        child = Icon(Icons.error_outline, color: color, size: 20);
-      default:
-        color = Colors.grey;
-        child = Icon(Icons.schedule, color: color, size: 20);
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        child,
-        const SizedBox(width: 6),
-        Text(status, style: TextStyle(color: color, fontSize: 12)),
-      ],
     );
   }
 }

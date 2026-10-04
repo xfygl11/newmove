@@ -14,6 +14,7 @@ final shotAgentsProvider = Provider<ShotAgents>(
 
 final shotServiceProvider = Provider<ShotService>((ref) {
   final service = ShotService(
+    db: ref.watch(databaseProvider),
     scriptDao: ref.watch(scriptDaoProvider),
     sceneDao: ref.watch(sceneDaoProvider),
     beatDao: ref.watch(beatDaoProvider),
@@ -70,6 +71,14 @@ final shotTransitionIssuesProvider =
 /// 某镜头的视频任务列表（最新在前）。
 final videoTasksByShotProvider = StreamProvider.family<List<VideoTask>, int>(
   (ref, shotId) => ref.watch(videoTaskDaoProvider).watchByShot(shotId),
+);
+
+/// 全部进行中/待验收的镜头（任务中心用）。
+///
+/// 用 StreamProvider 持有 Stream 实例：在 build 里直接 `.watch()` 每次都会新建
+/// Stream，StreamBuilder 会反复取消重订阅并闪烁。
+final activeShotsProvider = StreamProvider<List<Shot>>(
+  (ref) => ref.watch(shotDaoProvider).watchActive(),
 );
 
 /// 全部进行中的视频任务（任务中心用）。

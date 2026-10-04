@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../agent/active_llm.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
+import '../../widgets/confirm_sheet.dart';
 import '../novel/novel_providers.dart';
 import 'script_providers.dart';
 
@@ -52,18 +53,39 @@ class _AdaptSheetState extends ConsumerState<AdaptSheet> {
       return;
     }
 
+    final svc = ref.read(scriptServiceProvider);
+    final prompt = await svc.buildAdaptationPrompt(
+      bookId: widget.book.id,
+      sourceTexts: sourceTexts,
+      fidelityMode: _fidelity,
+    );
+    if (!mounted) return;
+    if (!await ConfirmSheet.confirm(
+      context,
+      objectName: widget.existing == null ? '新建剧本' : '重新改编',
+      quantity: '${sourceTexts.length} 章原文',
+      promptPreview: prompt,
+      params: [
+        '忠实度：$_fidelity',
+        '供应商：${llm.provider.label}',
+        '模型：${llm.modelId}',
+      ],
+      note: widget.existing == null ? '' : '将覆盖当前剧本的场次与版本记录（旧版进入版本历史）。',
+      title: '确认改编',
+    )) {
+      return;
+    }
+
     setState(() => _busy = true);
     try {
-      await ref
-          .read(scriptServiceProvider)
-          .adaptChapters(
-            bookId: widget.book.id,
-            existing: widget.existing,
-            title: widget.existing?.title ?? widget.book.title,
-            sourceTexts: sourceTexts,
-            fidelityMode: _fidelity,
-            llm: llm,
-          );
+      await svc.adaptChapters(
+        bookId: widget.book.id,
+        existing: widget.existing,
+        title: widget.existing?.title ?? widget.book.title,
+        sourceTexts: sourceTexts,
+        fidelityMode: _fidelity,
+        llm: llm,
+      );
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       _toast('改编失败：$e');

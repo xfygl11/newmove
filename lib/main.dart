@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +8,27 @@ import 'app.dart';
 import 'core/settings/app_settings.dart';
 
 void main() {
+  // 全局兜底：Release 下未捕获异常会直接崩进程，这里只上报并尝试恢复。
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    developer.log(
+      details.exceptionAsString(),
+      name: 'newmove-uncaught',
+      error: details.exception,
+      stackTrace: details.stack,
+      level: 1000,
+    );
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    developer.log(
+      error.toString(),
+      name: 'newmove-zone-error',
+      error: error,
+      stackTrace: stack,
+      level: 1000,
+    );
+    return true;
+  };
   runApp(ProviderScope(child: _AppBootstrap(child: const NewmoveApp())));
 }
 

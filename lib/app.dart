@@ -20,34 +20,26 @@ import 'features/shot/shot_list_page.dart';
 import 'features/skeleton/skeleton_page.dart';
 import 'features/task/task_page.dart';
 
+/// 根 Navigator key：供需要脱离页面 context 弹 Toast 的地方使用
+/// （如长耗时任务回调里 `context` 可能已卸载，直接 `ScaffoldMessenger.of(context)`
+/// 会抛 deactivated ancestor）。
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey();
+
+/// 取根 ScaffoldMessenger；页面卸载后仍可安全提示。
+ScaffoldMessengerState get rootMessenger {
+  final ctx = rootNavigatorKey.currentContext;
+  if (ctx == null) {
+    throw StateError('根 Navigator 尚未构建');
+  }
+  return ScaffoldMessenger.of(ctx);
+}
+
 /// 根路由：三 Tab（项目 / 任务 / 设置），分支各自维护导航栈。
 final GoRouter appRouter = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   // 非法/损坏的深链（如参数非数字）不白屏，显示可返回的错误页。
-  errorBuilder: (context, state) => Scaffold(
-    appBar: AppBar(title: const Text('页面不存在')),
-    body: Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline, size: 48),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              '无法打开：${state.uri}\n${state.error ?? ''}',
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: () => context.go('/'),
-            child: const Text('返回首页'),
-          ),
-        ],
-      ),
-    ),
-  ),
+  errorBuilder: (context, state) => const BadRoutePage(reason: '路径无法识别'),
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
@@ -71,110 +63,178 @@ final GoRouter appRouter = GoRouter(
         ),
       ],
     ),
+    GoRoute(path: '/bad-route', builder: (_, _) => const BadRoutePage()),
     // 小说模块：进入后全屏覆盖底部 TabBar（对齐 docs/05 3.2 流程即导航）。
     GoRoute(
       path: '/novel/:projectId',
-      builder: (_, state) => NovelShelfPage(
-        projectId: int.parse(state.pathParameters['projectId']!),
-      ),
+      redirect: (_, state) => requireIntParams(state, ['projectId']),
+      builder: (_, state) =>
+          NovelShelfPage(projectId: pathId(state, 'projectId')),
     ),
     GoRoute(
       path: '/novel/:projectId/chapter/:chapterId',
-      builder: (_, state) => ChapterEditorPage(
-        chapterId: int.parse(state.pathParameters['chapterId']!),
-      ),
+      redirect: (_, state) =>
+          requireIntParams(state, ['projectId', 'chapterId']),
+      builder: (_, state) =>
+          ChapterEditorPage(chapterId: pathId(state, 'chapterId')),
     ),
     GoRoute(
       path: '/novel/:projectId/settings',
-      builder: (_, state) => SettingWorkshopPage(
-        projectId: int.parse(state.pathParameters['projectId']!),
-      ),
+      redirect: (_, state) => requireIntParams(state, ['projectId']),
+      builder: (_, state) =>
+          SettingWorkshopPage(projectId: pathId(state, 'projectId')),
     ),
     GoRoute(
       path: '/novel/:projectId/outline',
-      builder: (_, state) => OutlineEditorPage(
-        projectId: int.parse(state.pathParameters['projectId']!),
-      ),
+      redirect: (_, state) => requireIntParams(state, ['projectId']),
+      builder: (_, state) =>
+          OutlineEditorPage(projectId: pathId(state, 'projectId')),
     ),
     GoRoute(
       path: '/novel/:projectId/characters',
-      builder: (_, state) => CharacterManagerPage(
-        projectId: int.parse(state.pathParameters['projectId']!),
-      ),
+      redirect: (_, state) => requireIntParams(state, ['projectId']),
+      builder: (_, state) =>
+          CharacterManagerPage(projectId: pathId(state, 'projectId')),
     ),
     GoRoute(
       path: '/novel/:projectId/hooks',
-      builder: (_, state) => HookManagerPage(
-        projectId: int.parse(state.pathParameters['projectId']!),
-      ),
+      redirect: (_, state) => requireIntParams(state, ['projectId']),
+      builder: (_, state) =>
+          HookManagerPage(projectId: pathId(state, 'projectId')),
     ),
     // 剧本模块：小说改编为分场剧本（对齐 docs/05 4.4 流程即导航）。
     GoRoute(
       path: '/script/:projectId',
-      builder: (_, state) =>
-          ScriptPage(projectId: int.parse(state.pathParameters['projectId']!)),
+      redirect: (_, state) => requireIntParams(state, ['projectId']),
+      builder: (_, state) => ScriptPage(projectId: pathId(state, 'projectId')),
     ),
     GoRoute(
       path: '/script/:projectId/script/:scriptId',
+      redirect: (_, state) =>
+          requireIntParams(state, ['projectId', 'scriptId']),
       builder: (_, state) => ScriptDetailPage(
-        projectId: int.parse(state.pathParameters['projectId']!),
-        scriptId: int.parse(state.pathParameters['scriptId']!),
+        projectId: pathId(state, 'projectId'),
+        scriptId: pathId(state, 'scriptId'),
       ),
     ),
     GoRoute(
       path: '/script/:projectId/script/:scriptId/versions',
+      redirect: (_, state) =>
+          requireIntParams(state, ['projectId', 'scriptId']),
       builder: (_, state) => ScriptVersionsPage(
-        projectId: int.parse(state.pathParameters['projectId']!),
-        scriptId: int.parse(state.pathParameters['scriptId']!),
+        projectId: pathId(state, 'projectId'),
+        scriptId: pathId(state, 'scriptId'),
       ),
     ),
     GoRoute(
       path: '/script/:projectId/script/:scriptId/scene/:sceneId',
+      redirect: (_, state) =>
+          requireIntParams(state, ['projectId', 'scriptId', 'sceneId']),
       builder: (_, state) => SceneEditPage(
-        projectId: int.parse(state.pathParameters['projectId']!),
-        sceneId: int.parse(state.pathParameters['sceneId']!),
+        projectId: pathId(state, 'projectId'),
+        sceneId: pathId(state, 'sceneId'),
       ),
     ),
     GoRoute(
       path: '/script/:projectId/script/:scriptId/skeleton',
+      redirect: (_, state) =>
+          requireIntParams(state, ['projectId', 'scriptId']),
       builder: (_, state) => SkeletonPage(
-        projectId: int.parse(state.pathParameters['projectId']!),
-        scriptId: int.parse(state.pathParameters['scriptId']!),
+        projectId: pathId(state, 'projectId'),
+        scriptId: pathId(state, 'scriptId'),
       ),
     ),
     GoRoute(
       path: '/script/:projectId/script/:scriptId/assets',
+      redirect: (_, state) =>
+          requireIntParams(state, ['projectId', 'scriptId']),
       builder: (_, state) => AssetGalleryPage(
-        projectId: int.parse(state.pathParameters['projectId']!),
-        scriptId: int.parse(state.pathParameters['scriptId']!),
+        projectId: pathId(state, 'projectId'),
+        scriptId: pathId(state, 'scriptId'),
       ),
     ),
     GoRoute(
       path: '/script/:projectId/script/:scriptId/asset/:assetId',
+      redirect: (_, state) =>
+          requireIntParams(state, ['projectId', 'scriptId', 'assetId']),
       builder: (_, state) => AssetDetailPage(
-        projectId: int.parse(state.pathParameters['projectId']!),
-        scriptId: int.parse(state.pathParameters['scriptId']!),
-        assetId: int.parse(state.pathParameters['assetId']!),
+        projectId: pathId(state, 'projectId'),
+        scriptId: pathId(state, 'scriptId'),
+        assetId: pathId(state, 'assetId'),
       ),
     ),
     // 镜头模块：分镜图列表 + 详情（M5）。
     GoRoute(
       path: '/script/:projectId/script/:scriptId/shots',
+      redirect: (_, state) =>
+          requireIntParams(state, ['projectId', 'scriptId']),
       builder: (_, state) => ShotListPage(
-        projectId: int.parse(state.pathParameters['projectId']!),
-        scriptId: int.parse(state.pathParameters['scriptId']!),
+        projectId: pathId(state, 'projectId'),
+        scriptId: pathId(state, 'scriptId'),
       ),
     ),
     GoRoute(
       path: '/script/:projectId/script/:scriptId/shot/:shotId',
+      redirect: (_, state) =>
+          requireIntParams(state, ['projectId', 'scriptId', 'shotId']),
       builder: (_, state) => ShotDetailPage(
-        projectId: int.parse(state.pathParameters['projectId']!),
-        scriptId: int.parse(state.pathParameters['scriptId']!),
-        shotId: int.parse(state.pathParameters['shotId']!),
+        projectId: pathId(state, 'projectId'),
+        scriptId: pathId(state, 'scriptId'),
+        shotId: pathId(state, 'shotId'),
       ),
     ),
   ],
 );
+
+/// 校验路径参数均为整数；有非法项时返回错误页路径，交由路由跳转。
+String? requireIntParams(GoRouterState state, List<String> keys) {
+  for (final key in keys) {
+    if (int.tryParse(state.pathParameters[key] ?? '') == null) {
+      return '/bad-route';
+    }
+  }
+  return null;
+}
+
+/// 解析路径参数为整数。[requireIntParams] 已拦截非法值，这里不再抛异常。
+int pathId(GoRouterState state, String key) {
+  return int.tryParse(state.pathParameters[key] ?? '') ?? 0;
+}
+
+/// 深链参数非法时的兜底页。
+class BadRoutePage extends StatelessWidget {
+  const BadRoutePage({super.key, this.reason});
+
+  final String? reason;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('页面无法打开')),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                reason ?? '链接中的参数无效，可能已被删除或不是本应用支持的格式。',
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () => context.go('/'),
+              child: const Text('返回首页'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// 应用根 Widget：深色主题 + 底部导航壳。
 class NewmoveApp extends StatelessWidget {

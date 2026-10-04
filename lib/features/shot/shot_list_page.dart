@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../agent/active_image.dart';
 import '../../agent/active_llm.dart';
 import '../../data/app_database.dart';
+import '../../widgets/confirm_sheet.dart';
+import '../../widgets/status_badge.dart';
 import '../asset/asset_providers.dart';
 import 'shot_models.dart';
 import 'shot_providers.dart';
@@ -99,8 +101,7 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
                 if (shots.isEmpty) {
                   return const Center(child: Text('暂无镜头，先在骨架页提取分段'));
                 }
-                // 清理已不存在的选中项。
-                _selected.retainAll(shots.map((s) => s.id));
+                final selected = _prune(_selected, shots.map((s) => s.id));
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: shots.length,
@@ -110,7 +111,7 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
                       projectId: widget.projectId,
                       scriptId: widget.scriptId,
                       shot: shot,
-                      selected: _selected.contains(shot.id),
+                      selected: selected.contains(shot.id),
                       selectable: ShotStatuses.awaitingImage == shot.status,
                       onToggle: () => setState(() {
                         if (!_selected.add(shot.id)) _selected.remove(shot.id);
@@ -129,8 +130,8 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
               .where((s) => s.status == ShotStatuses.awaitingImage)
               .toList();
           if (eligible.isEmpty) return null;
-          final allSelected =
-              _selected.length == eligible.length && eligible.isNotEmpty;
+          final selected = _prune(_selected, shots.map((s) => s.id));
+          final allSelected = selected.length == eligible.length;
           return SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -152,7 +153,7 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
                             ? Icons.check_box_outlined
                             : Icons.check_box_outline_blank,
                       ),
-                      label: Text('全选（${_selected.length}/${eligible.length}）'),
+                      label: Text('全选（${selected.length}/${eligible.length}）'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -169,7 +170,7 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
                     Expanded(
                       flex: 2,
                       child: FilledButton.icon(
-                        onPressed: (_generating || _selected.isEmpty)
+                        onPressed: (_generating || selected.isEmpty)
                             ? null
                             : _generateSelected,
                         icon: _generating
@@ -205,6 +206,24 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
       _toast('请先在「设置」配置可用的 LLM 供应商');
       return;
     }
+    final shots = await ref.read(
+      shotListByScriptProvider(widget.scriptId).future,
+    );
+    final prompt = await ref
+        .read(shotServiceProvider)
+        .buildDirectionContext(widget.scriptId);
+    if (!mounted) return;
+    if (!await ConfirmSheet.confirm(
+      context,
+      objectName: '分镜提示词',
+      quantity: '${shots.length} 个镜头',
+      promptPreview: prompt,
+      params: ['供应商：${llm.provider.label}', '模型：${llm.modelId}'],
+      note: '将覆盖已有的提示词、分镜帧与参考绑定。',
+      title: '确认重新导演',
+    )) {
+      return;
+    }
     setState(() => _directing = true);
     try {
       final summary = await ref
@@ -221,6 +240,10 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
     }
   }
 
+  /// 只保留仍存在的镜头 id，不改动 [_selected]，避免在 build 内产生副作用。
+  static Set<int> _prune(Set<int> selected, Iterable<int> existing) =>
+      selected.where(existing.contains).toSet();
+
   /// 批量生成选中的分镜图（含确认 Sheet）。
   Future<void> _generateSelected() async {
     final image = await ref.read(activeImageProvider.future);
@@ -230,27 +253,21 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
       return;
     }
     final ids = _selected.toList();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('确认生成'),
-        content: Text(
-          '将为选中的 ${ids.length} 个镜头生成静态分镜图，'
-          '供应商 ${image.provider.label} / 模型 ${image.modelId}。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('开始生成'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
+    final shots = (await ref.read(
+      shotListByScriptProvider(widget.scriptId).future,
+    )).where((s) => ids.contains(s.id)).toList();
+    if (!mounted) return;
+    if (!await ConfirmSheet.confirm(
+      context,
+      objectName: '批量分镜图',
+      quantity: '${ids.length} 次生成',
+      promptPreview: shots
+          .map((s) => '${s.globalSeq}：${s.prompt}')
+          .join('\n---\n'),
+      params: ['供应商：${image.provider.label}', '模型：${image.modelId}'],
+    )) {
+      return;
+    }
 
     _cancelToken = GenerationCancelToken();
     setState(() => _generating = true);
@@ -371,7 +388,7 @@ class _ShotCard extends ConsumerWidget {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       const Spacer(),
-                      _StatusBadge(status: shot.status),
+                      StatusBadge(status: shot.status),
                       if (selectable) ...[
                         const SizedBox(width: 4),
                         Checkbox(value: selected, onChanged: (_) => onToggle()),
@@ -439,35 +456,6 @@ class _Chip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(label, style: Theme.of(context).textTheme.labelSmall),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (status) {
-      ShotStatuses.awaitingPrompt => Colors.grey,
-      ShotStatuses.awaitingImage => Colors.blue,
-      ShotStatuses.generating => Colors.blue,
-      ShotStatuses.reviewing => Colors.amber,
-      ShotStatuses.confirmed => Colors.teal,
-      ShotStatuses.videoGenerating => Colors.blue,
-      ShotStatuses.videoDone => Colors.green,
-      _ => Colors.grey,
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(status, style: TextStyle(color: color, fontSize: 11)),
     );
   }
 }

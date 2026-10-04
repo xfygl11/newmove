@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +11,7 @@ import 'package:newmove/agent/active_llm.dart';
 import 'package:newmove/agent/active_video.dart';
 import 'package:newmove/core/network/image_provider_adapter.dart';
 import 'package:newmove/core/network/llm_provider_adapter.dart';
+import 'package:newmove/core/network/protocols.dart';
 import 'package:newmove/core/network/video_provider_adapter.dart';
 import 'package:newmove/core/storage/shot_file_store.dart';
 import 'package:newmove/core/storage/video_file_store.dart';
@@ -112,6 +114,8 @@ class _FakeImageAdapter extends ImageProviderAdapter {
     required String model,
     required String prompt,
     String size = '1024x1024',
+    String protocol = Protocols.openaiImages,
+    CancelToken? cancelToken,
   }) async {
     calls.add('text');
     _record(prompt);
@@ -126,6 +130,8 @@ class _FakeImageAdapter extends ImageProviderAdapter {
     required String prompt,
     required String referencePath,
     String size = '1024x1024',
+    String protocol = Protocols.openaiImages,
+    CancelToken? cancelToken,
   }) async {
     calls.add('single');
     _record(prompt);
@@ -140,6 +146,8 @@ class _FakeImageAdapter extends ImageProviderAdapter {
     required String prompt,
     required List<String> referencePaths,
     String size = '1024x1024',
+    String protocol = Protocols.openaiImages,
+    CancelToken? cancelToken,
   }) async {
     calls.add('multi:${referencePaths.length}');
     _record(prompt);
@@ -227,12 +235,24 @@ class _FakeVideoAdapter extends VideoProviderAdapter {
 }
 
 class _FakeVideoFileStore extends VideoFileStore {
+  /// 测试环境没有 path_provider 插件，用临时目录替代应用私有目录。
+  Future<Directory> _dir() =>
+      Directory.systemTemp.createTemp('newmove_video_test');
+
   @override
   Future<String> save(int shotId, Uint8List bytes) async {
-    final dir = await Directory.systemTemp.createTemp('newmove_video_test');
+    final dir = await _dir();
     final file = File('${dir.path}/shot_$shotId.mp4');
     await file.writeAsBytes(bytes);
     return file.path;
+  }
+
+  @override
+  Future<String> saveFromPath(int shotId, String sourcePath) async {
+    final dir = await _dir();
+    final target = File('${dir.path}/shot_$shotId.mp4');
+    await File(sourcePath).copy(target.path);
+    return target.path;
   }
 }
 
@@ -250,6 +270,7 @@ void main() {
     fakeImageAdapter = _FakeImageAdapter();
     fakeVideoAdapter = _FakeVideoAdapter();
     service = ShotService(
+      db: db,
       scriptDao: db.scriptDao,
       sceneDao: db.sceneDao,
       beatDao: db.beatDao,
@@ -281,7 +302,11 @@ void main() {
       ),
     );
     scriptId = await db.scriptDao.insert(
-      ScriptsCompanion.insert(bookId: bookId, title: '剧本A', status: Value('定稿')),
+      ScriptsCompanion.insert(
+        bookId: bookId,
+        title: '剧本A',
+        status: Value('定稿'),
+      ),
     );
 
     // 两个资产：角色阿青（有图，已采用）与场景荒原（无图）。
@@ -428,8 +453,8 @@ void main() {
   group('ShotService.generate', () {
     test('多参考走 imageToImageMulti，参考数只算有图资产', () async {
       await service.directAndSave(scriptId: scriptId, llm: await fakeLlm());
-      final g01 =
-          (await db.shotDao.listByScript(scriptId)).firstWhere((s) => s.globalSeq == 'G01');
+      final g01 = (await db.shotDao.listByScript(scriptId))
+          .firstWhere((s) => s.globalSeq == 'G01');
 
       final updated = await service.generate(
         shotId: g01.id,
@@ -444,8 +469,8 @@ void main() {
 
     test('提示词 {{ref N}} 被替换为语义描述', () async {
       await service.directAndSave(scriptId: scriptId, llm: await fakeLlm());
-      final g01 =
-          (await db.shotDao.listByScript(scriptId)).firstWhere((s) => s.globalSeq == 'G01');
+      final g01 = (await db.shotDao.listByScript(scriptId))
+          .firstWhere((s) => s.globalSeq == 'G01');
 
       await service.generate(shotId: g01.id, image: await fakeImage());
 
@@ -473,8 +498,8 @@ void main() {
     // 准备：生成分镜提示词 + 确认分镜图，使镜头可提交视频。
     Future<Shot> prepareConfirmedShot() async {
       await service.directAndSave(scriptId: scriptId, llm: await fakeLlm());
-      final g01 =
-          (await db.shotDao.listByScript(scriptId)).firstWhere((s) => s.globalSeq == 'G01');
+      final g01 = (await db.shotDao.listByScript(scriptId))
+          .firstWhere((s) => s.globalSeq == 'G01');
       final confirmed = await service.generate(
         shotId: g01.id,
         image: await fakeImage(),
@@ -511,13 +536,25 @@ void main() {
       expect(params.generateAudio, isTrue);
 
       // A9.2 提示词：Target duration 用参数值 8s（镜头 durationMs 为 6s）。
-      expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('Target duration: 8s'));
+      expect(
+        fakeVideoAdapter.lastSubmitPrompts.single,
+        contains('Target duration: 8s'),
+      );
       expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('Timeline:'));
       // G01 单帧：时间块头部（0:00-0:06）+ 连续自然语言描述；无 HARD CUT。
-      expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('【0:00-0:06】'));
+      expect(
+        fakeVideoAdapter.lastSubmitPrompts.single,
+        contains('【0:00-0:06】'),
+      );
       expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('同期对白「快走」'));
-      expect(fakeVideoAdapter.lastSubmitPrompts.single, isNot(contains('HARD CUT')));
-      expect(fakeVideoAdapter.lastSubmitPrompts.single, contains('Immutable locks:'));
+      expect(
+        fakeVideoAdapter.lastSubmitPrompts.single,
+        isNot(contains('HARD CUT')),
+      );
+      expect(
+        fakeVideoAdapter.lastSubmitPrompts.single,
+        contains('Immutable locks:'),
+      );
 
       // 镜头状态：视频生成中 + outputType video + modelVersion 记录模型。
       final updated = (await db.shotDao.find(shot.id))!;
@@ -567,7 +604,8 @@ void main() {
       expect(VideoGenParams.decode(task.paramsJson).useFirstFrame, isTrue);
     });
 
-    test('轮询成功：视频落盘，任务置成功，镜头置视频完成', () async {      final shot = await prepareConfirmedShot();
+    test('轮询成功：视频落盘，任务置成功，镜头置视频完成', () async {
+      final shot = await prepareConfirmedShot();
       final video = await fakeVideo();
       final task = await service.submitVideo(
         shotId: shot.id,
@@ -767,7 +805,10 @@ void main() {
       final done = await service.pollVideoTask(task.id);
       final versionPath = done.outputPath!;
 
-      await service.selectVideoVersion(shotId: shot.id, outputPath: versionPath);
+      await service.selectVideoVersion(
+        shotId: shot.id,
+        outputPath: versionPath,
+      );
       final updated = (await db.shotDao.find(shot.id))!;
       expect(updated.outputPath, versionPath);
       expect(updated.status, ShotStatuses.videoDone);
@@ -802,8 +843,8 @@ void main() {
     test('景别差 ≥2 档时不告警', () async {
       await service.directAndSave(scriptId: scriptId, llm: await fakeLlm());
       // 把 G02 改成特写（差 2 档：中景3 → 特写5）。
-      final g02 =
-          (await db.shotDao.listByScript(scriptId)).firstWhere((s) => s.globalSeq == 'G02');
+      final g02 = (await db.shotDao.listByScript(scriptId))
+          .firstWhere((s) => s.globalSeq == 'G02');
       await db.shotDao.updateById(
         g02.id,
         ShotsCompanion(shotType: const Value('特写')),

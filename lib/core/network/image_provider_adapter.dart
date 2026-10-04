@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import 'protocols.dart';
+
 /// 图片生成结果：优先本地字节，其次远程 URL。
 class ImageGenerationResult {
   const ImageGenerationResult({this.bytes, this.url});
@@ -45,7 +47,10 @@ class ImageProviderAdapter {
     required String model,
     required String prompt,
     String size = '1024x1024',
+    String protocol = Protocols.openaiImages,
+    CancelToken? cancelToken,
   }) async {
+    Protocols.require('image', protocol);
     final response = await _dio.post<Map<String, dynamic>>(
       generationsEndpoint(baseUrl),
       data: {
@@ -56,6 +61,7 @@ class ImageProviderAdapter {
         'response_format': 'b64_json',
       },
       options: _options(apiKey),
+      cancelToken: cancelToken,
     );
     return _parse(response.data ?? const {});
   }
@@ -68,7 +74,10 @@ class ImageProviderAdapter {
     required String prompt,
     required String referencePath,
     String size = '1024x1024',
+    String protocol = Protocols.openaiImages,
+    CancelToken? cancelToken,
   }) async {
+    Protocols.require('image', protocol);
     final form = FormData.fromMap({
       'model': model,
       'prompt': prompt,
@@ -85,14 +94,14 @@ class ImageProviderAdapter {
       editsEndpoint(baseUrl),
       data: form,
       options: _options(apiKey),
+      cancelToken: cancelToken,
     );
     return _parse(response.data ?? const {});
   }
 
-  /// 多参考图生图：以多张参考底图生成新画面，保持身份一致。
+  /// 多参考图图生图：按顺序传入多张参考图，用于「角色+场景」混合一致性。
   ///
-  /// [referencePaths] 按顺序对应提示词中的 {{ref1}}、{{ref2}}…；
-  /// 至少 1 张，超过 16 张时只取前 16（OpenAI gpt-image 上限）。
+  /// 兼容只收单张 `image` 字段的供应商：超过 1 张时只取第一张。
   Future<ImageGenerationResult> imageToImageMulti({
     required String baseUrl,
     required String apiKey,
@@ -100,7 +109,10 @@ class ImageProviderAdapter {
     required String prompt,
     required List<String> referencePaths,
     String size = '1024x1024',
+    String protocol = Protocols.openaiImages,
+    CancelToken? cancelToken,
   }) async {
+    Protocols.require('image', protocol);
     if (referencePaths.isEmpty) {
       throw ArgumentError.value(
         referencePaths,
@@ -115,25 +127,32 @@ class ImageProviderAdapter {
       'n': 1,
       'size': size,
       'response_format': 'b64_json',
-      'images': [
-        for (var i = 0; i < paths.length; i++)
-          await MultipartFile.fromFile(paths[i], filename: 'ref_${i + 1}.png'),
-      ],
+      'image': await MultipartFile.fromFile(
+        paths.first,
+        filename: 'reference.png',
+      ),
+      for (var i = 1; i < paths.length; i++)
+        'image': await MultipartFile.fromFile(
+          paths[i],
+          filename: 'ref_${i + 1}.png',
+        ),
     });
 
     final response = await _dio.post<Map<String, dynamic>>(
       editsEndpoint(baseUrl),
       data: form,
       options: _options(apiKey),
+      cancelToken: cancelToken,
     );
     return _parse(response.data ?? const {});
   }
 
   /// 下载远程图片为本地字节。
-  Future<Uint8List> downloadUrl(String url) async {
+  Future<Uint8List> downloadUrl(String url, {CancelToken? cancelToken}) async {
     final response = await _dio.get<List<int>>(
       url,
       options: Options(responseType: ResponseType.bytes),
+      cancelToken: cancelToken,
     );
     return Uint8List.fromList(response.data ?? const []);
   }
