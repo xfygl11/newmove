@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/providers.dart';
-import '../../core/storage/providers.dart';import '../../data/app_database.dart';
+import '../../core/storage/providers.dart';
+import '../../data/app_database.dart';
 import 'shot_agents.dart';
+import 'shot_compose_service.dart';
 import 'shot_models.dart';
 import 'shot_service.dart';
 
@@ -33,6 +35,13 @@ final shotServiceProvider = Provider<ShotService>(
     service.readProviderKey = keyStore.readKey;
     return service;
   },
+);
+
+/// 成片合成服务（M8：FFmpeg 拼接，借鉴 Toonflow）。
+final shotComposeServiceProvider = Provider<ShotComposeService>(
+  (ref) => ShotComposeService(
+    appDatabase: ref.watch(databaseProvider),
+  ),
 );
 
 /// 某剧本的镜头列表（G 序号升序）。

@@ -1,7 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/network/update_checker.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
@@ -94,9 +97,68 @@ class _GeneralSection extends ConsumerWidget {
                 .read(appSettingsProvider.notifier)
                 .update(settings.copyWith(confirmBeforeGenerate: v)),
           ),
+          const Divider(height: 1),
+          const _UpdateCheckTile(),
         ],
       ),
     );
+  }
+}
+
+/// 检查更新区块：拉取 GitHub 最新 release，有更新时提示跳转下载页。
+class _UpdateCheckTile extends ConsumerWidget {
+  const _UpdateCheckTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(updateCheckProvider);
+    return ListTile(
+      leading: const Icon(Icons.update),
+      title: const Text('检查更新'),
+      subtitle: state.when(
+        data: (u) => Text(
+          u.hasUpdate
+              ? '发现新版本 ${u.latestVersion}，点击前往下载'
+              : '已是最新版本',
+        ),
+        loading: () => const Text('检查中…'),
+        error: (e, _) => Text('检查失败：$e'),
+      ),
+      enabled: _updateAvailable(state),
+      onTap: () {
+        final url = _releaseUrl(state);
+        if (url == null) return;
+        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      },
+    );
+  }
+
+  bool _updateAvailable(AsyncValue<UpdateCheck> state) {
+    if (state is! AsyncData<UpdateCheck>) return false;
+    return state.value.hasUpdate;
+  }
+
+  String? _releaseUrl(AsyncValue<UpdateCheck> state) {
+    if (state is! AsyncData<UpdateCheck>) return null;
+    return state.value.releaseUrl;
+  }
+}
+
+final updateCheckProvider =
+    AsyncNotifierProvider<UpdateCheckNotifier, UpdateCheck>(
+  UpdateCheckNotifier.new,
+);
+
+class UpdateCheckNotifier extends AsyncNotifier<UpdateCheck> {
+  @override
+  Future<UpdateCheck> build() async {
+    final checker = UpdateChecker(dio: Dio());
+    try {
+      return await checker.checkLatest();
+    } catch (_) {
+      // 离线/无网时静默返回占位，避免界面报错。
+      return const UpdateCheck(latestVersion: '0.0.0', hasUpdate: false);
+    }
   }
 }
 

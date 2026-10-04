@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../data/app_database.dart';
 import '../novel/novel_providers.dart';
+import '../shot/shot_providers.dart';
 import 'script_adapt_sheet.dart';
 import 'script_models.dart';
 import 'script_providers.dart';
@@ -192,6 +194,8 @@ class _HeaderCard extends ConsumerWidget {
                 ),
               ],
             ),
+            const Divider(height: 16),
+            _ComposeRow(projectId: projectId, scriptId: script.id),
           ],
         ),
       ),
@@ -218,6 +222,60 @@ class _HeaderCard extends ConsumerWidget {
     );
     if (ok != true) return;
     await ref.read(scriptServiceProvider).finalizeScript(script.id);
+  }
+}
+
+class _ComposeRow extends ConsumerWidget {
+  const _ComposeRow({required this.projectId, required this.scriptId});
+
+  final int projectId;
+  final int scriptId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Row(
+      children: [
+        Expanded(
+          child: FilledButton.icon(
+            icon: const Icon(Icons.call_split),
+            label: const Text('合成成片'),
+            onPressed: () => _compose(context, ref),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _compose(BuildContext context, WidgetRef ref) async {
+    final script = ref.watch(scriptProvider(scriptId)).value;
+    final outName =
+        'compose_${script?.title ?? 'script'}_${DateTime.now().millisecondsSinceEpoch}.mp4';
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+            SizedBox(width: 12),
+            Expanded(child: Text('正在合成…（FFmpeg 本地拼接）')),
+          ],
+        ),
+      ),
+    );
+    try {
+      final path = await ref
+          .read(shotComposeServiceProvider)
+          .composeScript(scriptId: scriptId, outputName: outName);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(SnackBar(content: Text('已合成：$path')));
+      final file = XFile(path);
+      await SharePlus.instance.share(
+        ShareParams(files: [file]),
+      );
+    } catch (e) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(SnackBar(content: Text('合成失败：$e')));
+    }
   }
 }
 
