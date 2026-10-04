@@ -99,6 +99,26 @@ class ProviderModel {
         modes.contains('endFrameOptional');
   }
 
+  /// 归一化时长：无能力数据返回原值；否则取最接近的合法值。
+  int normalizeDuration(int value) {
+    final list = supportedDurations;
+    if (list.isEmpty) return value;
+    if (list.contains(value)) return value;
+    var best = list.first;
+    for (final d in list) {
+      if ((d - value).abs() < (best - value).abs()) best = d;
+    }
+    return best;
+  }
+
+  /// 归一化分辨率：无能力数据返回原值；否则给定时长下无匹配取第一个可选。
+  String normalizeResolution(int durationSec, String value) {
+    final list = resolutionsFor(durationSec);
+    if (list.isEmpty) return value;
+    if (list.contains(value)) return value;
+    return list.first;
+  }
+
   /// 音频三态：true 强制开 / false 强制关 / 其余（null、"optional"）可选。
   bool get audioRequired => identical(audio, true);
   bool get audioDisabled => identical(audio, false);

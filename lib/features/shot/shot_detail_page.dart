@@ -297,14 +297,54 @@ class _VideoTab extends ConsumerStatefulWidget {
 }
 
 class _VideoTabState extends ConsumerState<_VideoTab> {
-  // 参数选择状态（A9.2：模型/画幅/分辨率/时长/音频）。
+  // 参数选择状态（A9.2：模型/画幅/分辨率/时长/音频/首帧通道）。
   String? _modelId;
   String _ratio = '16:9';
   String _resolution = '480p';
   double _durationSec = 5;
   bool _generateAudio = false;
+  bool _useFirstFrame = false;
 
   bool _submitting = false;
+
+  /// 按当前模型能力归一化参数（时长/分辨率回落合法值、音频三态、首帧通道）。
+  (ProviderModel?, VideoGenParams) _effective(ActiveVideo? video) {
+    final models = video == null
+        ? const <ProviderModel>[]
+        : ProviderModelCodec.decode(
+            video.provider.models,
+          ).where((m) => m.enabled).toList();
+    final selectedId = _modelId ?? video?.modelId;
+    final model = models.isEmpty
+        ? null
+        : models.firstWhere(
+            (m) => m.id == selectedId,
+            orElse: () => models.first,
+          );
+    final duration =
+        model?.normalizeDuration(_durationSec.round()) ?? _durationSec.round();
+    final resolution =
+        model?.normalizeResolution(duration, _resolution) ?? _resolution;
+    final audio = model == null
+        ? _generateAudio
+        : (model.audioRequired
+              ? true
+              : model.audioDisabled
+              ? false
+              : _generateAudio);
+    return (
+      model,
+      VideoGenParams(
+        modelId: model?.id ?? selectedId ?? '',
+        durationSec: duration,
+        ratio: _ratio,
+        resolution: resolution,
+        generateAudio: audio,
+        referenceCount: 0,
+        useFirstFrame: (model?.supportsStartFrame ?? false) && _useFirstFrame,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -313,6 +353,9 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
     final tasksAsync = ref.watch(videoTasksByShotProvider(shot.id));
     final tasks = tasksAsync.value ?? const <VideoTask>[];
     final activeTask = tasks.isNotEmpty ? tasks.first : null;
+
+    final video = videoAsync.value;
+    final (selectedModel, params) = _effective(video);
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -327,18 +370,23 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
         videoAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Text('供应商配置读取失败：$e'),
-          data: (video) => _ParamCard(
+          data: (_) => _ParamCard(
             video: video,
-            modelId: _modelId ?? video?.modelId,
+            selectedModel: selectedModel,
+            modelId: params.modelId.isEmpty ? null : params.modelId,
             onModelChanged: (v) => setState(() => _modelId = v),
-            ratio: _ratio,
+            ratio: params.ratio,
             onRatioChanged: (v) => setState(() => _ratio = v),
-            resolution: _resolution,
+            resolution: params.resolution,
             onResolutionChanged: (v) => setState(() => _resolution = v),
-            durationSec: _durationSec,
-            onDurationChanged: (v) => setState(() => _durationSec = v),
-            generateAudio: _generateAudio,
+            durationSec: params.durationSec.toDouble(),
+            onDurationChanged: (v) =>
+                setState(() => _durationSec = v.toDouble()),
+            generateAudio: params.generateAudio,
             onAudioChanged: (v) => setState(() => _generateAudio = v),
+            supportsFirstFrame: selectedModel?.supportsStartFrame ?? false,
+            useFirstFrame: params.useFirstFrame,
+            onFirstFrameChanged: (v) => setState(() => _useFirstFrame = v),
           ),
         ),
         const SizedBox(height: 16),
@@ -376,15 +424,17 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
       return;
     }
     // 「生成前确认」开关关闭时直接提交（设置页 T9.3）。
+    final (_, params) = _effective(video);
     if (ref.read(appSettingsProvider).confirmBeforeGenerate) {
       final ok = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('确认生成视频'),
           content: Text(
-            '将为本镜头生成视频（${_durationSec.round()}s · $_ratio · $_resolution'
-            '${_generateAudio ? ' · 含音频' : ''}），'
-            '供应商 ${video.provider.label} / 模型 ${_modelId ?? video.modelId}。',
+            '将为本镜头生成视频（${params.durationSec}s · ${params.ratio} · '
+            '${params.resolution}${params.generateAudio ? ' · 含音频' : ''}'
+            '${params.useFirstFrame ? ' · 首帧锁定' : ''}），'
+            '供应商 ${video.provider.label} / 模型 ${params.modelId}。',
           ),
           actions: [
             TextButton(
@@ -406,14 +456,7 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
       await ref.read(shotServiceProvider).submitVideo(
             shotId: widget.shot.id,
             video: video,
-            params: VideoGenParams(
-              modelId: _modelId ?? video.modelId,
-              durationSec: _durationSec.round(),
-              ratio: _ratio,
-              resolution: _resolution,
-              generateAudio: _generateAudio,
-              referenceCount: 0,
-            ),
+            params: params,
           );
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -465,6 +508,7 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
 class _ParamCard extends StatelessWidget {
   const _ParamCard({
     required this.video,
+    required this.selectedModel,
     required this.modelId,
     required this.onModelChanged,
     required this.ratio,
@@ -475,9 +519,13 @@ class _ParamCard extends StatelessWidget {
     required this.onDurationChanged,
     required this.generateAudio,
     required this.onAudioChanged,
+    required this.supportsFirstFrame,
+    required this.useFirstFrame,
+    required this.onFirstFrameChanged,
   });
 
   final ActiveVideo? video;
+  final ProviderModel? selectedModel;
   final String? modelId;
   final ValueChanged<String?> onModelChanged;
   final String ratio;
@@ -488,15 +536,32 @@ class _ParamCard extends StatelessWidget {
   final ValueChanged<double> onDurationChanged;
   final bool generateAudio;
   final ValueChanged<bool> onAudioChanged;
+  final bool supportsFirstFrame;
+  final bool useFirstFrame;
+  final ValueChanged<bool> onFirstFrameChanged;
+
+  /// 可选分辨率：优先模型能力（按时长），否则回退通用词表。
+  List<String> _resolutionOptions() {
+    final fromCap = selectedModel?.resolutionsFor(durationSec.round()) ?? const [];
+    return fromCap.isNotEmpty ? fromCap : _fallbackResolutions;
+  }
+
+  /// 可选时长（模型能力，升序）；无能力时回退 4-15 连续区间。
+  List<int> get _durationOptions => selectedModel?.supportedDurations ?? const [];
 
   @override
   Widget build(BuildContext context) {
-    // models 落库为 JSON 字符串，展示前解码；只展示勾选启用的模型。
     final models = video == null
         ? const <ProviderModel>[]
         : ProviderModelCodec.decode(
             video!.provider.models,
           ).where((m) => m.enabled).toList();
+    final resolutions = _resolutionOptions();
+    final durations = _durationOptions;
+    final effectiveResolution =
+        resolutions.contains(resolution) ? resolution : resolutions.first;
+    final effectiveDuration =
+        durations.isEmpty ? durationSec.round() : durationSec.round();
 
     return Card(
       child: Padding(
@@ -540,46 +605,74 @@ class _ParamCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              // 分辨率。
+              // 分辨率（按时长联动）。
               Wrap(
                 spacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text('分辨率', style: Theme.of(context).textTheme.bodySmall),
-                  for (final r in _resolutionOptionsList)
+                  for (final r in resolutions)
                     ChoiceChip(
                       label: Text(r),
-                      selected: resolution == r,
+                      selected: effectiveResolution == r,
                       onSelected: (_) => onResolutionChanged(r),
                     ),
                 ],
               ),
               const SizedBox(height: 8),
-              // 时长滑条。
-              Row(
-                children: [
-                  Text('时长 ${durationSec.round()}s',
-                      style: Theme.of(context).textTheme.bodySmall),
-                  Expanded(
-                    child: Slider(
-                      min: 4,
-                      max: 15,
-                      divisions: 11,
-                      value: durationSec.clamp(4, 15),
-                      onChanged: onDurationChanged,
+              // 时长：有模型能力时离散选择，否则 4-15s 连续滑条。
+              if (durations.isNotEmpty)
+                _DurationSlider(
+                  options: durations,
+                  value: effectiveDuration,
+                  onChanged: onDurationChanged,
+                )
+              else
+                Row(
+                  children: [
+                    Text('时长 $effectiveDuration s',
+                        style: Theme.of(context).textTheme.bodySmall),
+                    Expanded(
+                      child: Slider(
+                        min: 4,
+                        max: 15,
+                        divisions: 11,
+                        value: durationSec.clamp(4, 15),
+                        onChanged: onDurationChanged,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              // 音频开关。
+                  ],
+                ),
+              // 音频：模型强制开/关时禁用开关。
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                title: Text('生成音频',
-                    style: Theme.of(context).textTheme.bodySmall),
+                title: Text(
+                  selectedModel?.audioRequired == true
+                      ? '生成音频（模型强制开启）'
+                      : selectedModel?.audioDisabled == true
+                      ? '生成音频（模型不支持）'
+                      : '生成音频',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
                 value: generateAudio,
-                onChanged: onAudioChanged,
+                onChanged: (selectedModel?.audioRequired == true ||
+                        selectedModel?.audioDisabled == true)
+                    ? null
+                    : onAudioChanged,
               ),
+              // 首帧通道：仅模型支持时显示（A9.2）。
+              if (supportsFirstFrame)
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: Text(
+                    '以分镜图作首帧（锁定起手画面）',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  value: useFirstFrame,
+                  onChanged: onFirstFrameChanged,
+                ),
             ],
           ],
         ),
@@ -588,7 +681,52 @@ class _ParamCard extends StatelessWidget {
   }
 
   static const _ratioOptionsList = ['16:9', '9:16', '1:1'];
-  static const _resolutionOptionsList = ['480p', '720p', '1080p'];
+  static const _fallbackResolutions = ['480p', '720p', '1080p'];
+}
+
+/// 离散时长滑条：在模型支持的时长列表上取最近索引。
+class _DurationSlider extends StatelessWidget {
+  const _DurationSlider({
+    required this.options,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final List<int> options;
+  final int value;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    var index = options.indexOf(value);
+    if (index < 0) {
+      index = 0;
+      var best = (options.first - value).abs();
+      for (var i = 1; i < options.length; i++) {
+        final d = (options[i] - value).abs();
+        if (d < best) {
+          best = d;
+          index = i;
+        }
+      }
+    }
+    return Row(
+      children: [
+        Text('时长 ${options[index]}s',
+            style: Theme.of(context).textTheme.bodySmall),
+        Expanded(
+          child: Slider(
+            min: 0,
+            max: (options.length - 1).toDouble(),
+            divisions: options.length > 1 ? options.length - 1 : null,
+            value: index.toDouble(),
+            label: '${options[index]}s',
+            onChanged: (v) => onChanged(options[v.round()].toDouble()),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// 操作行：生成/重试按钮。

@@ -21,6 +21,7 @@ import '../../data/daos/shot_dao.dart';
 import '../../data/daos/shot_frame_dao.dart';
 import '../../data/daos/video_task_dao.dart';
 import '../../data/daos/provider_dao.dart';
+import '../provider_config/provider_models.dart';
 import 'shot_agents.dart';
 import 'shot_models.dart';
 import 'video_prompt.dart';
@@ -426,15 +427,33 @@ class ShotService {
     if (shot.prompt.isEmpty) throw StateError('镜头尚未生成分镜提示词');
 
     // 组装参考图：分镜图优先，其次已采用资产图。
+    // 首帧通道开启时，分镜图改走 `first_frame` 角色，不再计入普通参考。
     final referencePaths = <String>[];
-    if (shot.outputPath != null &&
-        shot.outputPath!.isNotEmpty &&
-        File(shot.outputPath!).existsSync()) {
-      referencePaths.add(shot.outputPath!);
+    String? firstFramePath;
+    final storyboardPath = shot.outputPath;
+    if (params.useFirstFrame &&
+        storyboardPath != null &&
+        storyboardPath.isNotEmpty &&
+        File(storyboardPath).existsSync()) {
+      firstFramePath = storyboardPath;
+    } else if (storyboardPath != null &&
+        storyboardPath.isNotEmpty &&
+        File(storyboardPath).existsSync()) {
+      referencePaths.add(storyboardPath);
     }
+    // 模型参考上限（能力字段；缺省回退 9）。
+    final providerModels = ProviderModelCodec.decode(video.provider.models);
+    final selectedModel = providerModels.firstWhere(
+      (m) => m.id == params.modelId,
+      orElse: () => video.model,
+    );
+    final maxRefs = selectedModel.maxImageRefs ?? 9;
+
     final refs = await assetRefDao.listByShot(shotId);
     for (final ref in refs) {
-      if (referencePaths.length >= 9) break;
+      if (referencePaths.length + (firstFramePath == null ? 0 : 1) >= maxRefs) {
+        break;
+      }
       final asset = await assetDao.find(ref.assetId);
       final path = asset?.imagePath;
       if (path != null && path.isNotEmpty && File(path).existsSync()) {
@@ -447,7 +466,8 @@ class ShotService {
       ratio: params.ratio,
       resolution: params.resolution,
       generateAudio: params.generateAudio,
-      referenceCount: referencePaths.length,
+      referenceCount: referencePaths.length + (firstFramePath == null ? 0 : 1),
+      useFirstFrame: firstFramePath != null,
     );
 
     // 构造 A9 视频提示词（时长取参数面板选择值）。
@@ -482,6 +502,8 @@ class ShotService {
         ratio: params.ratio,
         resolution: params.resolution,
         referencePaths: referencePaths,
+        firstFramePath: firstFramePath,
+        maxImageRefs: maxRefs,
         generateAudio: params.generateAudio,
       );
       final id = await videoTaskDao.insert(

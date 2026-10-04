@@ -53,8 +53,9 @@ class VideoProviderAdapter {
 
   /// 提交视频生成任务，返回 taskId。
   ///
-  /// [referencePaths] 为参考图本地路径（如分镜图），转 data URI 上传；
-  /// 超过 9 张时只取前 9（对应 Seedance 2.0 imageReference:9 上限）。
+  /// [referencePaths] 为参考图本地路径（如分镜图/资产图），转 data URI 上传；
+  /// [firstFramePath] 非空时以 `first_frame` 角色单独提交（首帧通道，A9.2）；
+  /// [maxImageRefs] 为图片参考数量上限（模型能力，默认 9）。
   Future<String> submit({
     required String baseUrl,
     required String apiKey,
@@ -64,12 +65,32 @@ class VideoProviderAdapter {
     required String ratio,
     required String resolution,
     List<String> referencePaths = const [],
+    String? firstFramePath,
+    int maxImageRefs = 9,
     bool generateAudio = false,
   }) async {
-    final images = <String>[
-      for (final p in referencePaths.take(9))
-        'data:image/png;base64,${base64Encode(await File(p).readAsBytes())}',
-    ];
+    final references = <Map<String, dynamic>>[];
+    var budget = maxImageRefs < 1 ? 1 : maxImageRefs;
+    if (firstFramePath != null && budget > 0) {
+      references.add({
+        'role': 'first_frame',
+        'type': 'image_url',
+        'image_url': {
+          'url':
+              'data:image/png;base64,${base64Encode(await File(firstFramePath).readAsBytes())}',
+        },
+      });
+      budget--;
+    }
+    for (final p in referencePaths.take(budget)) {
+      references.add({
+        'role': 'reference_image',
+        'type': 'image_url',
+        'image_url': {
+          'url': 'data:image/png;base64,${base64Encode(await File(p).readAsBytes())}',
+        },
+      });
+    }
 
     final body = <String, dynamic>{
       'model': model,
@@ -78,18 +99,8 @@ class VideoProviderAdapter {
       'ratio': ratio,
       'resolution': resolution,
       'generate_audio': generateAudio,
-      if (images.isNotEmpty)
-        'metadata': {
-          'ratio': ratio,
-          'references': [
-            for (final url in images)
-              {
-                'role': 'reference_image',
-                'type': 'image_url',
-                'image_url': {'url': url},
-              },
-          ],
-        },
+      if (references.isNotEmpty)
+        'metadata': {'ratio': ratio, 'references': references},
     };
 
     final response = await _dio.post<Map<String, dynamic>>(

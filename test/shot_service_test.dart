@@ -169,6 +169,9 @@ class _FakeVideoAdapter extends VideoProviderAdapter {
 
   int submitCount = 0;
   List<String> lastSubmitPrompts = [];
+  String? lastFirstFramePath;
+  List<String> lastRefPaths = [];
+  int? lastMaxRefs;
 
   @override
   Future<String> submit({
@@ -180,11 +183,16 @@ class _FakeVideoAdapter extends VideoProviderAdapter {
     required String ratio,
     required String resolution,
     List<String> referencePaths = const [],
+    String? firstFramePath,
+    int maxImageRefs = 9,
     bool generateAudio = false,
   }) async {
     if (submitError != null) throw submitError!;
     submitCount++;
     lastSubmitPrompts.add(prompt);
+    lastFirstFramePath = firstFramePath;
+    lastRefPaths = referencePaths;
+    lastMaxRefs = maxImageRefs;
     return 'task_$submitCount';
   }
 
@@ -515,8 +523,48 @@ void main() {
       expect(updated.modelVersion, 'vid');
     });
 
-    test('轮询成功：视频落盘，任务置成功，镜头置视频完成', () async {
+    test('默认提交：分镜图作普通参考，不走首帧通道', () async {
       final shot = await prepareConfirmedShot();
+      final video = await fakeVideo();
+      await service.submitVideo(
+        shotId: shot.id,
+        video: video,
+        params: const VideoGenParams(
+          modelId: 'vid',
+          durationSec: 5,
+          ratio: '16:9',
+          resolution: '480p',
+          generateAudio: false,
+          referenceCount: 0,
+        ),
+      );
+      expect(fakeVideoAdapter.lastFirstFramePath, isNull);
+      expect(fakeVideoAdapter.lastRefPaths, contains(shot.outputPath));
+    });
+
+    test('首帧通道：分镜图作 first_frame，快照记录 useFirstFrame', () async {
+      final shot = await prepareConfirmedShot();
+      final video = await fakeVideo();
+      await service.submitVideo(
+        shotId: shot.id,
+        video: video,
+        params: const VideoGenParams(
+          modelId: 'vid',
+          durationSec: 5,
+          ratio: '16:9',
+          resolution: '480p',
+          generateAudio: false,
+          referenceCount: 0,
+          useFirstFrame: true,
+        ),
+      );
+      expect(fakeVideoAdapter.lastFirstFramePath, shot.outputPath);
+      expect(fakeVideoAdapter.lastRefPaths, isNot(contains(shot.outputPath)));
+      final task = (await db.videoTaskDao.listByShot(shot.id)).single;
+      expect(VideoGenParams.decode(task.paramsJson).useFirstFrame, isTrue);
+    });
+
+    test('轮询成功：视频落盘，任务置成功，镜头置视频完成', () async {      final shot = await prepareConfirmedShot();
       final video = await fakeVideo();
       final task = await service.submitVideo(
         shotId: shot.id,

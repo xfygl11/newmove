@@ -11,6 +11,7 @@ class VideoGenParams {
     required this.resolution,
     required this.generateAudio,
     required this.referenceCount,
+    this.useFirstFrame = false,
   });
 
   final String modelId;
@@ -20,6 +21,9 @@ class VideoGenParams {
   final bool generateAudio;
   final int referenceCount;
 
+  /// 是否把分镜图作为首帧通道提交（A9.2，仅模型支持时开启）。
+  final bool useFirstFrame;
+
   Map<String, dynamic> toJson() => {
     'modelId': modelId,
     'durationSec': durationSec,
@@ -27,6 +31,7 @@ class VideoGenParams {
     'resolution': resolution,
     'generateAudio': generateAudio,
     'referenceCount': referenceCount,
+    if (useFirstFrame) 'useFirstFrame': true,
   };
 
   factory VideoGenParams.fromJson(Map<String, dynamic> json) {
@@ -37,6 +42,7 @@ class VideoGenParams {
       resolution: json['resolution'] as String? ?? '480p',
       generateAudio: json['generateAudio'] as bool? ?? false,
       referenceCount: json['referenceCount'] as int? ?? 0,
+      useFirstFrame: json['useFirstFrame'] as bool? ?? false,
     );
   }
 

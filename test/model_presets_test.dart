@@ -52,6 +52,21 @@ void main() {
       expect(model.audioOptional, isTrue);
       expect(model.audioRequired, isFalse);
     });
+
+    test('normalizeDuration 回落最接近合法值', () {
+      expect(model.normalizeDuration(7), 6);
+      expect(model.normalizeDuration(12), 10);
+      expect(model.normalizeDuration(4), 4);
+      const bare = ProviderModel(id: 'x', label: 'x');
+      expect(bare.normalizeDuration(7), 7);
+    });
+
+    test('normalizeResolution 按时长回落首个合法值', () {
+      expect(model.normalizeResolution(5, '1080p'), '480p');
+      expect(model.normalizeResolution(10, '1080p'), '1080p');
+      const bare = ProviderModel(id: 'x', label: 'x');
+      expect(bare.normalizeResolution(5, '1080p'), '1080p');
+    });
   });
 
   group('ProviderModel codec', () {
