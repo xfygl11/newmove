@@ -83,6 +83,26 @@ Entries discovered by the Agent during task execution should follow this format:
   - 全量 `flutter test` 曾超时，优先跑核心四个文件
   - 当前基线：18/18 通过，`flutter analyze` 零问题
 
+[纯 Dart 语义与依赖 API 的本地验证方法]
+- Date: 2026-10-04
+- Context: 代码调研时需确认 Dart switch 语义与 dio 超时语义，避免凭记忆误判
+- Category: Testing Methods
+- Instructions:
+  - 验证纯 Dart 语言行为/最小样例时，直接跑 `/opt/flutter/bin/cache/dart-sdk/bin/dart <file>`（秒级，不需要 flutter 完整环境，也不受 358 MiB 内存限制影响）
+  - 第三方包的 API 语义一律去 `~/.pub-cache/hosted/pub.dev/<pkg>-<version>/` grep 源码确认，不要凭记忆下结论；例如 dio 5.11.1 中 `receiveTimeout` 同时覆盖「建连 + 首字节」以及「数据传输中每两个字节事件的间隔」，而 `connectTimeout` 默认 null（无限制）
+  - Dart 非空 `switch case` 分支即使不写 `break`，CFE 也不会 fall-through（运行时验证：case 体末尾隐式跳出），analyzer 3.13 也不会报 `flow_control_transfer_required_in_switch`；不要把「case 缺 break」当成缺陷上报
+
+[借鉴项目缓存位置（做功能/流程比对时直接用）]
+- Date: 2026-10-04
+- Context: 用户说明「借鉴项目还在缓存目录」，本项目需求比对与借鉴分析依赖这两个开源项目源码
+- Category: Environment Configuration
+- Instructions:
+  - Toonflow 在 `/tmp/opencode/Toonflow-app`（commit `f37b772`，646 文件，官方最新，无子模块，已核实远端/本地文件数一致）
+  - InkOS 在 `/tmp/opencode/inkos`（commit `8fc2ae5`，792 文件）
+  - 做功能对齐、流程比对、深查借鉴机制时直接读这两个目录，无需重新下载
+  - `/tmp/opencode` 属临时目录，若目录缺失则按远端仓库重新克隆；两个项目均为只读参考，不要在其内部修改代码
+  - 比对结论与「采纳/不采纳」决策记录在 `docs/01` 第 8 节，任务化条目在 `docs/04` 第 8.y 节（M14）
+
 [后续开发需同步更新 AGENTS.md 与 docs]
 - Date: 2026-10-04
 - Context: 用户要求

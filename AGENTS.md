@@ -140,6 +140,25 @@ lib/
 - **压缩包导入**：解压条目名一律经 `BackupService._resolveMediaPath` 解析——拒绝绝对路径、`..`/`.`/空段，并校验解析后绝对路径前缀（防 zip slip 越界写文件）。任何接收用户提供的 zip/文件名并落盘的路径都必须做同等校验。
 - **APK 体积**：`build.gradle.kts` 的 `defaultConfig` 用 `ndk.abiFilters = ["arm64-v8a"]` 只打单 ABI，FFmpeg 用 `ffmpeg_kit_flutter_new_min_gpl`；CI 构建命令带 `-P disable-abi-filtering=true`，产物为 `app-{release,debug}.apk`。**不要用 `splits.abi`**：Flutter Gradle 插件在未传 `-P split-per-abi` 时会把 `armeabi-v7a/arm64-v8a/x86_64` 写进 `defaultConfig.ndk.abiFilters`，与 `splits.abi` 互斥，Gradle configure 阶段直接报 `Conflicting configuration` 使 CI 构建失败。
 
+### 数据完整性、上下文预算与执行约定（M14，未完成）
+
+> M14 任务清单见 `docs/04` 第 8.y 节（T16.1–T16.9），架构约定见 `docs/02` 6.5–6.9，
+> 全量复研结论见 `docs/01` 第 8 节。**M13 全量扫描未覆盖以下问题，动手前先读这三处。**
+
+- **多表写必须事务化**：全库当前仅 `backup_service.dart:337` 一处 `transaction`，五个 service 的多表写全部裸写，中间态（JSON 解码抛错、磁盘满、进程被杀）永久落库且无回滚。DAO 层提供「按父 id 重建」复合方法并内置事务，业务层不直接拼 `deleteByX` + 多次 `insert`。
+- **删除顺序最下游先行**：`VideoTasks → AssetRefs → ShotFrames → Shots → Beats → Scenes`。`skeleton_service.dart:69-70` 先删 Beats 再删 Shots 违反此序，任一镜头有下游数据时删除抛冲突而 Beats 已不可恢复。
+- **写顺序先删后改**：`script_service.dart:110-118` 先 `updateRow` 写新正文再删场次，失败后正文新版 + 场次旧版错位。凡「父行更新 + 子表重建」一律先完成删除插入、成功后再更新父行版本。
+- **删除入口必须级联**：`project_dao.dart:40` 裸 delete 且 `tables.dart` 15 处 `references()` 全无 `onDelete`（Drift 默认 `NO ACTION`），删除任何创建过书籍的项目必然抛 `FOREIGN KEY constraint failed`。统一走 `deleteProjectCascade`，表定义显式 `KeyAction.cascade` + 迁移。
+- **LLM 上下文必须预算内构造**：现状全量拼接、`model_presets.dart` 的 `maxToken` 零使用方。统一走 `ContextBudget`；TruthFile 标 `protection: protected | compressible`（用户意图/角色锁/规则永不压缩），裁剪按「伏笔只留 open、摘要只留近 N 章、角色只留本章出场」执行，被裁条目写入台账供查证。
+- **确认与执行分离**：统一 `ConfirmSheet`（对象/数量/完整提示词/参数/参考文件与用途顺序/执行次数/费用，费用不可查时明确「未知」）；授权后提交前重读数据比对，节点/提示词/模式/引用/数量任一变化则差异高亮重新授权。生成前保存提示词、参数、引用与授权快照，后续编辑不回写这次尝试。阶段门纪律：确认简报 ≠ 确认剧本 ≠ 确认资产 ≠ 验收生成结果，允许小样 ≠ 允许批量生产。
+- **取消需透传 Dio**：`GenerationCancelToken` 包装为 `dio.CancellationToken` 并透传适配器，每个 await 之后检查，不只判 for 循环顶部。
+- **轮询需 per-task 超时且去重锁下沉**：`task_page.dart:111-125` 的全局 `_polling` + 串行 await，任一请求半连接不返回则全局永久停刷。超时下沉到 `pollVideoTask` 内部按 taskId 串行化。
+- **状态需僵尸检测**：`shot_service.dart:616-628` 对网络异常保持「生成中」无最大时长，供应商删任务后永久挂起。`updatedAt` 超阈值自动置失败；供应商配置变更后在途任务置失败。
+- **状态常量需统一且覆盖全枚举**：`task_page.dart:380-399` 的 `_TaskBadge` 只识别 8 个状态中的 2 个，6 个落灰色 default 使「已完成」与「排队中」外观一致。抽统一 `StatusBadge` + 单一状态常量类。状态迁移需幂等：`shot_service.dart:147-154` 重新导演无条件写 `awaitingImage` 会把已出视频镜头降级，对应视频任务仍「已完成」。
+- **文件校验需在读取前**：`shot_service.dart:721-722` 先 `readAsBytes()` 再判 100MB，超大文件先全量载入内存致 OOM（本机环境 358 MiB）。任何「读整个文件再校验」改为先 `File.length()` 或流式分块。
+- **用户文本不得拼进命令串**：`shot_compose_service.dart:52` 把剧本标题（`script_detail_page.dart:247`）拼进 FFmpeg 命令串，标题含 `"` 时输出路径可控。文件名白名单过滤 `[^\w\-]` → `_`，输出路径由服务内部生成，用 `executeWithArguments` 数组传参。同步长任务用 `FFmpegSession` + 进度回调 + `cancelExecution` + `Isolate.run`；`apad` 必须带 `whole_dur`（默认无限补静音致成片尾部黑帧）；成功后删临时文件。
+- **协议常量需统一枚举**：`agnes_presets.dart` 的 `openai-chat` / `openai-images` / `openai-videos` 与适配器实际分支不一致，LLM 侧 `protocol` 是死字段，图片/视频侧不匹配会静默落到默认分支。统一枚举 + 适配器显式分支 + 未知协议抛错，不得静默降级。
+
 ---
 
 ## 5. 数据与状态约定
