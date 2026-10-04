@@ -66,10 +66,13 @@ class LlmProviderAdapter {
     );
 
     final map = response.data ?? const {};
-    final choices = map['choices'] as List<dynamic>? ?? const [];
-    if (choices.isEmpty) return '';
-    final message = (choices.first as Map<String, dynamic>)['message'];
-    final content = (message as Map<String, dynamic>?)?['content'];
+    final choices = map['choices'];
+    if (choices is! List || choices.isEmpty) return '';
+    final first = choices.first;
+    if (first is! Map) return '';
+    final message = first['message'];
+    if (message is! Map) return '';
+    final content = message['content'];
     return content is String ? content : '';
   }
 
@@ -128,10 +131,13 @@ class LlmProviderAdapter {
     try {
       final map = jsonDecode(jsonText);
       if (map is! Map<String, dynamic>) return null;
-      final choices = map['choices'] as List<dynamic>? ?? const [];
-      if (choices.isEmpty) return null;
-      final delta = (choices.first as Map<String, dynamic>)['delta'];
-      final content = (delta as Map<String, dynamic>?)?['content'];
+      final choices = map['choices'];
+      if (choices is! List || choices.isEmpty) return null;
+      final first = choices.first;
+      if (first is! Map) return null;
+      final delta = first['delta'];
+      if (delta is! Map) return null;
+      final content = delta['content'];
       return content is String ? content : null;
     } on FormatException {
       return null;

@@ -88,17 +88,23 @@ class ModelFetcher {
     final result = <FetchedModel>[];
     for (final item in data) {
       if (item is! Map) continue;
-      final id = (item['id'] as String?)?.trim() ?? '';
+      final id = _str(item['id']).trim();
       if (id.isEmpty || !seen.add(id)) continue;
       final label =
-          (item['display_name'] as String?) ??
-          (item['displayName'] as String?) ??
-          (item['name'] as String?) ??
+          _strOrNull(item['display_name']) ??
+          _strOrNull(item['displayName']) ??
+          _strOrNull(item['name']) ??
           id;
       result.add((id: id, label: label));
     }
     return result;
   }
+
+  /// 宽容地把 JSON 值转成字符串（兼容数值型 id 等）。
+  static String _str(Object? value) => value?.toString() ?? '';
+
+  /// 宽容转字符串，null 保持 null 以保留 `??` 回退语义。
+  static String? _strOrNull(Object? value) => value?.toString();
 
   /// 把拉取结果合并进现有模型列表（docs/02 §4.1.1 合并策略）。
   ///

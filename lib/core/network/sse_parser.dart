@@ -39,7 +39,9 @@ class SseByteParser {
   /// 从单个事件字节中提取所有 `data:` 行内容（多行用换行连接）。
   String? _extractData(List<int> eventBytes) {
     if (eventBytes.isEmpty) return null;
-    final text = utf8.decode(eventBytes);
+    // ACT: 供应商偶发畸形 UTF-8 字节时降级替换而非抛异常中断整条流；
+    // 若后续需严格校验，可改为先 try decode 再走 allowMalformed 回退。
+    final text = utf8.decode(eventBytes, allowMalformed: true);
     final dataLines = <String>[];
     for (final rawLine in text.split('\n')) {
       var line = rawLine;

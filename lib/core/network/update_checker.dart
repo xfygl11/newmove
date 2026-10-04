@@ -50,8 +50,8 @@ class UpdateChecker {
     return UpdateCheck(
       latestVersion: tag,
       hasUpdate: hasUpdate,
-      releaseUrl: body['html_url'] as String?,
-      releaseNotes: body['body'] as String?,
+      releaseUrl: body['html_url']?.toString(),
+      releaseNotes: body['body']?.toString(),
     );
   }
 

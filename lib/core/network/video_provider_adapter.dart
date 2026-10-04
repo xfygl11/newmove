@@ -294,8 +294,10 @@ class VideoProviderAdapter {
     // Agnes 返回顶层 video_id（兼容 task_id / id）。
     final videoId = map['video_id'] ?? map['task_id'] ?? map['id'];
     if (videoId == null || videoId.toString().isEmpty) {
+      final detail = map.toString();
       throw StateError(
-        'Agnes 视频供应商未返回任务 ID: ${map.toString()}'.substring(0, 200),
+        'Agnes 视频供应商未返回任务 ID: '
+        '${detail.length < 200 ? detail : detail.substring(0, 200)}',
       );
     }
     return videoId.toString();
