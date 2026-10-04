@@ -1,4 +1,8 @@
 /// 镜头状态常量（DB 直接存中文）。
+library;
+
+import 'package:newmove/core/json_values.dart';
+
 class ShotStatuses {
   ShotStatuses._();
 
@@ -60,15 +64,15 @@ class ShotFrameDraft {
 
   factory ShotFrameDraft.fromJson(Map<String, dynamic> json) {
     return ShotFrameDraft(
-      seq: json['seq'] as int? ?? 1,
-      timeRange: (json['timeRange'] as String? ?? '').trim(),
-      subject: (json['subject'] as String? ?? '').trim(),
-      shotSize: (json['shotSize'] as String? ?? '').trim(),
-      angle: normalizeAngle(json['angle'] as String? ?? ''),
-      camera: (json['camera'] as String? ?? '').trim(),
-      blocking: (json['blocking'] as String? ?? '').trim(),
-      performance: (json['performance'] as String? ?? '').trim(),
-      dialogue: (json['dialogue'] as String?)?.trim(),
+      seq: jsonInt(json['seq'], 1),
+      timeRange: jsonString(json['timeRange']).trim(),
+      subject: jsonString(json['subject']).trim(),
+      shotSize: jsonString(json['shotSize']).trim(),
+      angle: normalizeAngle(jsonString(json['angle'])),
+      camera: jsonString(json['camera']).trim(),
+      blocking: jsonString(json['blocking']).trim(),
+      performance: jsonString(json['performance']).trim(),
+      dialogue: jsonStringOrNull(json['dialogue'])?.trim(),
     );
   }
 
@@ -95,8 +99,8 @@ class ShotRefDraft {
 
   factory ShotRefDraft.fromJson(Map<String, dynamic> json) {
     return ShotRefDraft(
-      role: _normalizeRole(json['role'] as String? ?? ''),
-      stableId: (json['stableId'] as String? ?? '').trim(),
+      role: _normalizeRole(jsonString(json['role'])),
+      stableId: jsonString(json['stableId']).trim(),
     );
   }
 
@@ -130,16 +134,16 @@ class ShotDraft {
 
   factory ShotDraft.fromJson(Map<String, dynamic> json) {
     return ShotDraft(
-      globalSeq: (json['globalSeq'] as String? ?? '').trim(),
-      shotType: normalizeShotType(json['shotType'] as String? ?? ''),
-      prompt: (json['prompt'] as String? ?? '').trim(),
+      globalSeq: jsonString(json['globalSeq']).trim(),
+      shotType: normalizeShotType(jsonString(json['shotType'])),
+      prompt: jsonString(json['prompt']).trim(),
       frames: [
-        for (final f in (json['frames'] as List<dynamic>? ?? const []))
-          ShotFrameDraft.fromJson((f as Map).cast<String, dynamic>()),
+        for (final f in jsonList(json['frames']))
+          ShotFrameDraft.fromJson(jsonMap(f)),
       ],
       refs: [
-        for (final r in (json['refs'] as List<dynamic>? ?? const []))
-          ShotRefDraft.fromJson((r as Map).cast<String, dynamic>()),
+        for (final r in jsonList(json['refs']))
+          ShotRefDraft.fromJson(jsonMap(r)),
       ],
     );
   }
@@ -165,8 +169,7 @@ class ShotDirectionResult {
   factory ShotDirectionResult.fromJson(Map<String, dynamic> json) {
     return ShotDirectionResult(
       shots: [
-        for (final s in (json['shots'] as List<dynamic>? ?? const []))
-          ShotDraft.fromJson((s as Map).cast<String, dynamic>()),
+        for (final s in jsonList(json['shots'])) ShotDraft.fromJson(jsonMap(s)),
       ],
     );
   }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/json_values.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
 import 'novel_providers.dart';
@@ -290,7 +291,7 @@ class _TruthFileView extends StatelessWidget {
       TruthFileKind.hooks => _hookCards(context, json),
       TruthFileKind.chapterSummaries => _summaryCards(json),
       TruthFileKind.authorIntent ||
-      TruthFileKind.currentFocus => [_textCard(json['text'] as String? ?? '')],
+      TruthFileKind.currentFocus => [_textCard(jsonString(json['text']))],
       _ => [_rawCard(content)],
     };
 
@@ -309,7 +310,7 @@ class _TruthFileView extends StatelessWidget {
   }
 
   List<Widget> _factCards(Map<String, dynamic> json) {
-    final facts = (json['facts'] as List<dynamic>? ?? const []);
+    final facts = jsonList(json['facts']);
     return [
       for (final f in facts)
         _kvCard(
@@ -323,7 +324,7 @@ class _TruthFileView extends StatelessWidget {
     BuildContext context,
     Map<String, dynamic> json,
   ) {
-    final chars = (json['characters'] as List<dynamic>? ?? const []);
+    final chars = jsonList(json['characters']);
     return [
       Card(
         margin: const EdgeInsets.symmetric(vertical: 4),
@@ -345,12 +346,12 @@ class _TruthFileView extends StatelessWidget {
   }
 
   List<Widget> _resourceCards(Map<String, dynamic> json) {
-    final items = (json['items'] as List<dynamic>? ?? const []);
+    final items = jsonList(json['items']);
     return [for (final i in items) _kvCard('${i['name']}', _compact(i))];
   }
 
   List<Widget> _hookCards(BuildContext context, Map<String, dynamic> json) {
-    final hooks = (json['hooks'] as List<dynamic>? ?? const []);
+    final hooks = jsonList(json['hooks']);
     return [
       Card(
         margin: const EdgeInsets.symmetric(vertical: 4),
@@ -369,7 +370,7 @@ class _TruthFileView extends StatelessWidget {
   }
 
   List<Widget> _summaryCards(Map<String, dynamic> json) {
-    final rows = (json['rows'] as List<dynamic>? ?? const []);
+    final rows = jsonList(json['rows']);
     return [for (final r in rows) _kvCard('第 ${r['chapter']} 章', _compact(r))];
   }
 
@@ -383,7 +384,7 @@ class _TruthFileView extends StatelessWidget {
 
   /// 把事实对象的生效区间格式化为 "第N章起" / "第N章—第M章"。
   String _rangeText(dynamic f) {
-    final map = (f as Map).cast<dynamic, dynamic>();
+    final map = jsonMap(f);
     final from = map['validFromChapter'];
     final until = map['validUntilChapter'];
     if (from == null && until == null) return '';
@@ -393,7 +394,7 @@ class _TruthFileView extends StatelessWidget {
 
   /// 把 map 中的非关键字段压缩为多行文本。
   String _compact(dynamic v) {
-    final map = (v as Map).cast<dynamic, dynamic>();
+    final map = jsonMap(v);
     final buf = StringBuffer();
     for (final e in map.entries) {
       if (e.key == 'name' || e.key == 'id') continue;

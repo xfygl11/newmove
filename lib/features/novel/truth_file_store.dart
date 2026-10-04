@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart' show Value;
 
+import '../../core/json_values.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/truth_file_dao.dart';
 import 'novel_models.dart';
@@ -104,10 +105,7 @@ class TruthFileStore {
   Future<void> _applyCharacters(SettleDelta delta) async {
     if (delta.characters.isEmpty) return;
     final current = await read(TruthFileKind.characterMatrix);
-    final list = [
-      for (final c in (current['characters'] as List<dynamic>? ?? const []))
-        (c as Map).cast<String, dynamic>(),
-    ];
+    final list = [for (final c in jsonList(current['characters'])) jsonMap(c)];
 
     for (final spec in delta.characters) {
       final idx = list.indexWhere((c) => c['name'] == spec.name);
@@ -125,10 +123,7 @@ class TruthFileStore {
   Future<void> _applyResources(SettleDelta delta) async {
     if (delta.resources.isEmpty) return;
     final current = await read(TruthFileKind.resources);
-    final items = [
-      for (final i in (current['items'] as List<dynamic>? ?? const []))
-        (i as Map).cast<String, dynamic>(),
-    ];
+    final items = [for (final i in jsonList(current['items'])) jsonMap(i)];
 
     for (final res in delta.resources) {
       final idx = items.indexWhere((i) => i['name'] == res['name']);
@@ -145,10 +140,7 @@ class TruthFileStore {
   Future<void> _applyHooks(SettleDelta delta) async {
     if (delta.hookUpsert.isEmpty && delta.hookResolve.isEmpty) return;
     final current = await read(TruthFileKind.hooks);
-    final hooks = [
-      for (final h in (current['hooks'] as List<dynamic>? ?? const []))
-        (h as Map).cast<String, dynamic>(),
-    ];
+    final hooks = [for (final h in jsonList(current['hooks'])) jsonMap(h)];
 
     for (final up in delta.hookUpsert) {
       final idx = hooks.indexWhere((h) => h['id'] == up['id']);
@@ -170,10 +162,7 @@ class TruthFileStore {
     final summary = delta.chapterSummary;
     if (summary == null) return;
     final current = await read(TruthFileKind.chapterSummaries);
-    final rows = [
-      for (final r in (current['rows'] as List<dynamic>? ?? const []))
-        (r as Map).cast<String, dynamic>(),
-    ];
+    final rows = [for (final r in jsonList(current['rows'])) jsonMap(r)];
 
     final chapter = summary['chapter'];
     final idx = rows.indexWhere((r) => r['chapter'] == chapter);

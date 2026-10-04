@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/json_values.dart';
 import 'novel_providers.dart';
 import 'truth_file_kinds.dart';
 
@@ -60,10 +61,7 @@ class _HookListState extends ConsumerState<_HookList> {
       final data = await _load();
       if (!mounted) return;
       setState(() {
-        _hooks = [
-          for (final h in (data['hooks'] as List<dynamic>? ?? const []))
-            (h as Map).cast<String, dynamic>(),
-        ];
+        _hooks = [for (final h in jsonList(data['hooks'])) jsonMap(h)];
         _loading = false;
         _error = null;
       });

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../core/json_values.dart';
 import '../../data/app_database.dart';
 
 /// 视频生成参数快照（提交前构造，随任务持久化）。
@@ -36,13 +37,13 @@ class VideoGenParams {
 
   factory VideoGenParams.fromJson(Map<String, dynamic> json) {
     return VideoGenParams(
-      modelId: json['modelId'] as String? ?? '',
-      durationSec: json['durationSec'] as int? ?? 5,
-      ratio: json['ratio'] as String? ?? '16:9',
-      resolution: json['resolution'] as String? ?? '480p',
-      generateAudio: json['generateAudio'] as bool? ?? false,
-      referenceCount: json['referenceCount'] as int? ?? 0,
-      useFirstFrame: json['useFirstFrame'] as bool? ?? false,
+      modelId: jsonString(json['modelId']),
+      durationSec: jsonInt(json['durationSec'], 5),
+      ratio: jsonString(json['ratio'], '16:9'),
+      resolution: jsonString(json['resolution'], '480p'),
+      generateAudio: jsonBool(json['generateAudio']),
+      referenceCount: jsonInt(json['referenceCount']),
+      useFirstFrame: jsonBool(json['useFirstFrame']),
     );
   }
 

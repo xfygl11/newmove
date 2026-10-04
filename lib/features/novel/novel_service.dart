@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
 
 import '../../agent/active_llm.dart';
+import '../../core/json_values.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/chapter_revision_dao.dart';
 import '../../data/daos/novel_dao.dart';
@@ -141,7 +142,7 @@ class NovelService {
       buf.writeln('');
       buf.writeln('【本章规划（Planner 产出，请严格遵循）】');
       buf.writeln('目标：${chapterPlan['chapterGoal'] ?? ''}');
-      final events = chapterPlan['keyEvents'] as List<dynamic>? ?? const [];
+      final events = jsonList(chapterPlan['keyEvents']);
       buf.writeln('关键事件：${events.join(' → ')}');
       buf.writeln('结尾变化：${chapterPlan['endingChange'] ?? ''}');
       final styleNotes = chapterPlan['styleNotes']?.toString() ?? '';

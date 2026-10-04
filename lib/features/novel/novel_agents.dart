@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../agent/active_llm.dart';
 import '../../agent/skill_loader.dart';
+import '../../core/json_values.dart';
 import '../../core/network/llm_provider_adapter.dart';
 import 'novel_models.dart';
 
@@ -101,11 +102,8 @@ class NovelAgents {
       temperature: 0.3,
     );
     final map = _extractJson(reply);
-    final issues = map['issues'] as List<dynamic>? ?? const [];
-    return [
-      for (final i in issues)
-        ReviewIssue.fromJson((i as Map).cast<String, dynamic>()),
-    ];
+    final issues = jsonList(map['issues']);
+    return [for (final i in issues) ReviewIssue.fromJson(jsonMap(i))];
   }
 
   // ---- 修订（Writer spot-fix/polish/rewrite） ----

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/json_values.dart';
 import 'novel_models.dart';
 import 'novel_providers.dart';
 import 'truth_file_kinds.dart';
@@ -107,11 +108,8 @@ class _CharacterListState extends ConsumerState<_CharacterList> {
   Future<List<CharacterSpec>> _load() async {
     final store = ref.read(novelServiceProvider).storeFor(widget.bookId);
     final json = await store.read(TruthFileKind.characterMatrix);
-    final list = json['characters'] as List<dynamic>? ?? const [];
-    return [
-      for (final c in list)
-        CharacterSpec.fromJson((c as Map).cast<String, dynamic>()),
-    ];
+    final list = jsonList(json['characters']);
+    return [for (final c in list) CharacterSpec.fromJson(jsonMap(c))];
   }
 
   Future<void> _persist(List<CharacterSpec> chars) async {

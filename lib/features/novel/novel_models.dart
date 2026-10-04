@@ -1,6 +1,8 @@
 /// AI 写小说模块的领域模型（AI 产物，与 Drift 表模型分层）。
 library;
 
+import 'package:newmove/core/json_values.dart';
+
 /// 设定生成结果（Planner + Architect 产出）。
 class SetupResult {
   const SetupResult({
@@ -21,18 +23,15 @@ class SetupResult {
 
   factory SetupResult.fromJson(Map<String, dynamic> json) {
     return SetupResult(
-      premise: json['premise'] as String? ?? '',
-      world: json['world'] as String? ?? '',
+      premise: jsonString(json['premise']),
+      world: jsonString(json['world']),
       characters: [
-        for (final c in (json['characters'] as List<dynamic>? ?? const []))
-          CharacterSpec.fromJson(c as Map<String, dynamic>),
+        for (final c in jsonList(json['characters']))
+          CharacterSpec.fromJson(jsonMap(c)),
       ],
-      styleGuide: json['styleGuide'] as String? ?? '',
-      outline: json['outline'] as String? ?? '',
-      proposals: [
-        for (final p in (json['proposals'] as List<dynamic>? ?? const []))
-          p.toString(),
-      ],
+      styleGuide: jsonString(json['styleGuide']),
+      outline: jsonString(json['outline']),
+      proposals: [for (final p in jsonList(json['proposals'])) p.toString()],
     );
   }
 }
@@ -55,11 +54,11 @@ class CharacterSpec {
 
   factory CharacterSpec.fromJson(Map<String, dynamic> json) {
     return CharacterSpec(
-      name: json['name'] as String? ?? '',
-      role: json['role'] as String? ?? '',
-      goal: json['goal'] as String? ?? '',
-      state: json['state'] as String? ?? '',
-      relations: json['relations'] as String? ?? '',
+      name: jsonString(json['name']),
+      role: jsonString(json['role']),
+      goal: jsonString(json['goal']),
+      state: jsonString(json['state']),
+      relations: jsonString(json['relations']),
     );
   }
 
@@ -122,13 +121,13 @@ class ReviewIssue {
 
   factory ReviewIssue.fromJson(Map<String, dynamic> json) {
     return ReviewIssue(
-      type: ReviewIssueType.fromValue(json['type'] as String?),
-      location: json['location'] as String? ?? '',
-      problem: json['problem'] as String? ?? '',
-      evidence: json['evidence'] as String? ?? '',
-      impact: json['impact'] as String? ?? '',
-      fix: json['fix'] as String? ?? '',
-      scope: json['scope'] as String? ?? 'local',
+      type: ReviewIssueType.fromValue(jsonStringOrNull(json['type'])),
+      location: jsonString(json['location']),
+      problem: jsonString(json['problem']),
+      evidence: jsonString(json['evidence']),
+      impact: jsonString(json['impact']),
+      fix: jsonString(json['fix']),
+      scope: jsonString(json['scope'], 'local'),
     );
   }
 }
@@ -169,38 +168,23 @@ class SettleDelta {
   final String currentFocus;
 
   factory SettleDelta.fromJson(Map<String, dynamic> json) {
-    final factOps = json['factOps'] as Map<String, dynamic>? ?? const {};
-    final hookOps = json['hookOps'] as Map<String, dynamic>? ?? const {};
+    final factOps = jsonMap(json['factOps']);
+    final hookOps = jsonMap(json['hookOps']);
     return SettleDelta(
-      factUpsert: [
-        for (final f in (factOps['upsert'] as List<dynamic>? ?? const []))
-          (f as Map).cast<String, dynamic>(),
-      ],
-      factExpire: [
-        for (final f in (factOps['expire'] as List<dynamic>? ?? const []))
-          (f as Map).cast<String, dynamic>(),
-      ],
+      factUpsert: [for (final f in jsonList(factOps['upsert'])) jsonMap(f)],
+      factExpire: [for (final f in jsonList(factOps['expire'])) jsonMap(f)],
       characters: [
-        for (final c in (json['characterOps'] as List<dynamic>? ?? const []))
-          CharacterSpec.fromJson((c as Map).cast<String, dynamic>()),
+        for (final c in jsonList(json['characterOps']))
+          CharacterSpec.fromJson(jsonMap(c)),
       ],
-      resources: [
-        for (final r in (json['resourceOps'] as List<dynamic>? ?? const []))
-          (r as Map).cast<String, dynamic>(),
-      ],
-      hookUpsert: [
-        for (final h in (hookOps['upsert'] as List<dynamic>? ?? const []))
-          (h as Map).cast<String, dynamic>(),
-      ],
-      hookResolve: [
-        for (final h in (hookOps['resolve'] as List<dynamic>? ?? const []))
-          h.toString(),
-      ],
+      resources: [for (final r in jsonList(json['resourceOps'])) jsonMap(r)],
+      hookUpsert: [for (final h in jsonList(hookOps['upsert'])) jsonMap(h)],
+      hookResolve: [for (final h in jsonList(hookOps['resolve'])) h.toString()],
       chapterSummary: json['chapterSummary'] is Map
-          ? (json['chapterSummary'] as Map).cast<String, dynamic>()
+          ? jsonMap(json['chapterSummary'])
           : null,
-      authorIntent: json['authorIntent'] as String? ?? '',
-      currentFocus: json['currentFocus'] as String? ?? '',
+      authorIntent: jsonString(json['authorIntent']),
+      currentFocus: jsonString(json['currentFocus']),
     );
   }
 }
