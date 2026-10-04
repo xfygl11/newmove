@@ -400,7 +400,7 @@ class _ProjectCard extends ConsumerWidget {
     );
     if (confirmed != true || !context.mounted) return;
     try {
-      await ref.read(projectDaoProvider).deleteProject(project.id);
+      await ref.read(cascadeDaoProvider).deleteProjectCascade(project.id);
       if (context.mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('项目已删除')));

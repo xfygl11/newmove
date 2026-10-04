@@ -87,10 +87,12 @@ void main() {
   setUp(() async {
     db = AppDatabase(NativeDatabase.memory());
     service = SkeletonService(
+      db: db,
       scriptDao: db.scriptDao,
       sceneDao: db.sceneDao,
       beatDao: db.beatDao,
       shotDao: db.shotDao,
+      cascadeDao: db.cascadeDao,
       agents: SkeletonAgents(adapter: _FakeAdapter(_cannedJson)),
     );
 

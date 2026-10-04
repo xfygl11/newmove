@@ -12,11 +12,13 @@ final scriptAgentsProvider = Provider<ScriptAgents>(
 
 final scriptServiceProvider = Provider<ScriptService>(
   (ref) => ScriptService(
+    db: ref.watch(databaseProvider),
     scriptDao: ref.watch(scriptDaoProvider),
     sceneDao: ref.watch(sceneDaoProvider),
     revisionDao: ref.watch(scriptRevisionDaoProvider),
     novelDao: ref.watch(novelDaoProvider),
     truthDao: ref.watch(truthFileDaoProvider),
+    cascadeDao: ref.watch(cascadeDaoProvider),
     agents: ref.watch(scriptAgentsProvider),
   ),
 );

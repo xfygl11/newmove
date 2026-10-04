@@ -5,6 +5,7 @@ import 'package:drift/drift.dart' show Value;
 import '../../agent/active_llm.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/beat_dao.dart';
+import '../../data/daos/cascade_dao.dart';
 import '../../data/daos/scene_dao.dart';
 import '../../data/daos/script_dao.dart';
 import '../../data/daos/shot_dao.dart';
@@ -14,17 +15,21 @@ import 'skeleton_models.dart';
 /// 剧本骨架的业务编排：构建导演上下文、调用 Agent、落库与完整性校验。
 class SkeletonService {
   SkeletonService({
+    required this.db,
     required this.scriptDao,
     required this.sceneDao,
     required this.beatDao,
     required this.shotDao,
+    required this.cascadeDao,
     required this.agents,
   });
 
+  final AppDatabase db;
   final ScriptDao scriptDao;
   final SceneDao sceneDao;
   final BeatDao beatDao;
   final ShotDao shotDao;
+  final CascadeDao cascadeDao;
   final SkeletonAgents agents;
 
   /// 默认单段时长上限（Seedance 2.0 单段 15s）。
@@ -66,46 +71,48 @@ class SkeletonService {
 
     final sceneIdBySeq = <int, int>{for (final s in scenes) s.seq: s.id};
 
-    await beatDao.deleteByScript(script.id);
-    await shotDao.deleteByScript(script.id);
+    // 删旧 + 插新整体包在事务内：中途失败整段回滚，不会留下空骨架。
+    await db.transaction(() async {
+      await cascadeDao.deleteSkeletonCascade(script.id);
 
-    for (var i = 0; i < result.beats.length; i++) {
-      final b = result.beats[i];
-      final sceneId = sceneIdBySeq[b.sceneSeq];
-      if (sceneId == null) {
-        // 场景引用无法解析时跳过，避免外键失败；由校验/日志暴露。
-        continue;
+      for (var i = 0; i < result.beats.length; i++) {
+        final b = result.beats[i];
+        final sceneId = sceneIdBySeq[b.sceneSeq];
+        if (sceneId == null) {
+          // 场景引用无法解析时跳过，避免外键失败；由校验/日志暴露。
+          continue;
+        }
+        await beatDao.insert(
+          BeatsCompanion.insert(
+            sceneId: sceneId,
+            seq: i + 1,
+            type: b.type.isEmpty ? '动作' : b.type,
+            who: Value(b.who),
+            content: b.content,
+            object: Value(b.object.isEmpty ? null : b.object),
+            sourceRef: b.id.isEmpty ? 'E${i + 1}' : b.id,
+            estDurationMs: Value(b.estDurationMs),
+            tags: Value(jsonEncode(b.tags)),
+          ),
+        );
       }
-      await beatDao.insert(
-        BeatsCompanion.insert(
-          sceneId: sceneId,
-          seq: i + 1,
-          type: b.type.isEmpty ? '动作' : b.type,
-          who: Value(b.who),
-          content: b.content,
-          object: Value(b.object.isEmpty ? null : b.object),
-          sourceRef: b.id.isEmpty ? 'E${i + 1}' : b.id,
-          estDurationMs: Value(b.estDurationMs),
-          tags: Value(jsonEncode(b.tags)),
-        ),
-      );
-    }
 
-    for (final seg in result.segments) {
-      await shotDao.insert(
-        ShotsCompanion.insert(
-          scriptId: script.id,
-          globalSeq: seg.id,
-          batch: Value(seg.batch),
-          durationMs: Value(seg.durationMs),
-          globalTimeRange: seg.globalTimeRange.isEmpty
-              ? '-'
-              : seg.globalTimeRange,
-          beatRefs: Value(jsonEncode(seg.beatRefs)),
-          assetStates: Value(jsonEncode(seg.assets.toJson())),
-        ),
-      );
-    }
+      for (final seg in result.segments) {
+        await shotDao.insert(
+          ShotsCompanion.insert(
+            scriptId: script.id,
+            globalSeq: seg.id,
+            batch: Value(seg.batch),
+            durationMs: Value(seg.durationMs),
+            globalTimeRange: seg.globalTimeRange.isEmpty
+                ? '-'
+                : seg.globalTimeRange,
+            beatRefs: Value(jsonEncode(seg.beatRefs)),
+            assetStates: Value(jsonEncode(seg.assets.toJson())),
+          ),
+        );
+      }
+    });
 
     return SkeletonExtractionSummary(
       beatCount: result.beats.length,

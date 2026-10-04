@@ -144,6 +144,8 @@ lib/
 
 > M14 任务清单见 `docs/04` 第 8.y 节（T16.1–T16.9），架构约定见 `docs/02` 6.5–6.9，
 > 全量复研结论见 `docs/01` 第 8 节。**M13 全量扫描未覆盖以下问题，动手前先读这三处。**
+> T16.1（数据完整性）已完成：新增 `lib/data/daos/cascade_dao.dart` 的 `CascadeDao`，
+> 事务化与级联删除的落地实现，新增删除或重建路径必须走它。
 
 - **多表写必须事务化**：全库当前仅 `backup_service.dart:337` 一处 `transaction`，五个 service 的多表写全部裸写，中间态（JSON 解码抛错、磁盘满、进程被杀）永久落库且无回滚。DAO 层提供「按父 id 重建」复合方法并内置事务，业务层不直接拼 `deleteByX` + 多次 `insert`。
 - **删除顺序最下游先行**：`VideoTasks → AssetRefs → ShotFrames → Shots → Beats → Scenes`。`skeleton_service.dart:69-70` 先删 Beats 再删 Shots 违反此序，任一镜头有下游数据时删除抛冲突而 Beats 已不可恢复。

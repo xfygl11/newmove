@@ -4,6 +4,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'daos/asset_dao.dart';
 import 'daos/asset_ref_dao.dart';
 import 'daos/beat_dao.dart';
+import 'daos/cascade_dao.dart';
 import 'daos/chapter_revision_dao.dart';
 import 'daos/novel_dao.dart';
 import 'daos/project_dao.dart';
@@ -41,6 +42,7 @@ part 'app_database.g.dart';
   daos: [
     ProjectDao,
     NovelDao,
+    CascadeDao,
     ChapterRevisionDao,
     TruthFileDao,
     ScriptDao,

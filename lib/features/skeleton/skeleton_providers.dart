@@ -13,10 +13,12 @@ final skeletonAgentsProvider = Provider<SkeletonAgents>(
 
 final skeletonServiceProvider = Provider<SkeletonService>(
   (ref) => SkeletonService(
+    db: ref.watch(databaseProvider),
     scriptDao: ref.watch(scriptDaoProvider),
     sceneDao: ref.watch(sceneDaoProvider),
     beatDao: ref.watch(beatDaoProvider),
     shotDao: ref.watch(shotDaoProvider),
+    cascadeDao: ref.watch(cascadeDaoProvider),
     agents: ref.watch(skeletonAgentsProvider),
   ),
 );

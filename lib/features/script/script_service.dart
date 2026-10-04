@@ -5,6 +5,7 @@ import 'package:drift/drift.dart' show Value;
 import '../../agent/active_llm.dart';
 import '../../core/json_values.dart';
 import '../../data/app_database.dart';
+import '../../data/daos/cascade_dao.dart';
 import '../../data/daos/novel_dao.dart';
 import '../../data/daos/scene_dao.dart';
 import '../../data/daos/script_dao.dart';
@@ -18,19 +19,23 @@ import 'script_models.dart';
 /// 小说→剧本的业务编排：构建改编上下文、调用 Agent、落库与版本管理。
 class ScriptService {
   ScriptService({
+    required this.db,
     required this.scriptDao,
     required this.sceneDao,
     required this.revisionDao,
     required this.novelDao,
     required this.truthDao,
+    required this.cascadeDao,
     required this.agents,
   });
 
+  final AppDatabase db;
   final ScriptDao scriptDao;
   final SceneDao sceneDao;
   final ScriptRevisionDao revisionDao;
   final NovelDao novelDao;
   final TruthFileDao truthDao;
+  final CascadeDao cascadeDao;
   final ScriptAgents agents;
 
   // ---- 改编（T2.1/T2.2） ----
@@ -86,36 +91,44 @@ class ScriptService {
         : '${book?.title ?? '改编剧本'}·剧本';
 
     if (existing == null) {
-      final id = await scriptDao.insert(
-        ScriptsCompanion.insert(
-          bookId: bookId,
-          title: resolvedTitle,
-          version: Value(1),
-          fidelityMode: Value(fidelityMode),
-          content: Value(jsonEncode(result.toJson())),
-        ),
-      );
-      await _replaceScenes(id, result.scenes);
-      return (await scriptDao.find(id))!;
+      final content = jsonEncode(result.toJson());
+      return db.transaction(() async {
+        final id = await scriptDao.insert(
+          ScriptsCompanion.insert(
+            bookId: bookId,
+            title: resolvedTitle,
+            version: Value(1),
+            fidelityMode: Value(fidelityMode),
+            content: Value(content),
+          ),
+        );
+        await _insertScenes(id, result.scenes);
+        return (await scriptDao.find(id))!;
+      });
     }
 
-    // 旧内容存版本快照。
-    await revisionDao.insert(
-      ScriptRevisionsCompanion.insert(
-        scriptId: existing.id,
-        version: existing.version,
-        content: Value(existing.content),
-      ),
-    );
-    await scriptDao.updateRow(
-      existing.copyWith(
-        version: existing.version + 1,
-        fidelityMode: fidelityMode,
-        status: '草案',
-        content: jsonEncode(result.toJson()),
-      ),
-    );
-    await _replaceScenes(existing.id, result.scenes);
+    // 先保存旧版本快照、再删场次（含节拍），最后才更新父行：
+    // 删除失败时正文保持旧版，不会出现「正文新版 + 场次旧版」的错位。
+    final newContent = jsonEncode(result.toJson());
+    await db.transaction(() async {
+      await revisionDao.insert(
+        ScriptRevisionsCompanion.insert(
+          scriptId: existing.id,
+          version: existing.version,
+          content: Value(existing.content),
+        ),
+      );
+      await cascadeDao.deleteScenesCascade(existing.id);
+      await _insertScenes(existing.id, result.scenes);
+      await scriptDao.updateRow(
+        existing.copyWith(
+          version: existing.version + 1,
+          fidelityMode: fidelityMode,
+          status: '草案',
+          content: newContent,
+        ),
+      );
+    });
     return (await scriptDao.find(existing.id))!;
   }
 
@@ -165,8 +178,8 @@ class ScriptService {
 
   // ---- 内部辅助 ----
 
-  Future<void> _replaceScenes(int scriptId, List<AdaptedScene> scenes) async {
-    await sceneDao.deleteByScript(scriptId);
+  /// 仅插入场次；删除旧场次由调用方在事务内走 [CascadeDao.deleteScenesCascade]。
+  Future<void> _insertScenes(int scriptId, List<AdaptedScene> scenes) async {
     for (final s in scenes) {
       await sceneDao.insert(
         ScenesCompanion.insert(

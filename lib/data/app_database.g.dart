@@ -8423,6 +8423,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final ProjectDao projectDao = ProjectDao(this as AppDatabase);
   late final NovelDao novelDao = NovelDao(this as AppDatabase);
+  late final CascadeDao cascadeDao = CascadeDao(this as AppDatabase);
   late final ChapterRevisionDao chapterRevisionDao = ChapterRevisionDao(
     this as AppDatabase,
   );

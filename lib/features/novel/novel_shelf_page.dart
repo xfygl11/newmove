@@ -352,7 +352,7 @@ class _ChapterTile extends ConsumerWidget {
     if (confirmed != true || !context.mounted) return;
 
     try {
-      await ref.read(novelDaoProvider).deleteChapter(chapter.id);
+      await ref.read(cascadeDaoProvider).deleteChapterCascade(chapter.id);
       if (context.mounted) {
         _toast(context, '已删除「${chapter.title}」');
       }

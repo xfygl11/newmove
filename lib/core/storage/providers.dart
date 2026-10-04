@@ -4,6 +4,7 @@ import '../../data/app_database.dart';
 import '../../data/daos/asset_dao.dart';
 import '../../data/daos/asset_ref_dao.dart';
 import '../../data/daos/beat_dao.dart';
+import '../../data/daos/cascade_dao.dart';
 import '../../data/daos/chapter_revision_dao.dart';
 import '../../data/daos/novel_dao.dart';
 import '../../data/daos/project_dao.dart';
@@ -30,6 +31,10 @@ final databaseProvider = Provider<AppDatabase>((ref) {
 
 final projectDaoProvider = Provider<ProjectDao>(
   (ref) => ref.watch(databaseProvider).projectDao,
+);
+
+final cascadeDaoProvider = Provider<CascadeDao>(
+  (ref) => ref.watch(databaseProvider).cascadeDao,
 );
 
 final providerDaoProvider = Provider<ProviderDao>(

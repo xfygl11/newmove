@@ -64,11 +64,13 @@ void main() {
   setUp(() async {
     db = AppDatabase(NativeDatabase.memory());
     service = ScriptService(
+      db: db,
       scriptDao: db.scriptDao,
       sceneDao: db.sceneDao,
       revisionDao: db.scriptRevisionDao,
       novelDao: db.novelDao,
       truthDao: db.truthFileDao,
+      cascadeDao: db.cascadeDao,
       agents: ScriptAgents(adapter: _FakeAdapter(_cannedJson)),
     );
     final projectId = await db.projectDao.insertProject(
