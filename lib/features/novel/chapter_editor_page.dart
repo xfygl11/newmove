@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../agent/active_llm.dart';
 import '../../core/storage/providers.dart';
@@ -87,6 +89,11 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
             : Text(chapterAsync.value!.title),
         actions: [
           IconButton(
+            tooltip: '导出章节',
+            onPressed: () => _exportChapter(context, chapterAsync.value),
+            icon: const Icon(Icons.file_download_outlined),
+          ),
+          IconButton(
             tooltip: '版本历史',
             onPressed: () => _showRevisions(chapterAsync.value),
             icon: const Icon(Icons.history),
@@ -145,6 +152,71 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
       _toast('请先在「设置」配置可用的 LLM 供应商');
     }
     return llm;
+  }
+
+  /// 导出章节为 Markdown 或 HTML 文件。
+  Future<void> _exportChapter(BuildContext context, Chapter? chapter) async {
+    if (chapter == null) return;
+    final format = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.code, size: 20),
+              title: const Text('Markdown'),
+              subtitle: const Text('导出为 .md 文件'),
+              onTap: () => Navigator.of(ctx).pop('md'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.html, size: 20),
+              title: const Text('HTML'),
+              subtitle: const Text('导出为 .html 文件'),
+              onTap: () => Navigator.of(ctx).pop('html'),
+            ),
+            const SizedBox(height: 48),
+          ],
+        ),
+      ),
+    );
+    if (format == null || !mounted) return;
+
+    final content = _plainText;
+    final title = chapter.title;
+    String body;
+    String ext;
+    if (format == 'md') {
+      ext = 'md';
+      body = '# $title\n\n$content';
+    } else {
+      ext = 'html';
+      final escaped = content
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('\n', '</p><p>');
+      body =
+          '<!DOCTYPE html>\n<html>\n<head><meta charset="utf-8">'
+          '<title>$title</title></head>\n'
+          '<body>\n<h1>$title</h1>\n<p>$escaped</p>\n</body>\n</html>';
+    }
+
+    final tmpDir = await _tmpDir();
+    final safeName = title.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    final filePath = '$tmpDir/$safeName.$ext';
+    await File(filePath).writeAsString(body);
+
+    await SharePlus.instance.share(
+      ShareParams(files: [XFile(filePath)], text: '章节「$title」导出'),
+    );
+    if (mounted) _toast('已导出 $ext 文件');
+  }
+
+  Future<String> _tmpDir() async {
+    final dir = await Directory.systemTemp.createTemp('newmove_chapter_');
+    return dir.path;
   }
 
   /// AI 写正文（空章节）或续写（已有内容），流式追加到编辑器。

@@ -25,22 +25,7 @@ class BackupService {
   /// 导出单个项目为 zip，返回文件路径。
   Future<String> exportProject(int projectId) async {
     final data = await _collect(projectId);
-
-    final archive = Archive();
-    final jsonBytes = utf8.encode(
-      const JsonEncoder.withIndent('  ').convert(data),
-    );
-    archive.addFile(ArchiveFile('backup.json', jsonBytes.length, jsonBytes));
-
-    // 媒体文件按相对路径打包。
-    final docDir = await getApplicationDocumentsDirectory();
-    for (final rel in (data['mediaFiles'] as List<String>)) {
-      final f = File('${docDir.path}/$rel');
-      if (!await f.exists()) continue;
-      final bytes = await f.readAsBytes();
-      archive.addFile(ArchiveFile(rel, bytes.length, bytes));
-    }
-
+    final archive = await _buildArchive(data, null);
     final project = await db.projectDao.findById(projectId);
     final safeName = (project?.name ?? 'project').replaceAll(
       RegExp(r'[\\/:*?"<>|]'),
@@ -51,6 +36,128 @@ class BackupService {
     );
     await outFile.writeAsBytes(ZipEncoder().encode(archive));
     return outFile.path;
+  }
+
+  /// 全库导出：所有项目 + 供应商配置 + 被引用媒体，打包为单个 zip。
+  Future<String> exportAll() async {
+    final data = await _collectAll();
+    final archive = await _buildArchive(data, 'full');
+    final outFile = File(
+      '${(await getTemporaryDirectory()).path}/newmove_full_backup_${DateTime.now().millisecondsSinceEpoch ~/ 1000}.zip',
+    );
+    await outFile.writeAsBytes(ZipEncoder().encode(archive));
+    return outFile.path;
+  }
+
+  Future<Archive> _buildArchive(
+    Map<String, dynamic> data,
+    String? scope,
+  ) async {
+    final archive = Archive();
+    final jsonBytes = utf8.encode(
+      const JsonEncoder.withIndent('  ').convert(data),
+    );
+    archive.addFile(ArchiveFile('backup.json', jsonBytes.length, jsonBytes));
+    final docDir = await getApplicationDocumentsDirectory();
+    for (final rel in (data['mediaFiles'] as List<String>)) {
+      final f = File('${docDir.path}/$rel');
+      if (!await f.exists()) continue;
+      final bytes = await f.readAsBytes();
+      archive.addFile(ArchiveFile(rel, bytes.length, bytes));
+    }
+    return archive;
+  }
+
+  /// 收集全部项目数据（全库备份用）。
+  Future<Map<String, dynamic>> _collectAll() async {
+    final projects = await db.projectDao.listAll();
+    final mediaFiles = <String>{};
+
+    final booksJson = <Map<String, dynamic>>[];
+    final chaptersJson = <Map<String, dynamic>>[];
+    final chapterRevisionsJson = <Map<String, dynamic>>[];
+    final truthsJson = <Map<String, dynamic>>[];
+    final scriptsJson = <Map<String, dynamic>>[];
+    final scenesJson = <Map<String, dynamic>>[];
+    final beatsJson = <Map<String, dynamic>>[];
+    final assetsJson = <Map<String, dynamic>>[];
+    final shotsJson = <Map<String, dynamic>>[];
+    final shotFramesJson = <Map<String, dynamic>>[];
+    final assetRefsJson = <Map<String, dynamic>>[];
+    final videoTasksJson = <Map<String, dynamic>>[];
+    final scriptRevisionsJson = <Map<String, dynamic>>[];
+
+    for (final p in projects) {
+      final books = <NovelBook>[?await db.novelDao.findBookByProject(p.id)];
+      for (final b in books) {
+        booksJson.add(b.toJson());
+        for (final c in await db.novelDao.listChapters(b.id)) {
+          chaptersJson.add(c.toJson());
+          for (final r in await db.chapterRevisionDao.listByChapter(c.id)) {
+            chapterRevisionsJson.add(r.toJson());
+          }
+        }
+        for (final t in await db.truthFileDao.listByBook(b.id)) {
+          truthsJson.add(t.toJson());
+        }
+        for (final s in await db.scriptDao.listByBook(b.id)) {
+          scriptsJson.add(s.toJson());
+          for (final sc in await db.sceneDao.listByScript(s.id)) {
+            scenesJson.add(sc.toJson());
+            for (final beat in await db.beatDao.listByScene(sc.id)) {
+              beatsJson.add(beat.toJson());
+            }
+          }
+          for (final a in await db.assetDao.listByScript(s.id)) {
+            assetsJson.add(a.toJson());
+            _collectMedia(mediaFiles, a.imagePath);
+          }
+          for (final sh in await db.shotDao.listByScript(s.id)) {
+            shotsJson.add(sh.toJson());
+            _collectMedia(mediaFiles, sh.outputPath);
+            for (final f in await db.shotFrameDao.listByShot(sh.id)) {
+              shotFramesJson.add(f.toJson());
+            }
+            for (final r in await db.assetRefDao.listByShot(sh.id)) {
+              assetRefsJson.add(r.toJson());
+            }
+            for (final v in await db.videoTaskDao.listByShot(sh.id)) {
+              videoTasksJson.add(v.toJson());
+              _collectMedia(mediaFiles, v.outputPath);
+            }
+          }
+          for (final r in await db.scriptRevisionDao.listByScript(s.id)) {
+            scriptRevisionsJson.add(r.toJson());
+          }
+        }
+      }
+    }
+
+    final providersJson = [
+      for (final p in await db.providerDao.listAll()) p.toJson(),
+    ];
+
+    return {
+      'formatVersion': 1,
+      'scope': 'full',
+      'exportedAt': DateTime.now().toIso8601String(),
+      'projects': [for (final p in projects) p.toJson()],
+      'books': booksJson,
+      'chapters': chaptersJson,
+      'chapterRevisions': chapterRevisionsJson,
+      'truthFiles': truthsJson,
+      'scripts': scriptsJson,
+      'scenes': scenesJson,
+      'beats': beatsJson,
+      'assets': assetsJson,
+      'shots': shotsJson,
+      'shotFrames': shotFramesJson,
+      'assetRefs': assetRefsJson,
+      'videoTasks': videoTasksJson,
+      'scriptRevisions': scriptRevisionsJson,
+      'providers': providersJson,
+      'mediaFiles': mediaFiles.toList(),
+    };
   }
 
   /// 收集项目全量数据（表行 toJson；附被引用媒体相对路径清单）。
@@ -160,9 +267,51 @@ class BackupService {
     }
   }
 
+  // ---- 冲突检测（P2-11） ----
+
+  /// 解析 zip 中的项目名列表（不写入 DB），用于导入前冲突提示。
+  ///
+  /// 返回包内所有项目名；单项目包返回 1 项，全库包返回 N 项。
+  Future<List<String>> peekProjectNames(String zipPath) async {
+    final bytes = await File(zipPath).readAsBytes();
+    final archive = ZipDecoder().decodeBytes(bytes);
+    final jsonFile = archive.findFile('backup.json');
+    if (jsonFile == null) {
+      throw const FormatException('备份包缺少 backup.json');
+    }
+    final data = (jsonDecode(utf8.decode(jsonFile.content as List<int>)) as Map)
+        .cast<String, dynamic>();
+    if (data['scope'] == 'full' && data['projects'] != null) {
+      return [
+        for (final p in (data['projects'] as List).cast<Map<String, dynamic>>())
+          p['name'] as String? ?? '',
+      ];
+    }
+    return [
+      (data['project'] as Map<String, dynamic>? ?? const {})['name']
+              as String? ??
+          '',
+    ];
+  }
+
+  /// 检查包内项目名是否已存在于本地，返回冲突项列表。
+  Future<List<String>> findConflicts(String zipPath) async {
+    final names = await peekProjectNames(zipPath);
+    final existing = await db.projectDao.listAll();
+    final existingNames = existing.map((p) => p.name.toLowerCase()).toSet();
+    return [
+      for (final n in names)
+        if (n.isNotEmpty && existingNames.contains(n.toLowerCase())) n,
+    ];
+  }
+
   // ---- 导入 ----
 
   /// 从 zip 恢复项目，返回新项目 id。
+  ///
+  /// 支持单项目包（`project` 字段）与全库包（`projects` 列表字段，
+  /// `scope: full`）。全库包中各子表行携带原始 `projectId`/`bookId` 等
+  /// 外键，导入时按映射链重写。
   Future<int> importProject(String zipPath) async {
     final bytes = await File(zipPath).readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
@@ -182,6 +331,8 @@ class BackupService {
       await out.writeAsBytes(f.content as List<int>);
       mediaMap[f.name] = out.path;
     }
+
+    final isFull = data['scope'] == 'full' && data['projects'] != null;
 
     return db.transaction(() async {
       final idMap = <String, Map<int, int>>{};
@@ -207,24 +358,61 @@ class BackupService {
         return rows.length;
       }
 
-      // 项目（顶层无外键映射，单独插入拿 id）。
-      final projCols = <String, Expression<Object>>{};
-      for (final e in (data['project'] as Map<String, dynamic>).entries) {
-        if (e.key == 'id') continue;
-        projCols[_snake(e.key)] = _expr(e.value);
-      }
-      final projectId = await db
-          .into(db.projects)
-          .insert(RawValuesInsertable<Project>(projCols));
-
-      // ---- 需要跨表 id 映射的表，显式构造 transform ----
       int mapped(String key, dynamic old) => idMap[key]?[old as int] ?? 0;
 
-      await insertRows<NovelBooks, NovelBook>(db.novelBooks, 'books', (r) {
-        final remapped = _remap(r, const {});
-        remapped['projectId'] = projectId;
-        return remapped;
-      });
+      // 插入项目行，返回第一个新 id（UI 提示用）。
+      final int firstNewProjectId;
+      if (isFull) {
+        final projectsList = (data['projects'] as List)
+            .cast<Map<String, dynamic>>();
+        if (projectsList.isEmpty) {
+          throw const FormatException('全库备份不包含任何项目');
+        }
+        final newProjectIds = <int>[];
+        for (final prow in projectsList) {
+          final cols = <String, Expression<Object>>{};
+          for (final e in prow.entries) {
+            if (e.key == 'id') continue;
+            cols[_snake(e.key)] = _expr(e.value);
+          }
+          newProjectIds.add(
+            await db
+                .into(db.projects)
+                .insert(RawValuesInsertable<Project>(cols)),
+          );
+        }
+        idMap['projects'] = {
+          for (var i = 0; i < projectsList.length; i++)
+            (projectsList[i]['id'] as int): newProjectIds[i],
+        };
+        firstNewProjectId = newProjectIds.first;
+
+        // 全库包：books 按原始 projectId 映射到新 projectId。
+        await insertRows<NovelBooks, NovelBook>(db.novelBooks, 'books', (r) {
+          final remapped = _remap(r, const {});
+          remapped['projectId'] = mapped('projects', r['projectId'] ?? 0) == 0
+              ? newProjectIds.first
+              : mapped('projects', r['projectId'] ?? 0);
+          return remapped;
+        });
+      } else {
+        final projCols = <String, Expression<Object>>{};
+        for (final e in (data['project'] as Map<String, dynamic>).entries) {
+          if (e.key == 'id') continue;
+          projCols[_snake(e.key)] = _expr(e.value);
+        }
+        firstNewProjectId = await db
+            .into(db.projects)
+            .insert(RawValuesInsertable<Project>(projCols));
+
+        await insertRows<NovelBooks, NovelBook>(db.novelBooks, 'books', (r) {
+          final remapped = _remap(r, const {});
+          remapped['projectId'] = firstNewProjectId;
+          return remapped;
+        });
+      }
+
+      // ---- 需要跨表 id 映射的表，显式构造 transform ----
       await insertRows<Chapters, Chapter>(db.chapters, 'chapters', (r) {
         final remapped = _remap(r, const {});
         remapped['bookId'] = mapped('books', r['bookId']);
@@ -325,7 +513,7 @@ class BackupService {
             );
       }
 
-      return projectId;
+      return firstNewProjectId;
     });
   }
 

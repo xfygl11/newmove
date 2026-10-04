@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:drift/drift.dart' show Value;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -109,10 +113,22 @@ class _BookView extends ConsumerWidget {
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: FilledButton.icon(
-              onPressed: () => _createAndOpenChapter(context, ref, book),
-              icon: const Icon(Icons.edit),
-              label: const Text('AI 写下一章'),
+            child: Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () => _createAndOpenChapter(context, ref, book),
+                    icon: const Icon(Icons.edit),
+                    label: const Text('AI 写下一章'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: '导入章节',
+                  onPressed: () => _importChapter(context, ref, book),
+                  icon: const Icon(Icons.file_upload_outlined),
+                ),
+              ],
             ),
           ),
         ),
@@ -139,6 +155,66 @@ class _BookView extends ConsumerWidget {
     );
     if (context.mounted) {
       context.push('/novel/${book.projectId}/chapter/$id');
+    }
+  }
+
+  /// 从本地 .md / .html / .txt 文件导入为新一章。
+  Future<void> _importChapter(
+    BuildContext context,
+    WidgetRef ref,
+    NovelBook book,
+  ) async {
+    final picked = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['md', 'markdown', 'html', 'txt'],
+    );
+    if (picked.isEmpty || picked.single.path == null) return;
+
+    final raw = await File(picked.single.path!).readAsString();
+    // 简单剥离 HTML 标签得到纯文本（支持 .html 导入）。
+    var content = raw
+        .replaceAll(RegExp(r'<[^>]+>'), '\n')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
+    if (content.isEmpty) {
+      if (context.mounted) {
+        _toast(context, '文件内容为空，导入失败');
+      }
+      return;
+    }
+
+    // 标题取文件名（去扩展名）或内容首行「# 标题」。
+    String title;
+    final fileName = picked.single.name;
+    title = fileName.replaceAll(RegExp(r'\.(md|markdown|html|txt)$'), '');
+    final headingMatch = RegExp(
+      r'^#\s+(.+)$',
+      multiLine: true,
+    ).firstMatch(content);
+    if (headingMatch != null) {
+      title = headingMatch.group(1)!.trim();
+      // 去掉正文中的首行 H1 避免重复。
+      content = content.replaceFirst(RegExp(r'^#\s+.+$\n?'), '').trimLeft();
+    }
+
+    final dao = ref.read(novelDaoProvider);
+    final seq = await dao.maxSeq(book.id) + 1;
+    await dao.insertChapter(
+      ChaptersCompanion.insert(
+        bookId: book.id,
+        seq: seq,
+        title: title.isNotEmpty ? title : '第 $seq 章（导入）',
+        content: Value(content),
+        wordCount: Value(content.length),
+        status: const Value('草稿'),
+      ),
+    );
+    if (context.mounted) {
+      _toast(context, '已导入为第 $seq 章');
+      ref.invalidate(chaptersByBookProvider(book.id));
     }
   }
 }

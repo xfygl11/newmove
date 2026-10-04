@@ -120,6 +120,11 @@ lib/
 - 一键预设：`AgnesPresets`（`lib/features/provider_config/agnes_presets.dart`）可一键创建 Agnes AI 的 LLM/图片/视频 3 个供应商条目（协议分别为 `openai-chat` / `openai-images` / `openai-videos`），Base URL 固定 `https://apihub.agnes-ai.cn/v1`。
 - Agent 系统提示词从 `skills/` 资源加载，与业务代码分离；修改 Prompt 不触碰业务逻辑。
 
+### 数据与备份约定（M11 P2 追加）
+
+- 全库备份：`BackupService.exportAll()` 导出所有项目为单 zip（`scope: full`），`importProject` 兼容全库包与单项目包；导入前经 `findConflicts` 做同名项目检测，冲突时弹窗确认。
+- 章节导入/导出：章节编辑器支持导出 Markdown / HTML；书架页支持导入 `.md/.html/.txt` 为草稿章节（H1 提取标题，HTML 剥标签）。
+
 ---
 
 ## 5. 数据与状态约定

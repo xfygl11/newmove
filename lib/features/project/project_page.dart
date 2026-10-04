@@ -21,10 +21,31 @@ class ProjectPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('小说动漫工坊'),
         actions: [
-          IconButton(
-            tooltip: '从备份导入',
-            onPressed: () => _importBackup(context, ref),
-            icon: const Icon(Icons.restore),
+          PopupMenuButton<String>(
+            tooltip: '备份',
+            onSelected: (v) => _onBackupAction(v, context, ref),
+            itemBuilder: (ctx) => const [
+              PopupMenuItem(
+                value: 'export_all',
+                child: Row(
+                  children: [
+                    Icon(Icons.backup, size: 18),
+                    SizedBox(width: 8),
+                    Text('导出全部项目'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'import',
+                child: Row(
+                  children: [
+                    Icon(Icons.restore, size: 18),
+                    SizedBox(width: 8),
+                    Text('从备份导入'),
+                  ],
+                ),
+              ),
+            ],
           ),
           IconButton(
             tooltip: '新建项目',
@@ -77,22 +98,84 @@ class ProjectPage extends ConsumerWidget {
     );
   }
 
-  /// 从 zip 备份导入项目。
+  /// 备份菜单分发：导出全部 / 导入（含冲突检测）。
+  Future<void> _onBackupAction(
+    String action,
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    switch (action) {
+      case 'export_all':
+        await _exportAll(context, ref);
+      case 'import':
+        await _importBackup(context, ref);
+    }
+  }
+
+  /// 全库备份：导出所有项目 + 供应商 + 媒体。
+  Future<void> _exportAll(BuildContext context, WidgetRef ref) async {
+    try {
+      final path = await ref.read(backupServiceProvider).exportAll();
+      if (!context.mounted) return;
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(path)], text: '全部项目备份'),
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('全库备份已导出')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('导出失败：$e')));
+      }
+    }
+  }
+
+  /// 从 zip 备份导入项目（含同名冲突检测）。
   Future<void> _importBackup(BuildContext context, WidgetRef ref) async {
     final picked = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['zip'],
     );
     if (picked.isEmpty || picked.single.path == null) return;
+
+    // 冲突检测：包内项目名与本地同名时提示用户确认。
+    final conflicts = await ref
+        .read(backupServiceProvider)
+        .findConflicts(picked.single.path!);
+    if (conflicts.isNotEmpty && context.mounted) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('同名项目'),
+          content: Text(
+            '以下项目名在本地已存在，导入将创建同名的新项目：\n'
+            '· ${conflicts.join('\n· ')}\n\n是否继续？',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('继续导入'),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+    }
+
     try {
       final newId = await ref
           .read(backupServiceProvider)
           .importProject(picked.single.path!);
-      // 令项目列表刷新。
       ref.invalidate(projectListProvider);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('导入成功，已创建新项目（id $newId）')));
+          .showSnackBar(SnackBar(content: Text('导入成功（id $newId）')));
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)
