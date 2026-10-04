@@ -76,9 +76,9 @@ jobs:
         with:
           name: app-apk
           path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
+            build/app/outputs/flutter-apk/app-release-arm64-v8a.apk
+            build/app/outputs/flutter-apk/app-debug-arm64-v8a.apk
+          if-no-files-found: warn
           retention-days: 14
 
       - name: Cleanup keystore

@@ -38,6 +38,17 @@ android {
         versionName = flutter.versionName
     }
 
+    // 仅保留 arm64-v8a，减少约 3/4 native 库体积（ffmpeg-kit full-gpl 是主要来源）。
+    // minSdk 24 = Android 7.0，所有主流目标设备均为 64 位。
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a")
+            isUniversalApk = false
+        }
+    }
+
     signingConfigs {
         if (keystoreProperties.isNotEmpty()) {
             create("upload") {
