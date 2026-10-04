@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' hide Column, isNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/json_values.dart';
 import '../../data/app_database.dart';
 import 'script_models.dart';
 import 'script_providers.dart';
@@ -72,10 +73,10 @@ class _SceneEditPageState extends ConsumerState<SceneEditPage> {
     _startState.text = scene.startState ?? '';
     _endState.text = scene.endState ?? '';
     _transition.text = scene.transition ?? '';
-    _sound.text = (_decodeMap(scene.sound)['text'] as String?) ?? '';
+    _sound.text = jsonString(_decodeMap(scene.sound)['text']);
     _dialogue = [
       for (final d in _decodeList(scene.dialogue))
-        DialogueLine.fromJson((d as Map).cast<String, dynamic>()),
+        DialogueLine.fromJson(jsonMap(d)),
     ];
   }
 

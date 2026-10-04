@@ -1,6 +1,8 @@
 /// 剧本骨架模块的领域模型（AI 产物，与 Drift 表模型分层）。
 library;
 
+import 'package:newmove/core/json_values.dart';
+
 /// 原子节拍（源剧情账本 E##）。
 class SkeletonBeat {
   const SkeletonBeat({
@@ -26,13 +28,13 @@ class SkeletonBeat {
 
   factory SkeletonBeat.fromJson(Map<String, dynamic> json) {
     return SkeletonBeat(
-      id: json['id'] as String? ?? '',
-      sceneSeq: json['sceneSeq'] as int? ?? 0,
-      type: json['type'] as String? ?? '',
-      who: json['who'] as String? ?? '',
-      content: json['content'] as String? ?? '',
-      object: json['object'] as String? ?? '',
-      estDurationMs: json['estDurationMs'] as int? ?? 0,
+      id: jsonString(json['id']),
+      sceneSeq: jsonInt(json['sceneSeq']),
+      type: jsonString(json['type']),
+      who: jsonString(json['who']),
+      content: jsonString(json['content']),
+      object: jsonString(json['object']),
+      estDurationMs: jsonInt(json['estDurationMs']),
       tags: _stringList(json['tags']),
     );
   }
@@ -63,8 +65,8 @@ class TimelineEntry {
 
   factory TimelineEntry.fromJson(Map<String, dynamic> json) {
     return TimelineEntry(
-      range: json['range'] as String? ?? '',
-      state: json['state'] as String? ?? '',
+      range: jsonString(json['range']),
+      state: jsonString(json['state']),
     );
   }
 
@@ -80,10 +82,10 @@ class AppearanceState {
 
   factory AppearanceState.fromJson(Map<String, dynamic> json) {
     return AppearanceState(
-      name: json['name'] as String? ?? '',
+      name: jsonString(json['name']),
       timeline: [
-        for (final t in (json['timeline'] as List<dynamic>? ?? const []))
-          TimelineEntry.fromJson((t as Map).cast<String, dynamic>()),
+        for (final t in jsonList(json['timeline']))
+          TimelineEntry.fromJson(jsonMap(t)),
       ],
     );
   }
@@ -122,10 +124,7 @@ class SegmentAssets {
 
   static List<AppearanceState> _list(dynamic value) {
     if (value is List) {
-      return [
-        for (final v in value)
-          AppearanceState.fromJson((v as Map).cast<String, dynamic>()),
-      ];
+      return [for (final v in value) AppearanceState.fromJson(jsonMap(v))];
     }
     return const [];
   }
@@ -151,14 +150,12 @@ class SkeletonSegment {
 
   factory SkeletonSegment.fromJson(Map<String, dynamic> json) {
     return SkeletonSegment(
-      id: json['id'] as String? ?? '',
-      batch: json['batch'] as int? ?? 1,
-      durationMs: json['durationMs'] as int? ?? 0,
-      globalTimeRange: json['globalTimeRange'] as String? ?? '',
+      id: jsonString(json['id']),
+      batch: jsonInt(json['batch'], 1),
+      durationMs: jsonInt(json['durationMs']),
+      globalTimeRange: jsonString(json['globalTimeRange']),
       beatRefs: _stringList(json['beatRefs']),
-      assets: SegmentAssets.fromJson(
-        (json['assets'] as Map?)?.cast<String, dynamic>() ?? const {},
-      ),
+      assets: SegmentAssets.fromJson(jsonMap(json['assets'])),
     );
   }
 
@@ -205,14 +202,14 @@ class SkeletonResult {
 
   factory SkeletonResult.fromJson(Map<String, dynamic> json) {
     return SkeletonResult(
-      globalDurationMs: json['globalDurationMs'] as int? ?? 0,
+      globalDurationMs: jsonInt(json['globalDurationMs']),
       beats: [
-        for (final b in (json['beats'] as List<dynamic>? ?? const []))
-          SkeletonBeat.fromJson((b as Map).cast<String, dynamic>()),
+        for (final b in jsonList(json['beats']))
+          SkeletonBeat.fromJson(jsonMap(b)),
       ],
       segments: [
-        for (final s in (json['segments'] as List<dynamic>? ?? const []))
-          SkeletonSegment.fromJson((s as Map).cast<String, dynamic>()),
+        for (final s in jsonList(json['segments']))
+          SkeletonSegment.fromJson(jsonMap(s)),
       ],
     );
   }

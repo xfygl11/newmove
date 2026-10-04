@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../core/json_values.dart';
+
 /// 资产类型常量（DB 直接存中文）。
 class AssetTypes {
   AssetTypes._();
@@ -55,14 +57,16 @@ class AssetDraft {
 
   factory AssetDraft.fromJson(Map<String, dynamic> json) {
     return AssetDraft(
-      type: (json['type'] as String? ?? '').trim(),
-      name: (json['name'] as String? ?? '').trim(),
-      stableId: (json['stableId'] as String? ?? '').trim(),
-      variantOf: (json['variantOf'] as String?)?.trim(),
+      type: jsonString(json['type']).trim(),
+      name: jsonString(json['name']).trim(),
+      stableId: jsonString(json['stableId']).trim(),
+      variantOf: jsonStringOrNull(json['variantOf'])?.trim(),
       appearanceAnchor: _asStringMap(json['appearanceAnchor']),
-      boardLayout: (json['boardLayout'] as String? ?? BoardLayouts.mainView)
-          .trim(),
-      prompt: (json['prompt'] as String? ?? '').trim(),
+      boardLayout: jsonString(
+        json['boardLayout'],
+        BoardLayouts.mainView,
+      ).trim(),
+      prompt: jsonString(json['prompt']).trim(),
     );
   }
 

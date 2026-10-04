@@ -1,6 +1,8 @@
 /// 剧本改编模块的领域模型（AI 产物，与 Drift 表模型分层）。
 library;
 
+import 'package:newmove/core/json_values.dart';
+
 /// 一句对白 / 画外音。
 class DialogueLine {
   const DialogueLine({
@@ -16,9 +18,9 @@ class DialogueLine {
 
   factory DialogueLine.fromJson(Map<String, dynamic> json) {
     return DialogueLine(
-      speaker: json['speaker'] as String? ?? '',
-      type: json['type'] as String? ?? '对白',
-      text: json['text'] as String? ?? '',
+      speaker: jsonString(json['speaker']),
+      type: jsonString(json['type'], '对白'),
+      text: jsonString(json['text']),
     );
   }
 
@@ -68,29 +70,23 @@ class AdaptedScene {
   final String transition;
 
   factory AdaptedScene.fromJson(Map<String, dynamic> json) {
-    final sound = json['sound'];
-    final soundMap = sound is Map<String, dynamic>
-        ? sound
-        : const <String, dynamic>{};
+    final sound = jsonMap(json['sound']);
     return AdaptedScene(
-      seq: json['seq'] as int? ?? 0,
-      location: json['location'] as String? ?? '',
-      time: json['time'] as String? ?? '',
-      characters: [
-        for (final c in (json['characters'] as List<dynamic>? ?? const []))
-          c.toString(),
-      ],
-      summary: json['summary'] as String? ?? '',
-      action: json['action'] as String? ?? '',
+      seq: jsonInt(json['seq']),
+      location: jsonString(json['location']),
+      time: jsonString(json['time']),
+      characters: [for (final c in jsonList(json['characters'])) c.toString()],
+      summary: jsonString(json['summary']),
+      action: jsonString(json['action']),
       dialogue: [
-        for (final d in (json['dialogue'] as List<dynamic>? ?? const []))
-          DialogueLine.fromJson((d as Map).cast<String, dynamic>()),
+        for (final d in jsonList(json['dialogue']))
+          DialogueLine.fromJson(jsonMap(d)),
       ],
-      music: _stringList(soundMap['music']),
-      sfx: _stringList(soundMap['sfx']),
-      startState: json['startState'] as String? ?? '',
-      endState: json['endState'] as String? ?? '',
-      transition: json['transition'] as String? ?? '',
+      music: _stringList(sound['music']),
+      sfx: _stringList(sound['sfx']),
+      startState: jsonString(json['startState']),
+      endState: jsonString(json['endState']),
+      transition: jsonString(json['transition']),
     );
   }
 
@@ -135,11 +131,11 @@ class AdaptationProposal {
     String? fallbackId,
   }) {
     return AdaptationProposal(
-      id: json['id'] as String? ?? fallbackId ?? '',
-      type: json['type'] as String? ?? '其他',
-      text: json['text'] as String? ?? '',
-      source: json['source'] as String? ?? '',
-      accepted: json['accepted'] as bool? ?? false,
+      id: jsonString(json['id'], fallbackId ?? ''),
+      type: jsonString(json['type'], '其他'),
+      text: jsonString(json['text']),
+      source: jsonString(json['source']),
+      accepted: jsonBool(json['accepted']),
     );
   }
 
@@ -172,20 +168,19 @@ class AdaptationResult {
   factory AdaptationResult.fromJson(Map<String, dynamic> json) {
     return AdaptationResult(
       scenes: [
-        for (final s in (json['scenes'] as List<dynamic>? ?? const []))
-          AdaptedScene.fromJson((s as Map).cast<String, dynamic>()),
+        for (final s in jsonList(json['scenes']))
+          AdaptedScene.fromJson(jsonMap(s)),
       ],
-      proposals: [
-        for (
-          var i = 0;
-          i < (json['proposals'] as List<dynamic>? ?? const []).length;
-          i++
-        )
-          AdaptationProposal.fromJson(
-            (json['proposals'] as List)[i] as Map<String, dynamic>,
-            fallbackId: 'P${i + 1}',
-          ),
-      ],
+      proposals: () {
+        final list = jsonList(json['proposals']);
+        return [
+          for (var i = 0; i < list.length; i++)
+            AdaptationProposal.fromJson(
+              jsonMap(list[i]),
+              fallbackId: 'P${i + 1}',
+            ),
+        ];
+      }(),
     );
   }
 

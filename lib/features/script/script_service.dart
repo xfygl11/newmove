@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
 
 import '../../agent/active_llm.dart';
+import '../../core/json_values.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/novel_dao.dart';
 import '../../data/daos/scene_dao.dart';
@@ -123,8 +124,8 @@ class ScriptService {
   List<AdaptationProposal> listProposals(Script script) {
     final content = _parseContent(script.content);
     return [
-      for (final p in (content['proposals'] as List<dynamic>? ?? const []))
-        AdaptationProposal.fromJson((p as Map).cast<String, dynamic>()),
+      for (final p in jsonList(content['proposals']))
+        AdaptationProposal.fromJson(jsonMap(p)),
     ];
   }
 
