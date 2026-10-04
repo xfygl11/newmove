@@ -431,19 +431,27 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
     final controller = _controller;
     if (controller == null) return;
     final plain = controller.document.toPlainText();
-    final key = _extractLocateKey(issue.location, plain);
-    if (key.isEmpty) {
-      _toast('未能定位：问题位置「${issue.location}」未在正文中找到');
-      return;
+
+    // 先按证据引用原文定位，再回退到位置文本模糊匹配，两者都失败才提示。
+    // 偏移不沿用审校时的结果：正文可能已被修改，必须按当前文本重新裁切。
+    final quote = issue.quote.trim();
+    var offset = quote.length >= 4 ? plain.indexOf(quote) : -1;
+    var length = offset >= 0 ? quote.length : 0;
+    if (offset < 0) {
+      final key = _extractLocateKey(issue.location, plain);
+      if (key.isEmpty) {
+        _toast('未能定位：问题位置「${issue.location}」未在正文中找到');
+        return;
+      }
+      offset = plain.indexOf(key);
+      length = key.length;
     }
-    final offset = plain.indexOf(key);
     if (offset < 0) {
       _toast('未能定位：问题位置「${issue.location}」未在正文中找到');
       return;
     }
-    final end = offset + key.length;
     controller.updateSelection(
-      TextSelection(baseOffset: offset, extentOffset: end),
+      TextSelection(baseOffset: offset, extentOffset: offset + length),
       ChangeSource.local,
     );
     // 滚动到选区起点。
@@ -616,9 +624,24 @@ class _IssueCard extends StatelessWidget {
           children: [
             Row(
               children: [
+                if (issue.code.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text(
+                      issue.code,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ),
+                  ),
                 Chip(label: Text(issue.type.label)),
                 const SizedBox(width: 8),
                 if (issue.isStructural) const Chip(label: Text('结构')),
+                if (issue.handling != 'ignore')
+                  Chip(
+                    label: Text(issue.handlingLabel),
+                    visualDensity: VisualDensity.compact,
+                  ),
                 const Spacer(),
                 Text(
                   issue.location,
@@ -638,6 +661,35 @@ class _IssueCard extends StatelessWidget {
               '修复：${issue.fix}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
+            if (issue.quote.trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color:
+                      (issue.quoteVerified
+                              ? Theme.of(context).colorScheme.primaryContainer
+                              : Theme.of(context).colorScheme.errorContainer)
+                          .withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      issue.quoteVerified
+                          ? '证据引用（第 ${issue.paragraphIndex! + 1} 段命中）'
+                          : '证据引用未验证',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text('「${issue.quote}」'),
+                  ],
+                ),
+              ),
+            ],
             Align(
               alignment: Alignment.centerRight,
               child: Row(

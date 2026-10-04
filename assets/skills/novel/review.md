@@ -13,22 +13,29 @@
 
 ## 输出格式（JSON）
 
-每个问题给出：类型、位置（章节内大致位置或引用）、问题、依据、影响、修复方向、影响范围（local 局部 / structural 结构）。
+每个问题给出：机器码、类型、位置、问题、依据、证据引用、影响、修复方向、影响范围、建议处置。
+
+- `quote` 必须是**正文中原样出现的连续文字**（≤40 字），用于本地定位；不确定的引用留空字符串，不要编造。
+- `evidence` 写依据来源（设定条目 / 前文事实 / 角色状态），不要把正文原文塞进这里。
+- `handling` 只取 `revise`（定点修）/ `rewrite`（重写段落）/ `accept`（可保留）/ `ignore`（建议忽略）四者之一。
 
 ```json
 {
   "issues": [
     {
+      "code": "OOC-01",
       "type": "ooc|timeline|hook|resource|style|conflict",
       "location": "第X段/某句",
       "problem": "问题描述",
-      "evidence": "依据（引用设定或前文）",
+      "evidence": "依据来源（设定/前文事实）",
+      "quote": "正文原样引用（≤40 字，可为空）",
       "impact": "影响",
       "fix": "最小修复方向",
-      "scope": "local|structural"
+      "scope": "local|structural",
+      "handling": "revise|rewrite|accept|ignore"
     }
   ]
 }
 ```
 
-只报告有依据的问题；没有依据时说明不确定，不制造问题。
+只报告有依据的问题；没有依据时说明不确定，不制造问题。同一条问题跨轮次请沿用同一个 `code`。

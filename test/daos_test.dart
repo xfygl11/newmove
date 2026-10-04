@@ -17,9 +17,7 @@ void main() {
 
   group('ProjectDao', () {
     test('插入并列出项目', () async {
-      await db.projectDao.insertProject(
-        ProjectsCompanion.insert(name: '测试项目'),
-      );
+      await db.projectDao.insertProject(ProjectsCompanion.insert(name: '测试项目'));
 
       final list = await db.projectDao.listAll();
       expect(list, hasLength(1));
@@ -66,11 +64,9 @@ void main() {
           baseUrl: 'https://api.deepseek.com',
           protocol: 'openai-completions',
           models: Value(
-            ProviderModelCodec.encode(
-              const [
-                ProviderModel(id: 'deepseek-chat', label: 'DeepSeek Chat'),
-              ],
-            ),
+            ProviderModelCodec.encode(const [
+              ProviderModel(id: 'deepseek-chat', label: 'DeepSeek Chat'),
+            ]),
           ),
         ),
       );
@@ -131,6 +127,31 @@ void main() {
       final llm = await db.providerDao.listByGroup('llm');
       expect(llm, hasLength(1));
       expect(llm.first.id, 'llm1');
+    });
+  });
+
+  group('schema v8 结构', () {
+    test('剧本表已删除 aspect_ratio 与 language 死字段', () async {
+      expect(db.schemaVersion, 8);
+
+      final rows = await db.customSelect('PRAGMA table_info(scripts)').get();
+      final columns = rows.map((row) => row.data['name'] as String).toSet();
+
+      expect(columns, isNot(contains('aspect_ratio')));
+      expect(columns, isNot(contains('language')));
+      expect(
+        columns,
+        containsAll([
+          'id',
+          'book_id',
+          'title',
+          'version',
+          'fidelity_mode',
+          'art_style',
+          'status',
+          'content',
+        ]),
+      );
     });
   });
 }

@@ -107,6 +107,11 @@ class ReviewIssue {
     required this.impact,
     required this.fix,
     required this.scope,
+    this.code = '',
+    this.quote = '',
+    this.handling = '',
+    this.quoteOffset,
+    this.paragraphIndex,
   });
 
   final ReviewIssueType type;
@@ -117,7 +122,50 @@ class ReviewIssue {
   final String fix;
   final String scope;
 
+  /// 稳定机器码（如 `OOC-03`），便于跨轮审校对齐同一条问题。
+  final String code;
+
+  /// 正文原样引用的连续文字（≤40 字），用于本地裁切证据；不直接采信 LLM 自报位置。
+  final String quote;
+
+  /// 建议处置：revise 定点修 / rewrite 重写 / accept 保留 / ignore 忽略。
+  final String handling;
+
+  /// 本地校验命中时的字符起始偏移；null 表示未验证。
+  final int? quoteOffset;
+
+  /// 本地校验命中时所在段落号（从 0 起）；null 表示未验证。
+  final int? paragraphIndex;
+
   bool get isStructural => scope == 'structural';
+
+  /// 证据是否已由本地正文命中校验。
+  bool get quoteVerified => quoteOffset != null;
+
+  /// 建议处置标签，未知值原样返回。
+  String get handlingLabel =>
+      {
+        'revise': '定点修',
+        'rewrite': '重写',
+        'accept': '保留',
+        'ignore': '忽略',
+      }[handling] ??
+      (handling.isEmpty ? '未建议' : handling);
+
+  ReviewIssue copyWith({int? quoteOffset, int? paragraphIndex}) => ReviewIssue(
+    type: type,
+    location: location,
+    problem: problem,
+    evidence: evidence,
+    impact: impact,
+    fix: fix,
+    scope: scope,
+    code: code,
+    quote: quote,
+    handling: handling,
+    quoteOffset: quoteOffset ?? this.quoteOffset,
+    paragraphIndex: paragraphIndex ?? this.paragraphIndex,
+  );
 
   factory ReviewIssue.fromJson(Map<String, dynamic> json) {
     return ReviewIssue(
@@ -128,8 +176,96 @@ class ReviewIssue {
       impact: jsonString(json['impact']),
       fix: jsonString(json['fix']),
       scope: jsonString(json['scope'], 'local'),
+      code: jsonString(json['code']),
+      quote: jsonString(json['quote']),
+      handling: jsonString(json['handling']),
     );
   }
+
+  /// 用本地正文校验全部条目的证据引用。
+  ///
+  /// LLM 自报的 `location` 与 `evidence` 可能是伪造引用，因此以正文明文
+  /// 为准重新裁切：命中则记录字符偏移与段落号，未命中保留原条目并标记
+  /// 未验证——不删除、不阻塞其它问题的呈现。
+  static List<ReviewIssue> verifyQuotes(
+    List<ReviewIssue> issues,
+    String content,
+  ) {
+    return [
+      for (final issue in issues)
+        _withQuoteLocation(issue, _locateQuote(content, issue.quote)),
+    ];
+  }
+
+  static ReviewIssue _withQuoteLocation(
+    ReviewIssue issue,
+    ({int offset, int paragraph})? location,
+  ) {
+    if (location == null) return issue;
+    return issue.copyWith(
+      quoteOffset: location.offset,
+      paragraphIndex: location.paragraph,
+    );
+  }
+}
+
+/// 在正文中定位证据引用，返回字符起始偏移与所在段落号；未命中返回 null。
+///
+/// 匹配分三级降级：原文精确匹配 → 忽略空白匹配（LLM 可能在引文中换行）→
+/// 逐步缩短前缀（容忍 LLM 对引文末尾的改写）。任一级命中即返回。
+({int offset, int paragraph})? _locateQuote(String content, String quote) {
+  final q = quote.trim();
+  if (q.length < 4) return null;
+
+  final exact = content.indexOf(q);
+  if (exact >= 0) {
+    return (offset: exact, paragraph: _paragraphIndexAt(content, exact));
+  }
+
+  final collapsed = _collapseWhitespace(q);
+  if (collapsed.length >= 4) {
+    final offset = _indexOfIgnoringWhitespace(content, collapsed);
+    if (offset >= 0) {
+      return (offset: offset, paragraph: _paragraphIndexAt(content, offset));
+    }
+  }
+
+  for (var length = q.length - 1; length >= 4; length--) {
+    final offset = content.indexOf(q.substring(0, length));
+    if (offset >= 0) {
+      return (offset: offset, paragraph: _paragraphIndexAt(content, offset));
+    }
+  }
+  return null;
+}
+
+/// 字符偏移所在的段落号（按换行切分，从 0 起）。
+int _paragraphIndexAt(String content, int offset) {
+  var index = 0;
+  for (var i = 0; i < offset && i < content.length; i++) {
+    if (content.codeUnitAt(i) == 10) index++;
+  }
+  return index;
+}
+
+String _collapseWhitespace(String input) =>
+    input.replaceAll(RegExp(r'[\s\u3000]+'), '');
+
+/// 忽略空白后查找，返回命中首字符在原文中的偏移；未命中返回 -1。
+int _indexOfIgnoringWhitespace(String content, String needle) {
+  final target = needle.length;
+  var matched = 0;
+  for (var i = 0; i < content.length; i++) {
+    final c = content.codeUnitAt(i);
+    if (c == 32 || c == 9 || c == 10 || c == 13 || c == 0x3000) continue;
+    if (c == needle.codeUnitAt(matched)) {
+      matched++;
+      if (matched == target) return i - (target - 1);
+    } else {
+      matched = c == needle.codeUnitAt(0) ? 1 : 0;
+    }
+  }
+  return -1;
 }
 
 /// 修订模式。

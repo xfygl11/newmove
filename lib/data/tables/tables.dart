@@ -78,8 +78,6 @@ class Scripts extends Table {
   // 忠实度：严格保留 / 允许合理压缩。
   TextColumn get fidelityMode => text().withDefault(const Constant('严格保留'))();
   TextColumn get artStyle => text().nullable()();
-  TextColumn get aspectRatio => text().withDefault(const Constant('16:9'))();
-  TextColumn get language => text().withDefault(const Constant('zh'))();
   // 状态：草案 / 定稿。
   TextColumn get status => text().withDefault(const Constant('草案'))();
   // 结构化 JSON：{ scenes: [...] }。

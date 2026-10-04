@@ -81,7 +81,7 @@ Entries discovered by the Agent during task execution should follow this format:
 - Instructions:
   - 跑核心测试（约 35 秒）：`/opt/flutter/bin/flutter test test/novel_service_test.dart test/backup_service_test.dart test/daos_test.dart test/truth_file_store_test.dart test/revision_and_attempt_test.dart`
   - 全量 `/opt/flutter/bin/flutter test` 约 7 分钟、峰值约 1.5 GiB，用 background terminal + `memory_percent: 60` 跑
-  - 当前基线：22 例新增（`test/revision_and_attempt_test.dart`）+ 全量约 174 例全通过，`/opt/flutter/bin/dart analyze` 零问题
+  - 当前基线：M14 全部落地，全量 181 例全通过，`/opt/flutter/bin/flutter analyze` 零问题（`flutter` 需用绝对路径 `/opt/flutter/bin/flutter`）
 
 [drift 2.35 更新语义与 Companion 限制（踩坑记录）]
 - Date: 2026-10-04

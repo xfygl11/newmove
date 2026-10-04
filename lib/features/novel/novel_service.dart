@@ -301,7 +301,8 @@ class NovelService {
     try {
       final issues = await agents.review(prompt: prompt, llm: llm);
       await _finish(attempt, AttemptStatuses.succeeded);
-      return issues;
+      // 证据引用一律由本地正文重新裁切，不直接采信 LLM 自报的位置与引文。
+      return ReviewIssue.verifyQuotes(issues, content);
     } catch (e) {
       await _finish(attempt, AttemptStatuses.failed, error: e.toString());
       rethrow;

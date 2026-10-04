@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:newmove/core/network/llm_provider_adapter.dart';
 import 'package:newmove/data/app_database.dart';
 import 'package:newmove/features/novel/novel_agents.dart';
+import 'package:newmove/features/novel/novel_models.dart';
 import 'package:newmove/features/novel/novel_service.dart';
 import 'package:newmove/features/novel/truth_file_kinds.dart';
 
@@ -90,5 +91,70 @@ void main() {
     expect(prompt, contains('主角拔出了刀。'));
     expect(prompt, contains('黑玉令'));
     expect(prompt, contains('问题清单'));
+  });
+
+  group('ReviewIssue.verifyQuotes 证据引用本地裁切', () {
+    final content = '第一行文字。\n第二行是主角的对话。\n第三行推进情节。';
+
+    ReviewIssue issue({String? code, String quote = ''}) => ReviewIssue(
+      type: ReviewIssueType.ooc,
+      location: '第1段',
+      problem: '问题',
+      evidence: '依据',
+      impact: '影响',
+      fix: '修复',
+      scope: 'local',
+      code: code ?? '',
+      quote: quote,
+    );
+
+    test('原文精确命中则记录偏移与段落号', () {
+      final issues = ReviewIssue.verifyQuotes([
+        issue(code: 'OOC-01', quote: '第二行是主角的对话。'),
+      ], content);
+
+      expect(issues, hasLength(1));
+      expect(issues.single.quoteVerified, isTrue);
+      expect(issues.single.quoteOffset, content.indexOf('第二行是主角的对话。'));
+      expect(issues.single.paragraphIndex, 1);
+    });
+
+    test('忽略空白后仍可命中', () {
+      final issues = ReviewIssue.verifyQuotes([
+        issue(code: 'STYLE-01', quote: '第二行是主角的\n对话。'),
+      ], content);
+
+      expect(issues.single.quoteVerified, isTrue);
+      expect(issues.single.quoteOffset, greaterThanOrEqualTo(0));
+    });
+
+    test('伪造引用不被验证且原条目保留', () {
+      final issues = ReviewIssue.verifyQuotes([
+        issue(code: 'HOOK-01', quote: '文中根本没有这句台词'),
+      ], content);
+
+      expect(issues, hasLength(1));
+      expect(issues.single.quoteVerified, isFalse);
+      expect(issues.single.quoteOffset, isNull);
+      expect(issues.single.paragraphIndex, isNull);
+    });
+
+    test('空引用与过短引用不验证', () {
+      final issues = ReviewIssue.verifyQuotes([
+        issue(quote: ''),
+        issue(quote: '第'),
+      ], content);
+
+      expect(issues.every((item) => !item.quoteVerified), isTrue);
+    });
+
+    test('引文末尾被改写时按前缀命中', () {
+      final issues = ReviewIssue.verifyQuotes([
+        issue(quote: '第一行文字，然后发生了别的事情。'),
+      ], content);
+
+      expect(issues.single.quoteVerified, isTrue);
+      expect(issues.single.quoteOffset, 0);
+    });
   });
 }

@@ -2569,30 +2569,6 @@ class $ScriptsTable extends Scripts with TableInfo<$ScriptsTable, Script> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _aspectRatioMeta = const VerificationMeta(
-    'aspectRatio',
-  );
-  @override
-  late final GeneratedColumn<String> aspectRatio = GeneratedColumn<String>(
-    'aspect_ratio',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant('16:9'),
-  );
-  static const VerificationMeta _languageMeta = const VerificationMeta(
-    'language',
-  );
-  @override
-  late final GeneratedColumn<String> language = GeneratedColumn<String>(
-    'language',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant('zh'),
-  );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -2623,8 +2599,6 @@ class $ScriptsTable extends Scripts with TableInfo<$ScriptsTable, Script> {
     version,
     fidelityMode,
     artStyle,
-    aspectRatio,
-    language,
     status,
     content,
   ];
@@ -2680,21 +2654,6 @@ class $ScriptsTable extends Scripts with TableInfo<$ScriptsTable, Script> {
         artStyle.isAcceptableOrUnknown(data['art_style']!, _artStyleMeta),
       );
     }
-    if (data.containsKey('aspect_ratio')) {
-      context.handle(
-        _aspectRatioMeta,
-        aspectRatio.isAcceptableOrUnknown(
-          data['aspect_ratio']!,
-          _aspectRatioMeta,
-        ),
-      );
-    }
-    if (data.containsKey('language')) {
-      context.handle(
-        _languageMeta,
-        language.isAcceptableOrUnknown(data['language']!, _languageMeta),
-      );
-    }
     if (data.containsKey('status')) {
       context.handle(
         _statusMeta,
@@ -2740,14 +2699,6 @@ class $ScriptsTable extends Scripts with TableInfo<$ScriptsTable, Script> {
         DriftSqlType.string,
         data['${effectivePrefix}art_style'],
       ),
-      aspectRatio: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}aspect_ratio'],
-      )!,
-      language: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}language'],
-      )!,
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
@@ -2772,8 +2723,6 @@ class Script extends DataClass implements Insertable<Script> {
   final int version;
   final String fidelityMode;
   final String? artStyle;
-  final String aspectRatio;
-  final String language;
   final String status;
   final String content;
   const Script({
@@ -2783,8 +2732,6 @@ class Script extends DataClass implements Insertable<Script> {
     required this.version,
     required this.fidelityMode,
     this.artStyle,
-    required this.aspectRatio,
-    required this.language,
     required this.status,
     required this.content,
   });
@@ -2799,8 +2746,6 @@ class Script extends DataClass implements Insertable<Script> {
     if (!nullToAbsent || artStyle != null) {
       map['art_style'] = Variable<String>(artStyle);
     }
-    map['aspect_ratio'] = Variable<String>(aspectRatio);
-    map['language'] = Variable<String>(language);
     map['status'] = Variable<String>(status);
     map['content'] = Variable<String>(content);
     return map;
@@ -2816,8 +2761,6 @@ class Script extends DataClass implements Insertable<Script> {
       artStyle: artStyle == null && nullToAbsent
           ? const Value.absent()
           : Value(artStyle),
-      aspectRatio: Value(aspectRatio),
-      language: Value(language),
       status: Value(status),
       content: Value(content),
     );
@@ -2835,8 +2778,6 @@ class Script extends DataClass implements Insertable<Script> {
       version: serializer.fromJson<int>(json['version']),
       fidelityMode: serializer.fromJson<String>(json['fidelityMode']),
       artStyle: serializer.fromJson<String?>(json['artStyle']),
-      aspectRatio: serializer.fromJson<String>(json['aspectRatio']),
-      language: serializer.fromJson<String>(json['language']),
       status: serializer.fromJson<String>(json['status']),
       content: serializer.fromJson<String>(json['content']),
     );
@@ -2851,8 +2792,6 @@ class Script extends DataClass implements Insertable<Script> {
       'version': serializer.toJson<int>(version),
       'fidelityMode': serializer.toJson<String>(fidelityMode),
       'artStyle': serializer.toJson<String?>(artStyle),
-      'aspectRatio': serializer.toJson<String>(aspectRatio),
-      'language': serializer.toJson<String>(language),
       'status': serializer.toJson<String>(status),
       'content': serializer.toJson<String>(content),
     };
@@ -2865,8 +2804,6 @@ class Script extends DataClass implements Insertable<Script> {
     int? version,
     String? fidelityMode,
     Value<String?> artStyle = const Value.absent(),
-    String? aspectRatio,
-    String? language,
     String? status,
     String? content,
   }) => Script(
@@ -2876,8 +2813,6 @@ class Script extends DataClass implements Insertable<Script> {
     version: version ?? this.version,
     fidelityMode: fidelityMode ?? this.fidelityMode,
     artStyle: artStyle.present ? artStyle.value : this.artStyle,
-    aspectRatio: aspectRatio ?? this.aspectRatio,
-    language: language ?? this.language,
     status: status ?? this.status,
     content: content ?? this.content,
   );
@@ -2891,10 +2826,6 @@ class Script extends DataClass implements Insertable<Script> {
           ? data.fidelityMode.value
           : this.fidelityMode,
       artStyle: data.artStyle.present ? data.artStyle.value : this.artStyle,
-      aspectRatio: data.aspectRatio.present
-          ? data.aspectRatio.value
-          : this.aspectRatio,
-      language: data.language.present ? data.language.value : this.language,
       status: data.status.present ? data.status.value : this.status,
       content: data.content.present ? data.content.value : this.content,
     );
@@ -2909,8 +2840,6 @@ class Script extends DataClass implements Insertable<Script> {
           ..write('version: $version, ')
           ..write('fidelityMode: $fidelityMode, ')
           ..write('artStyle: $artStyle, ')
-          ..write('aspectRatio: $aspectRatio, ')
-          ..write('language: $language, ')
           ..write('status: $status, ')
           ..write('content: $content')
           ..write(')'))
@@ -2925,8 +2854,6 @@ class Script extends DataClass implements Insertable<Script> {
     version,
     fidelityMode,
     artStyle,
-    aspectRatio,
-    language,
     status,
     content,
   );
@@ -2940,8 +2867,6 @@ class Script extends DataClass implements Insertable<Script> {
           other.version == this.version &&
           other.fidelityMode == this.fidelityMode &&
           other.artStyle == this.artStyle &&
-          other.aspectRatio == this.aspectRatio &&
-          other.language == this.language &&
           other.status == this.status &&
           other.content == this.content);
 }
@@ -2953,8 +2878,6 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
   final Value<int> version;
   final Value<String> fidelityMode;
   final Value<String?> artStyle;
-  final Value<String> aspectRatio;
-  final Value<String> language;
   final Value<String> status;
   final Value<String> content;
   const ScriptsCompanion({
@@ -2964,8 +2887,6 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     this.version = const Value.absent(),
     this.fidelityMode = const Value.absent(),
     this.artStyle = const Value.absent(),
-    this.aspectRatio = const Value.absent(),
-    this.language = const Value.absent(),
     this.status = const Value.absent(),
     this.content = const Value.absent(),
   });
@@ -2976,8 +2897,6 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     this.version = const Value.absent(),
     this.fidelityMode = const Value.absent(),
     this.artStyle = const Value.absent(),
-    this.aspectRatio = const Value.absent(),
-    this.language = const Value.absent(),
     this.status = const Value.absent(),
     this.content = const Value.absent(),
   }) : bookId = Value(bookId),
@@ -2989,8 +2908,6 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     Expression<int>? version,
     Expression<String>? fidelityMode,
     Expression<String>? artStyle,
-    Expression<String>? aspectRatio,
-    Expression<String>? language,
     Expression<String>? status,
     Expression<String>? content,
   }) {
@@ -3001,8 +2918,6 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
       if (version != null) 'version': version,
       if (fidelityMode != null) 'fidelity_mode': fidelityMode,
       if (artStyle != null) 'art_style': artStyle,
-      if (aspectRatio != null) 'aspect_ratio': aspectRatio,
-      if (language != null) 'language': language,
       if (status != null) 'status': status,
       if (content != null) 'content': content,
     });
@@ -3015,8 +2930,6 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     Value<int>? version,
     Value<String>? fidelityMode,
     Value<String?>? artStyle,
-    Value<String>? aspectRatio,
-    Value<String>? language,
     Value<String>? status,
     Value<String>? content,
   }) {
@@ -3027,8 +2940,6 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
       version: version ?? this.version,
       fidelityMode: fidelityMode ?? this.fidelityMode,
       artStyle: artStyle ?? this.artStyle,
-      aspectRatio: aspectRatio ?? this.aspectRatio,
-      language: language ?? this.language,
       status: status ?? this.status,
       content: content ?? this.content,
     );
@@ -3055,12 +2966,6 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     if (artStyle.present) {
       map['art_style'] = Variable<String>(artStyle.value);
     }
-    if (aspectRatio.present) {
-      map['aspect_ratio'] = Variable<String>(aspectRatio.value);
-    }
-    if (language.present) {
-      map['language'] = Variable<String>(language.value);
-    }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
@@ -3079,8 +2984,6 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
           ..write('version: $version, ')
           ..write('fidelityMode: $fidelityMode, ')
           ..write('artStyle: $artStyle, ')
-          ..write('aspectRatio: $aspectRatio, ')
-          ..write('language: $language, ')
           ..write('status: $status, ')
           ..write('content: $content')
           ..write(')'))
@@ -12555,8 +12458,6 @@ typedef $$ScriptsTableCreateCompanionBuilder = ScriptsCompanion Function({
   Value<int> version,
   Value<String> fidelityMode,
   Value<String?> artStyle,
-  Value<String> aspectRatio,
-  Value<String> language,
   Value<String> status,
   Value<String> content,
 });
@@ -12567,8 +12468,6 @@ typedef $$ScriptsTableUpdateCompanionBuilder = ScriptsCompanion Function({
   Value<int> version,
   Value<String> fidelityMode,
   Value<String?> artStyle,
-  Value<String> aspectRatio,
-  Value<String> language,
   Value<String> status,
   Value<String> content,
 });
@@ -12703,16 +12602,6 @@ class $$ScriptsTableFilterComposer
 
   ColumnFilters<String> get artStyle => $composableBuilder(
     column: $table.artStyle,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get aspectRatio => $composableBuilder(
-    column: $table.aspectRatio,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get language => $composableBuilder(
-    column: $table.language,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12884,16 +12773,6 @@ class $$ScriptsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get aspectRatio => $composableBuilder(
-    column: $table.aspectRatio,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get language => $composableBuilder(
-    column: $table.language,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnOrderings(column),
@@ -12953,14 +12832,6 @@ class $$ScriptsTableAnnotationComposer
 
   GeneratedColumn<String> get artStyle =>
       $composableBuilder(column: $table.artStyle, builder: (column) => column);
-
-  GeneratedColumn<String> get aspectRatio => $composableBuilder(
-    column: $table.aspectRatio,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get language =>
-      $composableBuilder(column: $table.language, builder: (column) => column);
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
@@ -13132,8 +13003,6 @@ class $$ScriptsTableTableManager
                 Value<int> version = const Value.absent(),
                 Value<String> fidelityMode = const Value.absent(),
                 Value<String?> artStyle = const Value.absent(),
-                Value<String> aspectRatio = const Value.absent(),
-                Value<String> language = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String> content = const Value.absent(),
               }) => ScriptsCompanion(
@@ -13143,8 +13012,6 @@ class $$ScriptsTableTableManager
                 version: version,
                 fidelityMode: fidelityMode,
                 artStyle: artStyle,
-                aspectRatio: aspectRatio,
-                language: language,
                 status: status,
                 content: content,
               ),
@@ -13156,8 +13023,6 @@ class $$ScriptsTableTableManager
                 Value<int> version = const Value.absent(),
                 Value<String> fidelityMode = const Value.absent(),
                 Value<String?> artStyle = const Value.absent(),
-                Value<String> aspectRatio = const Value.absent(),
-                Value<String> language = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String> content = const Value.absent(),
               }) => ScriptsCompanion.insert(
@@ -13167,8 +13032,6 @@ class $$ScriptsTableTableManager
                 version: version,
                 fidelityMode: fidelityMode,
                 artStyle: artStyle,
-                aspectRatio: aspectRatio,
-                language: language,
                 status: status,
                 content: content,
               ),

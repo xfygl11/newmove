@@ -72,7 +72,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -109,6 +109,14 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(shotRevisions);
         await m.createTable(assetRevisions);
         await m.createTable(generationAttempts);
+      }
+      if (from < 8) {
+        // M14 T16.9.4：清理剧本表上的死字段。aspectRatio 从未传入图片或视频
+        // 生成（合成固定 1280x720），language 无读取方；两列均无外键引用，
+        // 直接删除比保留默认值更不易误导。aspectRatio 支持需按供应商能力表
+        // 映射 size 参数，另行规划。
+        await m.dropColumn(scripts, 'aspect_ratio');
+        await m.dropColumn(scripts, 'language');
       }
     },
     beforeOpen: (details) async {

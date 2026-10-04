@@ -119,8 +119,6 @@ void main() {
       expect(script.version, 1);
       expect(script.status, '草案');
       expect(script.fidelityMode, '严格保留');
-      expect(script.aspectRatio, '16:9');
-      expect(script.language, 'zh');
 
       await db.scriptDao.updateRow(script.copyWith(status: '定稿'));
       script = (await db.scriptDao.find(id))!;
@@ -132,10 +130,20 @@ void main() {
         ScriptsCompanion.insert(bookId: bookId, title: '剧本A'),
       );
       await db.sceneDao.insert(
-        ScenesCompanion.insert(scriptId: scriptId, seq: 2, location: 'B', time: '夜'),
+        ScenesCompanion.insert(
+          scriptId: scriptId,
+          seq: 2,
+          location: 'B',
+          time: '夜',
+        ),
       );
       await db.sceneDao.insert(
-        ScenesCompanion.insert(scriptId: scriptId, seq: 1, location: 'A', time: '晨'),
+        ScenesCompanion.insert(
+          scriptId: scriptId,
+          seq: 1,
+          location: 'A',
+          time: '晨',
+        ),
       );
 
       final list = await db.sceneDao.listByScript(scriptId);
@@ -154,10 +162,18 @@ void main() {
         ScriptsCompanion.insert(bookId: bookId, title: '剧本A'),
       );
       await db.scriptRevisionDao.insert(
-        ScriptRevisionsCompanion.insert(scriptId: scriptId, version: 1, content: Value('v1')),
+        ScriptRevisionsCompanion.insert(
+          scriptId: scriptId,
+          version: 1,
+          content: Value('v1'),
+        ),
       );
       await db.scriptRevisionDao.insert(
-        ScriptRevisionsCompanion.insert(scriptId: scriptId, version: 2, content: Value('v2')),
+        ScriptRevisionsCompanion.insert(
+          scriptId: scriptId,
+          version: 2,
+          content: Value('v2'),
+        ),
       );
 
       final list = await db.scriptRevisionDao.listByScript(scriptId);
@@ -250,7 +266,11 @@ void main() {
       expect(before, hasLength(1));
       expect(before.first.accepted, isFalse);
 
-      await service.setProposalAccepted(script, proposalId: 'P1', accepted: true);
+      await service.setProposalAccepted(
+        script,
+        proposalId: 'P1',
+        accepted: true,
+      );
 
       final updated = (await db.scriptDao.find(script.id))!;
       final after = service.listProposals(updated);

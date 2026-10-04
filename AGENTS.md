@@ -140,7 +140,7 @@ lib/
 - **压缩包导入**：解压条目名一律经 `BackupService._resolveMediaPath` 解析——拒绝绝对路径、`..`/`.`/空段，并校验解析后绝对路径前缀（防 zip slip 越界写文件）。任何接收用户提供的 zip/文件名并落盘的路径都必须做同等校验。
 - **APK 体积**：`build.gradle.kts` 的 `defaultConfig` 用 `ndk.abiFilters = ["arm64-v8a"]` 只打单 ABI，FFmpeg 用 `ffmpeg_kit_flutter_new_min_gpl`；CI 构建命令带 `-P disable-abi-filtering=true`，产物为 `app-{release,debug}.apk`。**不要用 `splits.abi`**：Flutter Gradle 插件在未传 `-P split-per-abi` 时会把 `armeabi-v7a/arm64-v8a/x86_64` 写进 `defaultConfig.ndk.abiFilters`，与 `splits.abi` 互斥，Gradle configure 阶段直接报 `Conflicting configuration` 使 CI 构建失败。
 
- ### 数据完整性、上下文预算与执行约定（M14，T16.7.3 / T16.9.4 未完成）
+ ### 数据完整性、上下文预算与执行约定（M14，已完成）
 
   > M14 任务清单见 `docs/04` 第 8.y 节（T16.1–T16.9），架构约定见 `docs/02` 6.5–6.9，
   > 全量复研结论见 `docs/01` 第 8 节。**M13 全量扫描未覆盖以下问题，动手前先读这三处。**
@@ -158,8 +158,10 @@ lib/
   > - Hook 状态机：`HookStates`（`open` / `progressing` / `deferred` / `resolved` / `superseded` + `transitions` 表 + `allows`）。`_applyHooks` 校验转移，非法转移不阻塞固化而是记入 `rejectedTransitions`。
   > - 变体父校验：`AssetDao.insert` / `updateById` 校验 `variantOf` 存在且同 `scriptId`，`deleteById` 先解绑子变体再删。
   > - 测试：`test/import_and_protocols_test.dart`、`test/context_budget_test.dart`、`test/revision_and_attempt_test.dart`（快照 / 台账 / 乐观锁 / HookStates / variantOf / 级联）。
+  > - 结构化审校：`lib/features/novel/novel_models.dart` 的 `ReviewIssue`（`code` 稳定机器码 / `quote` 正文原样引用 / `handling` 处置建议）+ `ReviewIssue.verifyQuotes`。审校产出一律经本地正文重新裁切引用（精确匹配 → 忽略空白 → 前缀降级），**不采信 LLM 自报的位置与引文**；未命中标 `quoteVerified = false` 但保留条目，不删除、不阻塞其它问题呈现。定位按点击时正文重新裁切，不沿用审校时偏移。
+  > - 死字段清理：`Scripts.aspectRatio` / `Scripts.language` 已删（schema v8，`onUpgrade` 走 `m.dropColumn`）。两列从无读取方，`aspectRatio` 从未进入图片或视频生成（合成固定 1280x720）。新增供应商能力透传需按 `size` 参数映射，另行规划。
   >
-  > **仍未覆盖**：结构化审校产出（T16.7.3）、`Scripts` 死字段清理（T16.9.4）。
+  > **测试**：`test/novel_service_test.dart` 覆盖 `verifyQuotes` 五例（精确 / 忽略空白 / 伪造 / 过短 / 前缀降级），`test/daos_test.dart` 覆盖 schema v8 与剧本表列集。
 
 - **多表写必须事务化**：全库当前仅 `backup_service.dart:337` 一处 `transaction`，五个 service 的多表写全部裸写，中间态（JSON 解码抛错、磁盘满、进程被杀）永久落库且无回滚。DAO 层提供「按父 id 重建」复合方法并内置事务，业务层不直接拼 `deleteByX` + 多次 `insert`。
 - **删除顺序最下游先行**：`VideoTasks → AssetRefs → ShotFrames → Shots → Beats → Scenes`。`skeleton_service.dart:69-70` 先删 Beats 再删 Shots 违反此序，任一镜头有下游数据时删除抛冲突而 Beats 已不可恢复。
