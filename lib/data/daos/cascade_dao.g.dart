@@ -19,6 +19,10 @@ mixin _$CascadeDaoMixin on DatabaseAccessor<AppDatabase> {
   $ShotFramesTable get shotFrames => attachedDatabase.shotFrames;
   $AssetRefsTable get assetRefs => attachedDatabase.assetRefs;
   $VideoTasksTable get videoTasks => attachedDatabase.videoTasks;
+  $ShotRevisionsTable get shotRevisions => attachedDatabase.shotRevisions;
+  $AssetRevisionsTable get assetRevisions => attachedDatabase.assetRevisions;
+  $GenerationAttemptsTable get generationAttempts =>
+      attachedDatabase.generationAttempts;
   CascadeDaoManager get managers => CascadeDaoManager(this);
 }
 
@@ -59,4 +63,16 @@ class CascadeDaoManager {
       $$AssetRefsTableTableManager(_db.attachedDatabase, _db.assetRefs);
   $$VideoTasksTableTableManager get videoTasks =>
       $$VideoTasksTableTableManager(_db.attachedDatabase, _db.videoTasks);
+  $$ShotRevisionsTableTableManager get shotRevisions =>
+      $$ShotRevisionsTableTableManager(_db.attachedDatabase, _db.shotRevisions);
+  $$AssetRevisionsTableTableManager get assetRevisions =>
+      $$AssetRevisionsTableTableManager(
+        _db.attachedDatabase,
+        _db.assetRevisions,
+      );
+  $$GenerationAttemptsTableTableManager get generationAttempts =>
+      $$GenerationAttemptsTableTableManager(
+        _db.attachedDatabase,
+        _db.generationAttempts,
+      );
 }

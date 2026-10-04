@@ -18,6 +18,8 @@ final assetServiceProvider = Provider<AssetService>(
     agents: ref.watch(assetAgentsProvider),
     imageAdapter: ref.watch(imageProviderAdapterProvider),
     fileStore: ref.watch(assetFileStoreProvider),
+    revisionDao: ref.watch(revisionDaoProvider),
+    attemptDao: ref.watch(generationAttemptDaoProvider),
   ),
 );
 
@@ -32,6 +34,11 @@ final activeAssetsProvider = StreamProvider<List<Asset>>(
 /// 某剧本的资产列表（类型升序、id 升序）。
 final assetsByScriptProvider = StreamProvider.family<List<Asset>, int>(
   (ref, scriptId) => ref.watch(assetDaoProvider).watchByScript(scriptId),
+);
+
+/// 单个资产的产物版本快照（最新在前）。
+final assetRevisionsProvider = FutureProvider.family<List<AssetRevision>, int>(
+  (ref, assetId) => ref.watch(revisionDaoProvider).listAssets(assetId),
 );
 
 /// 单个资产实时监听。

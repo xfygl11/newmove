@@ -6,6 +6,7 @@ import '../../agent/active_llm.dart';
 import '../../core/json_values.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/cascade_dao.dart';
+import '../../data/daos/generation_attempt_dao.dart';
 import '../../data/daos/novel_dao.dart';
 import '../../data/daos/scene_dao.dart';
 import '../../data/daos/script_dao.dart';
@@ -28,7 +29,8 @@ class ScriptService {
     required this.truthDao,
     required this.cascadeDao,
     required this.agents,
-  });
+    GenerationAttemptDao? attemptDao,
+  }) : _attempts = attemptDao == null ? null : AttemptRecorder(attemptDao);
 
   final AppDatabase db;
   final ScriptDao scriptDao;
@@ -37,6 +39,55 @@ class ScriptService {
   final NovelDao novelDao;
   final TruthFileDao truthDao;
   final CascadeDao cascadeDao;
+
+  /// 生成尝试台账；未注入时所有登记静默跳过。
+  final AttemptRecorder? _attempts;
+
+  static String _paramsOf(ActiveLlm llm) => jsonEncode({
+    'model': llm.modelId,
+    'provider': llm.provider.label,
+    'maxToken': llm.model.maxOutputTokens,
+    'budgetTokens': llm.budgetTokens,
+  });
+
+  Future<int?> _start({
+    required String subjectType,
+    int? subjectId,
+    required String subjectLabel,
+    required String prompt,
+    required String params,
+    Map<String, dynamic> before = const {},
+  }) {
+    final rec = _attempts;
+    if (rec == null) return Future.value(null);
+    return rec.start(
+      subjectType: subjectType,
+      subjectId: subjectId,
+      subjectLabel: subjectLabel,
+      prompt: prompt,
+      params: params,
+      before: before,
+    );
+  }
+
+  Future<void> _finish(
+    int? id,
+    String status, {
+    String? error,
+    int? subjectId,
+    String? subjectLabel,
+  }) async {
+    final rec = _attempts;
+    if (rec == null) return;
+    await rec.finish(
+      id: id,
+      status: status,
+      error: error,
+      subjectId: subjectId,
+      subjectLabel: subjectLabel,
+    );
+  }
+
   final ScriptAgents agents;
 
   // ---- 改编（T2.1/T2.2） ----
@@ -101,53 +152,83 @@ class ScriptService {
       fidelityMode: fidelityMode,
       maxTokens: llm.budgetTokens,
     );
-    final result = await agents.adapt(prompt: prompt, llm: llm);
+    final params = _paramsOf(llm);
+    final attempt = await _start(
+      subjectType: AttemptSubjects.scriptAdapt,
+      subjectId: existing?.id,
+      subjectLabel: title ?? existing?.title ?? '改编剧本',
+      prompt: prompt,
+      params: params,
+      before: {
+        'version': existing?.version,
+        'fidelityMode': existing?.fidelityMode,
+      },
+    );
+    try {
+      final result = await agents.adapt(prompt: prompt, llm: llm);
 
-    final book = await novelDao.findBook(bookId);
-    final resolvedTitle = title?.isNotEmpty == true
-        ? title!
-        : '${book?.title ?? '改编剧本'}·剧本';
+      final book = await novelDao.findBook(bookId);
+      final resolvedTitle = title?.isNotEmpty == true
+          ? title!
+          : '${book?.title ?? '改编剧本'}·剧本';
 
-    if (existing == null) {
-      final content = jsonEncode(result.toJson());
-      return db.transaction(() async {
-        final id = await scriptDao.insert(
-          ScriptsCompanion.insert(
-            bookId: bookId,
-            title: resolvedTitle,
-            version: Value(1),
-            fidelityMode: Value(fidelityMode),
-            content: Value(content),
+      if (existing == null) {
+        final content = jsonEncode(result.toJson());
+        final script = await db.transaction(() async {
+          final id = await scriptDao.insert(
+            ScriptsCompanion.insert(
+              bookId: bookId,
+              title: resolvedTitle,
+              version: Value(1),
+              fidelityMode: Value(fidelityMode),
+              content: Value(content),
+            ),
+          );
+          await _insertScenes(id, result.scenes);
+          return (await scriptDao.find(id))!;
+        });
+        await _finish(
+          attempt,
+          AttemptStatuses.succeeded,
+          subjectId: script.id,
+          subjectLabel: script.title,
+        );
+        return script;
+      }
+
+      // 先保存旧版本快照、再删场次（含节拍），最后才更新父行：
+      // 删除失败时正文保持旧版，不会出现「正文新版 + 场次旧版」的错位。
+      final newContent = jsonEncode(result.toJson());
+      await db.transaction(() async {
+        await revisionDao.insert(
+          ScriptRevisionsCompanion.insert(
+            scriptId: existing.id,
+            version: existing.version,
+            content: Value(existing.content),
           ),
         );
-        await _insertScenes(id, result.scenes);
-        return (await scriptDao.find(id))!;
+        await cascadeDao.deleteScenesCascade(existing.id);
+        await _insertScenes(existing.id, result.scenes);
+        await scriptDao.updateRow(
+          existing.copyWith(
+            version: existing.version + 1,
+            fidelityMode: fidelityMode,
+            status: '草案',
+            content: newContent,
+          ),
+        );
       });
+      final updated = (await scriptDao.find(existing.id))!;
+      await _finish(
+        attempt,
+        AttemptStatuses.succeeded,
+        subjectLabel: updated.title,
+      );
+      return updated;
+    } catch (e) {
+      await _finish(attempt, AttemptStatuses.failed, error: e.toString());
+      rethrow;
     }
-
-    // 先保存旧版本快照、再删场次（含节拍），最后才更新父行：
-    // 删除失败时正文保持旧版，不会出现「正文新版 + 场次旧版」的错位。
-    final newContent = jsonEncode(result.toJson());
-    await db.transaction(() async {
-      await revisionDao.insert(
-        ScriptRevisionsCompanion.insert(
-          scriptId: existing.id,
-          version: existing.version,
-          content: Value(existing.content),
-        ),
-      );
-      await cascadeDao.deleteScenesCascade(existing.id);
-      await _insertScenes(existing.id, result.scenes);
-      await scriptDao.updateRow(
-        existing.copyWith(
-          version: existing.version + 1,
-          fidelityMode: fidelityMode,
-          status: '草案',
-          content: newContent,
-        ),
-      );
-    });
-    return (await scriptDao.find(existing.id))!;
   }
 
   // ---- 提案确认（T2.3） ----

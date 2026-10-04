@@ -10,6 +10,8 @@ import '../../core/storage/asset_file_store.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/asset_dao.dart';
 import '../../data/daos/beat_dao.dart';
+import '../../data/daos/generation_attempt_dao.dart';
+import '../../data/daos/revision_dao.dart';
 import '../../data/daos/shot_dao.dart';
 import 'asset_agents.dart';
 import 'asset_models.dart';
@@ -23,6 +25,8 @@ class AssetService {
     required this.agents,
     required this.imageAdapter,
     required this.fileStore,
+    this.revisionDao,
+    this.attemptDao,
   });
 
   final AssetDao assetDao;
@@ -31,6 +35,18 @@ class AssetService {
   final AssetAgents agents;
   final ImageProviderAdapter imageAdapter;
   final AssetFileStore fileStore;
+
+  /// 产物版本快照（M14 T16.6）。未注入时跳过。
+  final RevisionDao? revisionDao;
+
+  /// 生成尝试台账（M14 T16.5.4）。未注入时跳过。
+  AttemptRecorder? get _recorder {
+    final dao = attemptDao;
+    return dao == null ? null : AttemptRecorder(dao);
+  }
+
+  /// 生成尝试台账（M14 T16.5.4）。未注入时跳过。
+  final GenerationAttemptDao? attemptDao;
 
   // ---- 清单提取（T5.2） ----
 
@@ -73,72 +89,189 @@ class AssetService {
     required ActiveLlm llm,
   }) async {
     final context = await buildSkeletonContext(scriptId);
+    final rec = _recorder;
+    final attemptId = rec == null
+        ? null
+        : await rec.start(
+            subjectType: AttemptSubjects.assetExtract,
+            subjectId: scriptId,
+            subjectLabel: '资产提取',
+            prompt: context,
+            params: jsonEncode({
+              'provider': llm.provider.label,
+              'model': llm.modelId,
+              'maxToken': llm.model.maxOutputTokens,
+              'budgetTokens': llm.budgetTokens,
+            }),
+          );
     final result = await agents.extract(skeletonContext: context, llm: llm);
 
-    // stableId -> 已存在/本轮新建的资产，用于复用与变体父解析。
-    final byStableId = <String, Asset>{
-      for (final a in await assetDao.listByScript(scriptId)) a.stableId: a,
-    };
+    try {
+      // stableId -> 已存在/本轮新建的资产，用于复用与变体父解析。
+      final byStableId = <String, Asset>{
+        for (final a in await assetDao.listByScript(scriptId)) a.stableId: a,
+      };
 
-    var created = 0;
-    var reused = 0;
-    var variants = 0;
+      var created = 0;
+      var reused = 0;
+      var variants = 0;
 
-    // 第一遍：新建非变体资产。
-    for (final d in result.drafts) {
-      if (d.stableId.isEmpty || d.name.isEmpty) continue;
-      if (d.variantOf != null) continue;
-      if (byStableId.containsKey(d.stableId)) {
-        reused++;
-        continue;
+      // 第一遍：新建非变体资产。
+      for (final d in result.drafts) {
+        if (d.stableId.isEmpty || d.name.isEmpty) continue;
+        if (d.variantOf != null) continue;
+        if (byStableId.containsKey(d.stableId)) {
+          reused++;
+          continue;
+        }
+        final id = await assetDao.insert(
+          AssetsCompanion.insert(
+            scriptId: scriptId,
+            type: _normalizeType(d.type),
+            name: d.name,
+            stableId: d.stableId,
+            appearanceAnchor: Value(jsonEncode(d.appearanceAnchor)),
+            boardLayout: Value(_normalizeBoardLayout(d.type, d.boardLayout)),
+            prompt: Value(d.prompt),
+            status: const Value(AssetStatuses.pending),
+          ),
+        );
+        byStableId[d.stableId] = (await assetDao.find(id))!;
+        created++;
       }
-      final id = await assetDao.insert(
-        AssetsCompanion.insert(
-          scriptId: scriptId,
-          type: _normalizeType(d.type),
-          name: d.name,
-          stableId: d.stableId,
-          appearanceAnchor: Value(jsonEncode(d.appearanceAnchor)),
-          boardLayout: Value(_normalizeBoardLayout(d.type, d.boardLayout)),
-          prompt: Value(d.prompt),
-          status: const Value(AssetStatuses.pending),
+
+      // 第二遍：新建变体（父资产可能本轮刚建，也可能复用已存在）。
+      for (final d in result.drafts) {
+        if (d.variantOf == null) continue;
+        if (d.stableId.isEmpty || d.name.isEmpty) continue;
+        if (byStableId.containsKey(d.stableId)) {
+          reused++;
+          continue;
+        }
+        final parent = byStableId[d.variantOf];
+        final id = await assetDao.insert(
+          AssetsCompanion.insert(
+            scriptId: scriptId,
+            type: _normalizeType(d.type),
+            name: d.name,
+            stableId: d.stableId,
+            variantOf: Value(parent?.id),
+            appearanceAnchor: Value(jsonEncode(d.appearanceAnchor)),
+            boardLayout: Value(_normalizeBoardLayout(d.type, d.boardLayout)),
+            prompt: Value(d.prompt),
+            status: const Value(AssetStatuses.pending),
+          ),
+        );
+        byStableId[d.stableId] = (await assetDao.find(id))!;
+        variants++;
+      }
+
+      await rec?.finish(
+        id: attemptId,
+        status: AttemptStatuses.succeeded,
+        resultPath: '新建 $created / 变体 $variants / 复用 $reused',
+      );
+      return AssetExtractionSummary(
+        created: created,
+        reused: reused,
+        variants: variants,
+      );
+    } catch (e) {
+      await rec?.finish(
+        id: attemptId,
+        status: AttemptStatuses.failed,
+        error: e.toString(),
+      );
+      rethrow;
+    }
+  }
+
+  // ---- 产物版本快照与生成尝试台账（M14 T16.6 / T16.5.4） ----
+
+  /// 资产产物快照：名称 / 类型 / 提示词 / 图片 / 变体父 / 外观锚点。
+  String _snapshotOf(Asset asset) {
+    return jsonEncode({
+      'name': asset.name,
+      'type': asset.type,
+      'stableId': asset.stableId,
+      'variantOf': asset.variantOf,
+      'appearanceAnchor': asset.appearanceAnchor,
+      'boardLayout': asset.boardLayout,
+      'prompt': asset.prompt,
+      'imagePath': asset.imagePath,
+      'status': asset.status,
+    });
+  }
+
+  Future<void> _saveSnapshot(
+    Asset asset, {
+    required String kind,
+    required String summary,
+  }) async {
+    final dao = revisionDao;
+    if (dao == null) return;
+    try {
+      await dao.saveAsset(
+        assetId: asset.id,
+        kind: kind,
+        snapshot: _snapshotOf(asset),
+        summary: summary,
+      );
+    } catch (_) {
+      // 快照失败不得阻塞生成主流程。
+    }
+  }
+
+  Future<int?> _recordAttempt({
+    required String subjectType,
+    required Asset asset,
+    required ActiveImage image,
+  }) async {
+    final dao = attemptDao;
+    if (dao == null) return null;
+    try {
+      return await dao.insert(
+        GenerationAttemptsCompanion.insert(
+          subjectType: subjectType,
+          subjectId: Value(asset.id),
+          subjectLabel: Value('${asset.type}「${asset.name}」'),
+          prompt: asset.prompt,
+          params: Value(
+            jsonEncode({
+              'provider': image.provider.label,
+              'model': image.modelId,
+              'protocol': image.protocol,
+            }),
+          ),
+          before: Value(
+            jsonEncode({'status': asset.status, 'imagePath': asset.imagePath}),
+          ),
+          attemptNo: Value(await dao.nextAttemptNo(subjectType, asset.id)),
         ),
       );
-      byStableId[d.stableId] = (await assetDao.find(id))!;
-      created++;
+    } catch (_) {
+      return null;
     }
+  }
 
-    // 第二遍：新建变体（父资产可能本轮刚建，也可能复用已存在）。
-    for (final d in result.drafts) {
-      if (d.variantOf == null) continue;
-      if (d.stableId.isEmpty || d.name.isEmpty) continue;
-      if (byStableId.containsKey(d.stableId)) {
-        reused++;
-        continue;
-      }
-      final parent = byStableId[d.variantOf];
-      final id = await assetDao.insert(
-        AssetsCompanion.insert(
-          scriptId: scriptId,
-          type: _normalizeType(d.type),
-          name: d.name,
-          stableId: d.stableId,
-          variantOf: Value(parent?.id),
-          appearanceAnchor: Value(jsonEncode(d.appearanceAnchor)),
-          boardLayout: Value(_normalizeBoardLayout(d.type, d.boardLayout)),
-          prompt: Value(d.prompt),
-          status: const Value(AssetStatuses.pending),
-        ),
+  Future<void> _finishAttempt({
+    int? id,
+    required String status,
+    String? resultPath,
+    String? error,
+  }) async {
+    final dao = attemptDao;
+    if (dao == null || id == null) return;
+    try {
+      await dao.finishAttempt(
+        id: id,
+        status: status,
+        resultPath: resultPath,
+        errorMessage: error,
       );
-      byStableId[d.stableId] = (await assetDao.find(id))!;
-      variants++;
+    } catch (_) {
+      // 台账回写失败不影响主流程。
     }
-
-    return AssetExtractionSummary(
-      created: created,
-      reused: reused,
-      variants: variants,
-    );
   }
 
   // ---- 生成 / 验收（T5.4 / T5.5） ----
@@ -149,6 +282,13 @@ class AssetService {
   }) async {
     final asset = await assetDao.find(assetId);
     if (asset == null) throw StateError('资产不存在：$assetId');
+
+    // 台账在调用前写入，之后的编辑不回写这一行。
+    final attemptId = await _recordAttempt(
+      subjectType: AttemptSubjects.assetImage,
+      asset: asset,
+      image: image,
+    );
 
     await assetDao.updateById(
       assetId,
@@ -166,8 +306,19 @@ class AssetService {
           status: const Value(AssetStatuses.reviewing),
         ),
       );
+      await _saveSnapshot(asset, kind: 'image', summary: '资产图已生成');
+      await _finishAttempt(
+        id: attemptId,
+        status: AttemptStatuses.succeeded,
+        resultPath: path,
+      );
       return (await assetDao.find(assetId))!;
-    } catch (_) {
+    } catch (e) {
+      await _finishAttempt(
+        id: attemptId,
+        status: AttemptStatuses.failed,
+        error: '$e',
+      );
       await assetDao.updateById(
         assetId,
         AssetsCompanion(status: const Value(AssetStatuses.pending)),

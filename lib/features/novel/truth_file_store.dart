@@ -17,6 +17,66 @@ import 'truth_file_kinds.dart';
 /// - hooks: `{ "hooks": [...] }`
 /// - chapter_summaries: `{ "rows": [...] }`
 /// - author_intent / current_focus: `{ "text": "..." }`
+/// TruthFile 并发写冲突：期望的 revision 与库中不一致，说明有另一处
+/// （如 Settler 固化与用户手工编辑）在同一个读改写窗口内各写了一次，
+/// 后写者若不校验就会整表覆盖并静默丢失前者修改。
+class ConcurrentWriteConflict implements Exception {
+  ConcurrentWriteConflict(this.kind, this.expected, this.actual);
+
+  final String kind;
+  final int expected;
+  final int actual;
+
+  @override
+  String toString() =>
+      'TruthFile 并发写冲突：$kind 期望 revision=$expected，库中已是 $actual';
+}
+
+/// 伏笔生命周期状态机（对齐 InkOS hook-arbiter 的防倒退约束）。
+///
+/// 允许方向：`open → progressing → deferred → resolved | superseded`。
+/// `resolved` / `superseded` 是终态，不允许再变更；`progressing` 不允许回退到
+/// `open`，`deferred` 不允许回退到 `open` / `progressing`。
+class HookStates {
+  HookStates._();
+
+  static const open = 'open';
+  static const progressing = 'progressing';
+  static const deferred = 'deferred';
+  static const resolved = 'resolved';
+  static const superseded = 'superseded';
+
+  static const Map<String, Set<String>> transitions = {
+    open: {progressing, deferred, resolved, superseded},
+    progressing: {deferred, resolved, superseded},
+    deferred: {resolved, superseded},
+    resolved: <String>{},
+    superseded: <String>{},
+  };
+
+  /// 展示用标签，未知状态原样返回。
+  static String label(String? status) =>
+      {
+        open: '未闭合',
+        progressing: '推进中',
+        deferred: '搁置',
+        resolved: '已回收',
+        superseded: '已废弃',
+      }[status] ??
+      (status ?? '未闭合');
+
+  /// [to] 是否为合法目标状态。空串与未知值一律拒绝。
+  static bool isValid(String to) => transitions.containsKey(to);
+
+  /// [from] → [to] 是否允许。[from] 为 null 表示新建条目，任何合法目标状态都允许。
+  static bool allows(String? from, String to) {
+    if (!isValid(to)) return false;
+    if (from == null) return true;
+    final fromKey = transitions.containsKey(from) ? from : open;
+    return transitions[fromKey]!.contains(to);
+  }
+}
+
 class TruthFileStore {
   TruthFileStore({required this.dao, required this.bookId});
 
@@ -35,8 +95,20 @@ class TruthFileStore {
     return <String, dynamic>{};
   }
 
-  Future<void> write(String kind, Map<String, dynamic> content) async {
+  /// 读取原始行，含 revision，供需要乐观锁的读改写路径使用。
+  Future<TruthFile?> readRow(String kind) => dao.findByKind(bookId, kind);
+
+  Future<void> write(
+    String kind,
+    Map<String, dynamic> content, {
+    int? expectedRevision,
+  }) async {
     final existing = await dao.findByKind(bookId, kind);
+    if (existing != null &&
+        expectedRevision != null &&
+        existing.revision != expectedRevision) {
+      throw ConcurrentWriteConflict(kind, expectedRevision, existing.revision);
+    }
     await dao.upsert(
       TruthFilesCompanion.insert(
         bookId: bookId,
@@ -69,7 +141,8 @@ class TruthFileStore {
   }
 
   Future<void> _applyFacts(SettleDelta delta, int chapterNumber) async {
-    final current = await read(TruthFileKind.worldFacts);
+    final row = await readRow(TruthFileKind.worldFacts);
+    final current = _contentOf(row);
     final facts = [for (final f in jsonList(current['facts'])) jsonMap(f)];
 
     // 失效：匹配未过期事实，设 validUntilChapter。
@@ -96,12 +169,15 @@ class TruthFileStore {
       });
     }
 
-    await write(TruthFileKind.worldFacts, {'facts': facts});
+    await write(TruthFileKind.worldFacts, {
+      'facts': facts,
+    }, expectedRevision: row?.revision);
   }
 
   Future<void> _applyCharacters(SettleDelta delta) async {
     if (delta.characters.isEmpty) return;
-    final current = await read(TruthFileKind.characterMatrix);
+    final row = await readRow(TruthFileKind.characterMatrix);
+    final current = _contentOf(row);
     final list = [for (final c in jsonList(current['characters'])) jsonMap(c)];
 
     for (final spec in delta.characters) {
@@ -114,12 +190,15 @@ class TruthFileStore {
       }
     }
 
-    await write(TruthFileKind.characterMatrix, {'characters': list});
+    await write(TruthFileKind.characterMatrix, {
+      'characters': list,
+    }, expectedRevision: row?.revision);
   }
 
   Future<void> _applyResources(SettleDelta delta) async {
     if (delta.resources.isEmpty) return;
-    final current = await read(TruthFileKind.resources);
+    final row = await readRow(TruthFileKind.resources);
+    final current = _contentOf(row);
     final items = [for (final i in jsonList(current['items'])) jsonMap(i)];
 
     for (final res in delta.resources) {
@@ -131,16 +210,30 @@ class TruthFileStore {
       }
     }
 
-    await write(TruthFileKind.resources, {'items': items});
+    await write(TruthFileKind.resources, {
+      'items': items,
+    }, expectedRevision: row?.revision);
   }
 
   Future<void> _applyHooks(SettleDelta delta) async {
     if (delta.hookUpsert.isEmpty && delta.hookResolve.isEmpty) return;
-    final current = await read(TruthFileKind.hooks);
+    final row = await readRow(TruthFileKind.hooks);
+    final current = _contentOf(row);
     final hooks = [for (final h in jsonList(current['hooks'])) jsonMap(h)];
+    final rejected = <String>[];
 
     for (final up in delta.hookUpsert) {
       final idx = hooks.indexWhere((h) => h['id'] == up['id']);
+      final next = up['status']?.toString() ?? '';
+      if (next.isEmpty) {
+        // 新建且未给状态时默认 open；历史条目无状态视为 open。
+        up['status'] = HookStates.open;
+      }
+      final from = idx >= 0 ? hooks[idx]['status']?.toString() : null;
+      if (!HookStates.allows(from, up['status'] as String)) {
+        rejected.add('${up['id']} ${HookStates.label(from)} → ${up['status']}');
+        continue;
+      }
       if (idx >= 0) {
         hooks[idx] = {...hooks[idx], ...up};
       } else {
@@ -149,16 +242,32 @@ class TruthFileStore {
     }
     for (final id in delta.hookResolve) {
       final idx = hooks.indexWhere((h) => h['id'] == id);
-      if (idx >= 0) hooks[idx]['status'] = 'resolved';
+      if (idx < 0) continue;
+      final from = hooks[idx]['status']?.toString();
+      if (!HookStates.allows(from, HookStates.resolved)) {
+        rejected.add('$id ${HookStates.label(from)} → resolved');
+        continue;
+      }
+      hooks[idx]['status'] = HookStates.resolved;
     }
 
-    await write(TruthFileKind.hooks, {'hooks': hooks});
+    await write(TruthFileKind.hooks, {
+      'hooks': hooks,
+    }, expectedRevision: row?.revision);
+    if (rejected.isNotEmpty) {
+      // 终态不可回退：不阻塞整章固化，但把被拒转移记入内容，用户可在伏笔池查证。
+      await write(TruthFileKind.hooks, {
+        ..._contentOf(await readRow(TruthFileKind.hooks)),
+        'rejectedTransitions': rejected,
+      });
+    }
   }
 
   Future<void> _applySummary(SettleDelta delta) async {
     final summary = delta.chapterSummary;
     if (summary == null) return;
-    final current = await read(TruthFileKind.chapterSummaries);
+    final row = await readRow(TruthFileKind.chapterSummaries);
+    final current = _contentOf(row);
     final rows = [for (final r in jsonList(current['rows'])) jsonMap(r)];
 
     final chapter = summary['chapter'];
@@ -169,6 +278,20 @@ class TruthFileStore {
       rows.add(summary);
     }
 
-    await write(TruthFileKind.chapterSummaries, {'rows': rows});
+    await write(TruthFileKind.chapterSummaries, {
+      'rows': rows,
+    }, expectedRevision: row?.revision);
+  }
+
+  /// 从原始行解出内容，null 或损坏时按空对象处理。
+  Map<String, dynamic> _contentOf(TruthFile? row) {
+    if (row == null) return <String, dynamic>{};
+    try {
+      final decoded = jsonDecode(row.content);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } on FormatException {
+      // 内容损坏时按空处理。
+    }
+    return <String, dynamic>{};
   }
 }

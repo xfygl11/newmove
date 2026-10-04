@@ -7,6 +7,7 @@ import '../../core/json_values.dart';
 import '../../core/text/chapter_import.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/chapter_revision_dao.dart';
+import '../../data/daos/generation_attempt_dao.dart';
 import '../../data/daos/novel_dao.dart';
 import '../../data/daos/truth_file_dao.dart';
 import 'novel_agents.dart';
@@ -22,12 +23,59 @@ class NovelService {
     required this.truthDao,
     required this.revisionDao,
     required this.agents,
-  });
+    GenerationAttemptDao? attemptDao,
+  }) : _attempts = attemptDao == null ? null : AttemptRecorder(attemptDao);
 
   final NovelDao novelDao;
   final TruthFileDao truthDao;
   final ChapterRevisionDao revisionDao;
   final NovelAgents agents;
+
+  /// 生成尝试台账；未注入时所有登记静默跳过。
+  final AttemptRecorder? _attempts;
+
+  static String _paramsOf(ActiveLlm llm) => jsonEncode({
+    'model': llm.modelId,
+    'provider': llm.provider.label,
+    'maxToken': llm.model.maxOutputTokens,
+    'budgetTokens': llm.budgetTokens,
+  });
+
+  Future<int?> _start({
+    required String subjectType,
+    int? subjectId,
+    required String subjectLabel,
+    required String prompt,
+    required String params,
+    Map<String, dynamic> before = const {},
+  }) {
+    final rec = _attempts;
+    if (rec == null) return Future.value(null);
+    return rec.start(
+      subjectType: subjectType,
+      subjectId: subjectId,
+      subjectLabel: subjectLabel,
+      prompt: prompt,
+      params: params,
+      before: before,
+    );
+  }
+
+  Future<void> _finish(
+    int? id,
+    String status, {
+    String? error,
+    int? subjectId,
+  }) async {
+    final rec = _attempts;
+    if (rec == null) return;
+    await rec.finish(
+      id: id,
+      status: status,
+      error: error,
+      subjectId: subjectId,
+    );
+  }
 
   TruthFileStore storeFor(int bookId) =>
       TruthFileStore(dao: truthDao, bookId: bookId);
@@ -41,33 +89,47 @@ class NovelService {
     required ActiveLlm llm,
     String workType = '长篇',
   }) async {
-    final result = await agents.generateSetup(
-      idea: idea,
-      genre: genre,
-      llm: llm,
-      workType: workType,
+    final params = _paramsOf(llm);
+    final attempt = await _start(
+      subjectType: AttemptSubjects.novelPlan,
+      subjectId: bookId,
+      subjectLabel: '设定生成',
+      prompt: 'idea=$idea; genre=$genre; workType=$workType',
+      params: params,
     );
-
-    final book = await novelDao.findBook(bookId);
-    if (book != null) {
-      await novelDao.updateBook(
-        book.copyWith(
-          genre: Value(genre.isEmpty ? null : genre),
-          world: Value(result.world),
-          premise: Value(result.premise),
-          styleGuide: Value(result.styleGuide),
-          outline: Value(result.outline),
-        ),
+    try {
+      final result = await agents.generateSetup(
+        idea: idea,
+        genre: genre,
+        llm: llm,
+        workType: workType,
       );
+
+      final book = await novelDao.findBook(bookId);
+      if (book != null) {
+        await novelDao.updateBook(
+          book.copyWith(
+            genre: Value(genre.isEmpty ? null : genre),
+            world: Value(result.world),
+            premise: Value(result.premise),
+            styleGuide: Value(result.styleGuide),
+            outline: Value(result.outline),
+          ),
+        );
+      }
+
+      // 初始化角色矩阵 TruthFile。
+      final store = storeFor(bookId);
+      await store.write(TruthFileKind.characterMatrix, {
+        'characters': [for (final c in result.characters) c.toJson()],
+      });
+
+      await _finish(attempt, AttemptStatuses.succeeded);
+      return result;
+    } catch (e) {
+      await _finish(attempt, AttemptStatuses.failed, error: e.toString());
+      rethrow;
     }
-
-    // 初始化角色矩阵 TruthFile。
-    final store = storeFor(bookId);
-    await store.write(TruthFileKind.characterMatrix, {
-      'characters': [for (final c in result.characters) c.toJson()],
-    });
-
-    return result;
   }
 
   // ---- 章节写作（T1.3） ----
@@ -83,6 +145,7 @@ class NovelService {
     required ActiveLlm llm,
     String? existingContent,
     Map<String, dynamic>? chapterPlan,
+    int? chapterId,
   }) async* {
     final prompt = await buildWritePrompt(
       bookId: bookId,
@@ -92,7 +155,21 @@ class NovelService {
       chapterPlan: chapterPlan,
       maxTokens: llm.budgetTokens,
     );
-    yield* agents.writeChapter(prompt: prompt, llm: llm);
+    final params = _paramsOf(llm);
+    final attempt = await _start(
+      subjectType: AttemptSubjects.novelWrite,
+      subjectId: chapterId,
+      subjectLabel: '第 $chapterNumber 章',
+      prompt: prompt,
+      params: params,
+    );
+    try {
+      yield* agents.writeChapter(prompt: prompt, llm: llm);
+      await _finish(attempt, AttemptStatuses.succeeded);
+    } catch (e) {
+      await _finish(attempt, AttemptStatuses.failed, error: e.toString());
+      rethrow;
+    }
   }
 
   /// Planner 步骤（P3-13）：为指定章节生成写作规划。
@@ -103,6 +180,7 @@ class NovelService {
     required int bookId,
     required int chapterNumber,
     required ActiveLlm llm,
+    int? chapterId,
   }) async {
     final book = await novelDao.findBook(bookId);
     final texts = await storeFor(bookId).readAllText();
@@ -116,7 +194,25 @@ class NovelService {
       ..write(head)
       ..write(kindBlocks(budget))
       ..writeln('请为第 $chapterNumber 章输出规划 JSON。');
-    return agents.planChapter(prompt: prompt.toString(), llm: llm);
+    final params = _paramsOf(llm);
+    final attempt = await _start(
+      subjectType: AttemptSubjects.novelPlan,
+      subjectId: chapterId,
+      subjectLabel: '第 $chapterNumber 章 规划',
+      prompt: prompt.toString(),
+      params: params,
+    );
+    try {
+      final plan = await agents.planChapter(
+        prompt: prompt.toString(),
+        llm: llm,
+      );
+      await _finish(attempt, AttemptStatuses.succeeded);
+      return plan;
+    } catch (e) {
+      await _finish(attempt, AttemptStatuses.failed, error: e.toString());
+      rethrow;
+    }
   }
 
   Future<String> buildWritePrompt({
@@ -187,13 +283,29 @@ class NovelService {
     required int bookId,
     required String content,
     required ActiveLlm llm,
+    int? chapterId,
   }) async {
     final prompt = await buildReviewPrompt(
       bookId: bookId,
       content: content,
       maxTokens: llm.budgetTokens,
     );
-    return agents.review(prompt: prompt, llm: llm);
+    final params = _paramsOf(llm);
+    final attempt = await _start(
+      subjectType: AttemptSubjects.novelReview,
+      subjectId: chapterId,
+      subjectLabel: '章节审校',
+      prompt: prompt,
+      params: params,
+    );
+    try {
+      final issues = await agents.review(prompt: prompt, llm: llm);
+      await _finish(attempt, AttemptStatuses.succeeded);
+      return issues;
+    } catch (e) {
+      await _finish(attempt, AttemptStatuses.failed, error: e.toString());
+      rethrow;
+    }
   }
 
   // ---- 修订（T1.5/T1.6） ----
@@ -210,25 +322,40 @@ class NovelService {
       instruction: instruction,
       mode: mode,
     );
-    final revised = await agents.revise(prompt: prompt, llm: llm);
-
-    // 旧内容存入版本快照。
-    await revisionDao.insert(
-      ChapterRevisionsCompanion.insert(
-        chapterId: chapter.id,
-        revision: chapter.revision,
-        content: Value(chapter.content),
-      ),
+    final params = _paramsOf(llm);
+    final attempt = await _start(
+      subjectType: AttemptSubjects.novelWrite,
+      subjectId: chapter.id,
+      subjectLabel: '第 ${chapter.seq} 章 修订',
+      prompt: prompt,
+      params: params,
+      before: {'contentRevision': chapter.revision},
     );
-    await novelDao.updateChapter(
-      chapter.copyWith(
-        content: Value(revised),
-        wordCount: ChapterImport.countWords(revised),
-        revision: chapter.revision + 1,
-      ),
-    );
+    try {
+      final revised = await agents.revise(prompt: prompt, llm: llm);
 
-    return revised;
+      // 旧内容存入版本快照。
+      await revisionDao.insert(
+        ChapterRevisionsCompanion.insert(
+          chapterId: chapter.id,
+          revision: chapter.revision,
+          content: Value(chapter.content),
+        ),
+      );
+      await novelDao.updateChapter(
+        chapter.copyWith(
+          content: Value(revised),
+          wordCount: ChapterImport.countWords(revised),
+          revision: chapter.revision + 1,
+        ),
+      );
+
+      await _finish(attempt, AttemptStatuses.succeeded);
+      return revised;
+    } catch (e) {
+      await _finish(attempt, AttemptStatuses.failed, error: e.toString());
+      rethrow;
+    }
   }
 
   // ---- 状态固化（T1.4/T1.6） ----
@@ -261,8 +388,22 @@ class NovelService {
       ..writeln(budget.note.isEmpty ? '' : '【预算说明】${budget.note}，请勿重复合并已有条目。')
       ..writeln('请输出固化 delta JSON。');
 
-    final delta = await agents.settle(prompt: prompt.toString(), llm: llm);
-    await store.applyDelta(delta, chapter.seq);
+    final params = _paramsOf(llm);
+    final attempt = await _start(
+      subjectType: AttemptSubjects.novelSettle,
+      subjectId: chapter.id,
+      subjectLabel: '第 ${chapter.seq} 章 固化',
+      prompt: prompt.toString(),
+      params: params,
+    );
+    try {
+      final delta = await agents.settle(prompt: prompt.toString(), llm: llm);
+      await store.applyDelta(delta, chapter.seq);
+      await _finish(attempt, AttemptStatuses.succeeded);
+    } catch (e) {
+      await _finish(attempt, AttemptStatuses.failed, error: e.toString());
+      rethrow;
+    }
   }
 
   // ---- 内部辅助 ----

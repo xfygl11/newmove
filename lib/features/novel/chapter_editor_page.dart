@@ -254,6 +254,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
       plan = await svc.planChapter(
         bookId: chapter.bookId,
         chapterNumber: chapter.seq,
+        chapterId: chapter.id,
         llm: llm,
       );
     }
@@ -270,6 +271,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
     if (!await ConfirmSheet.confirm(
       context,
       objectName: '第 ${chapter.seq} 章正文',
+      gate: '章节写作（正文需人工验收后才进入下一章）',
       quantity: '目标约 2000 字',
       promptPreview: prompt,
       params: [
@@ -292,6 +294,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
         targetWords: 2000,
         existingContent: existing,
         chapterPlan: plan,
+        chapterId: chapter.id,
         llm: llm,
       );
       await for (final chunk in stream) {
@@ -318,6 +321,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
     if (!await ConfirmSheet.confirm(
       context,
       objectName: '章节审校',
+      gate: '章节审校（仅产出问题清单，不改正文）',
       quantity: '1 次审校',
       promptPreview: prompt,
       params: ['供应商：${llm.provider.label}', '模型：${llm.modelId}'],
@@ -331,6 +335,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
       final issues = await svc.reviewChapter(
         bookId: chapter.bookId,
         content: _plainText,
+        chapterId: chapter.id,
         llm: llm,
       );
       if (!mounted) return;

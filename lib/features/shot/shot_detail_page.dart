@@ -249,6 +249,7 @@ class _ShotDetailPageState extends ConsumerState<ShotDetailPage>
     if (!await ConfirmSheet.confirm(
       context,
       objectName: '分镜图 · 镜头 ${shot.globalSeq}',
+      gate: '分镜图生成（需用户逐张验收后才可用于视频）',
       quantity: '1 次生成',
       promptPreview: shot.prompt,
       params: [
@@ -436,6 +437,7 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
     if (!await ConfirmSheet.confirm(
       context,
       objectName: '镜头视频 · ${widget.shot.globalSeq}',
+      gate: '镜头视频生成（授权范围仅限本次镜头的视频）',
       quantity: '1 次生成',
       promptPreview: widget.shot.prompt,
       params: [

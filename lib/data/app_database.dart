@@ -5,6 +5,8 @@ import 'daos/asset_dao.dart';
 import 'daos/asset_ref_dao.dart';
 import 'daos/beat_dao.dart';
 import 'daos/cascade_dao.dart';
+import 'daos/generation_attempt_dao.dart';
+import 'daos/revision_dao.dart';
 import 'daos/chapter_revision_dao.dart';
 import 'daos/novel_dao.dart';
 import 'daos/project_dao.dart';
@@ -38,6 +40,9 @@ part 'app_database.g.dart';
     AssetRefs,
     VideoTasks,
     ProviderConfigs,
+    ShotRevisions,
+    AssetRevisions,
+    GenerationAttempts,
   ],
   daos: [
     ProjectDao,
@@ -55,6 +60,8 @@ part 'app_database.g.dart';
     ShotFrameDao,
     VideoTaskDao,
     ProviderDao,
+    RevisionDao,
+    GenerationAttemptDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -65,7 +72,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -96,6 +103,12 @@ class AppDatabase extends _$AppDatabase {
       if (from < 6) {
         // P3-15：小说书表新增 workType 字段（长篇/短篇/剧本/影游）。
         await m.addColumn(novelBooks, novelBooks.workType);
+      }
+      if (from < 7) {
+        // M14：镜头 / 资产产物版本快照 + 生成尝试台账。
+        await m.createTable(shotRevisions);
+        await m.createTable(assetRevisions);
+        await m.createTable(generationAttempts);
       }
     },
     beforeOpen: (details) async {

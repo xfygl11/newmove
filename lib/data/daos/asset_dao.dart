@@ -52,7 +52,29 @@ class AssetDao extends DatabaseAccessor<AppDatabase> with _$AssetDaoMixin {
     return (select(assets)..where((t) => t.id.equals(id))).watchSingleOrNull();
   }
 
-  Future<int> insert(AssetsCompanion entry) {
+  /// 列出挂在 [parentId] 下的全部变体。
+  Future<List<Asset>> listVariants(int parentId) {
+    return (select(assets)..where((t) => t.variantOf.equals(parentId))).get();
+  }
+
+  /// 插入资产。
+  ///
+  /// [entry.variantOf] 指向的父资产必须存在且属于同一剧本，否则抛 [ArgumentError]。
+  /// `variantOf` 在表定义上不带 `references`（加外键需重建 assets 表，风险高），
+  /// 这里在 DAO 层做同等校验，避免出现「变体父资产 #<不存在的 id>」的孤儿引用。
+  Future<int> insert(AssetsCompanion entry) async {
+    final variantOf = entry.variantOf.present ? entry.variantOf.value : null;
+    if (variantOf != null) {
+      final parent = await find(variantOf);
+      if (parent == null) {
+        throw ArgumentError('变体父资产不存在：#$variantOf');
+      }
+      if (parent.scriptId != entry.scriptId.value) {
+        throw ArgumentError(
+          '变体父资产 #$variantOf 属于剧本 ${parent.scriptId}，与当前剧本 ${entry.scriptId.value} 不一致',
+        );
+      }
+    }
     return into(assets).insert(entry);
   }
 
@@ -60,11 +82,28 @@ class AssetDao extends DatabaseAccessor<AppDatabase> with _$AssetDaoMixin {
     return update(assets).replace(row);
   }
 
-  Future<int> updateById(int id, AssetsCompanion entry) {
+  Future<int> updateById(int id, AssetsCompanion entry) async {
+    if (entry.variantOf.present && entry.variantOf.value != null) {
+      final parentId = entry.variantOf.value!;
+      if (parentId != id) {
+        final parent = await find(parentId);
+        if (parent == null) throw ArgumentError('变体父资产不存在：#$parentId');
+        final self = await find(id);
+        if (self != null && parent.scriptId != self.scriptId) {
+          throw ArgumentError('变体父资产 #$parentId 与当前资产不属于同一剧本');
+        }
+      }
+    }
     return (update(assets)..where((t) => t.id.equals(id))).write(entry);
   }
 
-  Future<int> deleteById(int id) {
+  /// 删除资产：先把挂在它下面的变体解绑（置空 variantOf），避免孤儿引用。
+  Future<int> deleteById(int id) async {
+    await attachedDatabase.transaction(() async {
+      await (update(assets)..where((t) => t.variantOf.equals(id))).write(
+        const AssetsCompanion(variantOf: Value(null)),
+      );
+    });
     return (delete(assets)..where((t) => t.id.equals(id))).go();
   }
 

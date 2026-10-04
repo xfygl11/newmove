@@ -8397,6 +8397,1877 @@ class ProviderConfigsCompanion extends UpdateCompanion<ProviderConfig> {
   }
 }
 
+class $ShotRevisionsTable extends ShotRevisions
+    with TableInfo<$ShotRevisionsTable, ShotRevision> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ShotRevisionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shotIdMeta = const VerificationMeta('shotId');
+  @override
+  late final GeneratedColumn<int> shotId = GeneratedColumn<int>(
+    'shot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shots (id)',
+    ),
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+    'state',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('current'),
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _snapshotMeta = const VerificationMeta(
+    'snapshot',
+  );
+  @override
+  late final GeneratedColumn<String> snapshot = GeneratedColumn<String>(
+    'snapshot',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
+  static const VerificationMeta _summaryMeta = const VerificationMeta(
+    'summary',
+  );
+  @override
+  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
+    'summary',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shotId,
+    revision,
+    state,
+    kind,
+    snapshot,
+    summary,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'shot_revisions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ShotRevision> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shot_id')) {
+      context.handle(
+        _shotIdMeta,
+        shotId.isAcceptableOrUnknown(data['shot_id']!, _shotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shotIdMeta);
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_revisionMeta);
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+        _stateMeta,
+        state.isAcceptableOrUnknown(data['state']!, _stateMeta),
+      );
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('snapshot')) {
+      context.handle(
+        _snapshotMeta,
+        snapshot.isAcceptableOrUnknown(data['snapshot']!, _snapshotMeta),
+      );
+    }
+    if (data.containsKey('summary')) {
+      context.handle(
+        _summaryMeta,
+        summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ShotRevision map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ShotRevision(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shot_id'],
+      )!,
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      )!,
+      state: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}state'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      snapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot'],
+      )!,
+      summary: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}summary'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ShotRevisionsTable createAlias(String alias) {
+    return $ShotRevisionsTable(attachedDatabase, alias);
+  }
+}
+
+class ShotRevision extends DataClass implements Insertable<ShotRevision> {
+  final int id;
+  final int shotId;
+  final int revision;
+  final String state;
+  final String kind;
+  final String snapshot;
+  final String summary;
+  final DateTime createdAt;
+  const ShotRevision({
+    required this.id,
+    required this.shotId,
+    required this.revision,
+    required this.state,
+    required this.kind,
+    required this.snapshot,
+    required this.summary,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shot_id'] = Variable<int>(shotId);
+    map['revision'] = Variable<int>(revision);
+    map['state'] = Variable<String>(state);
+    map['kind'] = Variable<String>(kind);
+    map['snapshot'] = Variable<String>(snapshot);
+    map['summary'] = Variable<String>(summary);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ShotRevisionsCompanion toCompanion(bool nullToAbsent) {
+    return ShotRevisionsCompanion(
+      id: Value(id),
+      shotId: Value(shotId),
+      revision: Value(revision),
+      state: Value(state),
+      kind: Value(kind),
+      snapshot: Value(snapshot),
+      summary: Value(summary),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ShotRevision.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ShotRevision(
+      id: serializer.fromJson<int>(json['id']),
+      shotId: serializer.fromJson<int>(json['shotId']),
+      revision: serializer.fromJson<int>(json['revision']),
+      state: serializer.fromJson<String>(json['state']),
+      kind: serializer.fromJson<String>(json['kind']),
+      snapshot: serializer.fromJson<String>(json['snapshot']),
+      summary: serializer.fromJson<String>(json['summary']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shotId': serializer.toJson<int>(shotId),
+      'revision': serializer.toJson<int>(revision),
+      'state': serializer.toJson<String>(state),
+      'kind': serializer.toJson<String>(kind),
+      'snapshot': serializer.toJson<String>(snapshot),
+      'summary': serializer.toJson<String>(summary),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ShotRevision copyWith({
+    int? id,
+    int? shotId,
+    int? revision,
+    String? state,
+    String? kind,
+    String? snapshot,
+    String? summary,
+    DateTime? createdAt,
+  }) => ShotRevision(
+    id: id ?? this.id,
+    shotId: shotId ?? this.shotId,
+    revision: revision ?? this.revision,
+    state: state ?? this.state,
+    kind: kind ?? this.kind,
+    snapshot: snapshot ?? this.snapshot,
+    summary: summary ?? this.summary,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ShotRevision copyWithCompanion(ShotRevisionsCompanion data) {
+    return ShotRevision(
+      id: data.id.present ? data.id.value : this.id,
+      shotId: data.shotId.present ? data.shotId.value : this.shotId,
+      revision: data.revision.present ? data.revision.value : this.revision,
+      state: data.state.present ? data.state.value : this.state,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      snapshot: data.snapshot.present ? data.snapshot.value : this.snapshot,
+      summary: data.summary.present ? data.summary.value : this.summary,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShotRevision(')
+          ..write('id: $id, ')
+          ..write('shotId: $shotId, ')
+          ..write('revision: $revision, ')
+          ..write('state: $state, ')
+          ..write('kind: $kind, ')
+          ..write('snapshot: $snapshot, ')
+          ..write('summary: $summary, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    shotId,
+    revision,
+    state,
+    kind,
+    snapshot,
+    summary,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ShotRevision &&
+          other.id == this.id &&
+          other.shotId == this.shotId &&
+          other.revision == this.revision &&
+          other.state == this.state &&
+          other.kind == this.kind &&
+          other.snapshot == this.snapshot &&
+          other.summary == this.summary &&
+          other.createdAt == this.createdAt);
+}
+
+class ShotRevisionsCompanion extends UpdateCompanion<ShotRevision> {
+  final Value<int> id;
+  final Value<int> shotId;
+  final Value<int> revision;
+  final Value<String> state;
+  final Value<String> kind;
+  final Value<String> snapshot;
+  final Value<String> summary;
+  final Value<DateTime> createdAt;
+  const ShotRevisionsCompanion({
+    this.id = const Value.absent(),
+    this.shotId = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.state = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.snapshot = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  ShotRevisionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int shotId,
+    required int revision,
+    this.state = const Value.absent(),
+    required String kind,
+    this.snapshot = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : shotId = Value(shotId),
+       revision = Value(revision),
+       kind = Value(kind);
+  static Insertable<ShotRevision> custom({
+    Expression<int>? id,
+    Expression<int>? shotId,
+    Expression<int>? revision,
+    Expression<String>? state,
+    Expression<String>? kind,
+    Expression<String>? snapshot,
+    Expression<String>? summary,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shotId != null) 'shot_id': shotId,
+      if (revision != null) 'revision': revision,
+      if (state != null) 'state': state,
+      if (kind != null) 'kind': kind,
+      if (snapshot != null) 'snapshot': snapshot,
+      if (summary != null) 'summary': summary,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  ShotRevisionsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shotId,
+    Value<int>? revision,
+    Value<String>? state,
+    Value<String>? kind,
+    Value<String>? snapshot,
+    Value<String>? summary,
+    Value<DateTime>? createdAt,
+  }) {
+    return ShotRevisionsCompanion(
+      id: id ?? this.id,
+      shotId: shotId ?? this.shotId,
+      revision: revision ?? this.revision,
+      state: state ?? this.state,
+      kind: kind ?? this.kind,
+      snapshot: snapshot ?? this.snapshot,
+      summary: summary ?? this.summary,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shotId.present) {
+      map['shot_id'] = Variable<int>(shotId.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (snapshot.present) {
+      map['snapshot'] = Variable<String>(snapshot.value);
+    }
+    if (summary.present) {
+      map['summary'] = Variable<String>(summary.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShotRevisionsCompanion(')
+          ..write('id: $id, ')
+          ..write('shotId: $shotId, ')
+          ..write('revision: $revision, ')
+          ..write('state: $state, ')
+          ..write('kind: $kind, ')
+          ..write('snapshot: $snapshot, ')
+          ..write('summary: $summary, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AssetRevisionsTable extends AssetRevisions
+    with TableInfo<$AssetRevisionsTable, AssetRevision> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AssetRevisionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _assetIdMeta = const VerificationMeta(
+    'assetId',
+  );
+  @override
+  late final GeneratedColumn<int> assetId = GeneratedColumn<int>(
+    'asset_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES assets (id)',
+    ),
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+    'state',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('current'),
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _snapshotMeta = const VerificationMeta(
+    'snapshot',
+  );
+  @override
+  late final GeneratedColumn<String> snapshot = GeneratedColumn<String>(
+    'snapshot',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
+  static const VerificationMeta _summaryMeta = const VerificationMeta(
+    'summary',
+  );
+  @override
+  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
+    'summary',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    assetId,
+    revision,
+    state,
+    kind,
+    snapshot,
+    summary,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'asset_revisions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AssetRevision> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('asset_id')) {
+      context.handle(
+        _assetIdMeta,
+        assetId.isAcceptableOrUnknown(data['asset_id']!, _assetIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_assetIdMeta);
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_revisionMeta);
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+        _stateMeta,
+        state.isAcceptableOrUnknown(data['state']!, _stateMeta),
+      );
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('snapshot')) {
+      context.handle(
+        _snapshotMeta,
+        snapshot.isAcceptableOrUnknown(data['snapshot']!, _snapshotMeta),
+      );
+    }
+    if (data.containsKey('summary')) {
+      context.handle(
+        _summaryMeta,
+        summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AssetRevision map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AssetRevision(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      assetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}asset_id'],
+      )!,
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      )!,
+      state: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}state'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      snapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}snapshot'],
+      )!,
+      summary: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}summary'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AssetRevisionsTable createAlias(String alias) {
+    return $AssetRevisionsTable(attachedDatabase, alias);
+  }
+}
+
+class AssetRevision extends DataClass implements Insertable<AssetRevision> {
+  final int id;
+  final int assetId;
+  final int revision;
+  final String state;
+  final String kind;
+  final String snapshot;
+  final String summary;
+  final DateTime createdAt;
+  const AssetRevision({
+    required this.id,
+    required this.assetId,
+    required this.revision,
+    required this.state,
+    required this.kind,
+    required this.snapshot,
+    required this.summary,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['asset_id'] = Variable<int>(assetId);
+    map['revision'] = Variable<int>(revision);
+    map['state'] = Variable<String>(state);
+    map['kind'] = Variable<String>(kind);
+    map['snapshot'] = Variable<String>(snapshot);
+    map['summary'] = Variable<String>(summary);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  AssetRevisionsCompanion toCompanion(bool nullToAbsent) {
+    return AssetRevisionsCompanion(
+      id: Value(id),
+      assetId: Value(assetId),
+      revision: Value(revision),
+      state: Value(state),
+      kind: Value(kind),
+      snapshot: Value(snapshot),
+      summary: Value(summary),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory AssetRevision.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AssetRevision(
+      id: serializer.fromJson<int>(json['id']),
+      assetId: serializer.fromJson<int>(json['assetId']),
+      revision: serializer.fromJson<int>(json['revision']),
+      state: serializer.fromJson<String>(json['state']),
+      kind: serializer.fromJson<String>(json['kind']),
+      snapshot: serializer.fromJson<String>(json['snapshot']),
+      summary: serializer.fromJson<String>(json['summary']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'assetId': serializer.toJson<int>(assetId),
+      'revision': serializer.toJson<int>(revision),
+      'state': serializer.toJson<String>(state),
+      'kind': serializer.toJson<String>(kind),
+      'snapshot': serializer.toJson<String>(snapshot),
+      'summary': serializer.toJson<String>(summary),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  AssetRevision copyWith({
+    int? id,
+    int? assetId,
+    int? revision,
+    String? state,
+    String? kind,
+    String? snapshot,
+    String? summary,
+    DateTime? createdAt,
+  }) => AssetRevision(
+    id: id ?? this.id,
+    assetId: assetId ?? this.assetId,
+    revision: revision ?? this.revision,
+    state: state ?? this.state,
+    kind: kind ?? this.kind,
+    snapshot: snapshot ?? this.snapshot,
+    summary: summary ?? this.summary,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  AssetRevision copyWithCompanion(AssetRevisionsCompanion data) {
+    return AssetRevision(
+      id: data.id.present ? data.id.value : this.id,
+      assetId: data.assetId.present ? data.assetId.value : this.assetId,
+      revision: data.revision.present ? data.revision.value : this.revision,
+      state: data.state.present ? data.state.value : this.state,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      snapshot: data.snapshot.present ? data.snapshot.value : this.snapshot,
+      summary: data.summary.present ? data.summary.value : this.summary,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetRevision(')
+          ..write('id: $id, ')
+          ..write('assetId: $assetId, ')
+          ..write('revision: $revision, ')
+          ..write('state: $state, ')
+          ..write('kind: $kind, ')
+          ..write('snapshot: $snapshot, ')
+          ..write('summary: $summary, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    assetId,
+    revision,
+    state,
+    kind,
+    snapshot,
+    summary,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AssetRevision &&
+          other.id == this.id &&
+          other.assetId == this.assetId &&
+          other.revision == this.revision &&
+          other.state == this.state &&
+          other.kind == this.kind &&
+          other.snapshot == this.snapshot &&
+          other.summary == this.summary &&
+          other.createdAt == this.createdAt);
+}
+
+class AssetRevisionsCompanion extends UpdateCompanion<AssetRevision> {
+  final Value<int> id;
+  final Value<int> assetId;
+  final Value<int> revision;
+  final Value<String> state;
+  final Value<String> kind;
+  final Value<String> snapshot;
+  final Value<String> summary;
+  final Value<DateTime> createdAt;
+  const AssetRevisionsCompanion({
+    this.id = const Value.absent(),
+    this.assetId = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.state = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.snapshot = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  AssetRevisionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int assetId,
+    required int revision,
+    this.state = const Value.absent(),
+    required String kind,
+    this.snapshot = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : assetId = Value(assetId),
+       revision = Value(revision),
+       kind = Value(kind);
+  static Insertable<AssetRevision> custom({
+    Expression<int>? id,
+    Expression<int>? assetId,
+    Expression<int>? revision,
+    Expression<String>? state,
+    Expression<String>? kind,
+    Expression<String>? snapshot,
+    Expression<String>? summary,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (assetId != null) 'asset_id': assetId,
+      if (revision != null) 'revision': revision,
+      if (state != null) 'state': state,
+      if (kind != null) 'kind': kind,
+      if (snapshot != null) 'snapshot': snapshot,
+      if (summary != null) 'summary': summary,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  AssetRevisionsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? assetId,
+    Value<int>? revision,
+    Value<String>? state,
+    Value<String>? kind,
+    Value<String>? snapshot,
+    Value<String>? summary,
+    Value<DateTime>? createdAt,
+  }) {
+    return AssetRevisionsCompanion(
+      id: id ?? this.id,
+      assetId: assetId ?? this.assetId,
+      revision: revision ?? this.revision,
+      state: state ?? this.state,
+      kind: kind ?? this.kind,
+      snapshot: snapshot ?? this.snapshot,
+      summary: summary ?? this.summary,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (assetId.present) {
+      map['asset_id'] = Variable<int>(assetId.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (snapshot.present) {
+      map['snapshot'] = Variable<String>(snapshot.value);
+    }
+    if (summary.present) {
+      map['summary'] = Variable<String>(summary.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetRevisionsCompanion(')
+          ..write('id: $id, ')
+          ..write('assetId: $assetId, ')
+          ..write('revision: $revision, ')
+          ..write('state: $state, ')
+          ..write('kind: $kind, ')
+          ..write('snapshot: $snapshot, ')
+          ..write('summary: $summary, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GenerationAttemptsTable extends GenerationAttempts
+    with TableInfo<$GenerationAttemptsTable, GenerationAttempt> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GenerationAttemptsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _projectIdMeta = const VerificationMeta(
+    'projectId',
+  );
+  @override
+  late final GeneratedColumn<int> projectId = GeneratedColumn<int>(
+    'project_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _subjectTypeMeta = const VerificationMeta(
+    'subjectType',
+  );
+  @override
+  late final GeneratedColumn<String> subjectType = GeneratedColumn<String>(
+    'subject_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _subjectIdMeta = const VerificationMeta(
+    'subjectId',
+  );
+  @override
+  late final GeneratedColumn<int> subjectId = GeneratedColumn<int>(
+    'subject_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _subjectLabelMeta = const VerificationMeta(
+    'subjectLabel',
+  );
+  @override
+  late final GeneratedColumn<String> subjectLabel = GeneratedColumn<String>(
+    'subject_label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _promptMeta = const VerificationMeta('prompt');
+  @override
+  late final GeneratedColumn<String> prompt = GeneratedColumn<String>(
+    'prompt',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _paramsMeta = const VerificationMeta('params');
+  @override
+  late final GeneratedColumn<String> params = GeneratedColumn<String>(
+    'params',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
+  static const VerificationMeta _refsMeta = const VerificationMeta('refs');
+  @override
+  late final GeneratedColumn<String> refs = GeneratedColumn<String>(
+    'refs',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _beforeMeta = const VerificationMeta('before');
+  @override
+  late final GeneratedColumn<String> before = GeneratedColumn<String>(
+    'before',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
+  static const VerificationMeta _attemptNoMeta = const VerificationMeta(
+    'attemptNo',
+  );
+  @override
+  late final GeneratedColumn<int> attemptNo = GeneratedColumn<int>(
+    'attempt_no',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _grantLimitMeta = const VerificationMeta(
+    'grantLimit',
+  );
+  @override
+  late final GeneratedColumn<int> grantLimit = GeneratedColumn<int>(
+    'grant_limit',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _grantFingerprintMeta = const VerificationMeta(
+    'grantFingerprint',
+  );
+  @override
+  late final GeneratedColumn<String> grantFingerprint = GeneratedColumn<String>(
+    'grant_fingerprint',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
+  );
+  static const VerificationMeta _resultPathMeta = const VerificationMeta(
+    'resultPath',
+  );
+  @override
+  late final GeneratedColumn<String> resultPath = GeneratedColumn<String>(
+    'result_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _errorMessageMeta = const VerificationMeta(
+    'errorMessage',
+  );
+  @override
+  late final GeneratedColumn<String> errorMessage = GeneratedColumn<String>(
+    'error_message',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    projectId,
+    subjectType,
+    subjectId,
+    subjectLabel,
+    prompt,
+    params,
+    refs,
+    before,
+    attemptNo,
+    grantLimit,
+    grantFingerprint,
+    status,
+    resultPath,
+    errorMessage,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'generation_attempts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GenerationAttempt> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('project_id')) {
+      context.handle(
+        _projectIdMeta,
+        projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta),
+      );
+    }
+    if (data.containsKey('subject_type')) {
+      context.handle(
+        _subjectTypeMeta,
+        subjectType.isAcceptableOrUnknown(
+          data['subject_type']!,
+          _subjectTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_subjectTypeMeta);
+    }
+    if (data.containsKey('subject_id')) {
+      context.handle(
+        _subjectIdMeta,
+        subjectId.isAcceptableOrUnknown(data['subject_id']!, _subjectIdMeta),
+      );
+    }
+    if (data.containsKey('subject_label')) {
+      context.handle(
+        _subjectLabelMeta,
+        subjectLabel.isAcceptableOrUnknown(
+          data['subject_label']!,
+          _subjectLabelMeta,
+        ),
+      );
+    }
+    if (data.containsKey('prompt')) {
+      context.handle(
+        _promptMeta,
+        prompt.isAcceptableOrUnknown(data['prompt']!, _promptMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_promptMeta);
+    }
+    if (data.containsKey('params')) {
+      context.handle(
+        _paramsMeta,
+        params.isAcceptableOrUnknown(data['params']!, _paramsMeta),
+      );
+    }
+    if (data.containsKey('refs')) {
+      context.handle(
+        _refsMeta,
+        refs.isAcceptableOrUnknown(data['refs']!, _refsMeta),
+      );
+    }
+    if (data.containsKey('before')) {
+      context.handle(
+        _beforeMeta,
+        before.isAcceptableOrUnknown(data['before']!, _beforeMeta),
+      );
+    }
+    if (data.containsKey('attempt_no')) {
+      context.handle(
+        _attemptNoMeta,
+        attemptNo.isAcceptableOrUnknown(data['attempt_no']!, _attemptNoMeta),
+      );
+    }
+    if (data.containsKey('grant_limit')) {
+      context.handle(
+        _grantLimitMeta,
+        grantLimit.isAcceptableOrUnknown(data['grant_limit']!, _grantLimitMeta),
+      );
+    }
+    if (data.containsKey('grant_fingerprint')) {
+      context.handle(
+        _grantFingerprintMeta,
+        grantFingerprint.isAcceptableOrUnknown(
+          data['grant_fingerprint']!,
+          _grantFingerprintMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('result_path')) {
+      context.handle(
+        _resultPathMeta,
+        resultPath.isAcceptableOrUnknown(data['result_path']!, _resultPathMeta),
+      );
+    }
+    if (data.containsKey('error_message')) {
+      context.handle(
+        _errorMessageMeta,
+        errorMessage.isAcceptableOrUnknown(
+          data['error_message']!,
+          _errorMessageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GenerationAttempt map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GenerationAttempt(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      projectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}project_id'],
+      ),
+      subjectType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject_type'],
+      )!,
+      subjectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}subject_id'],
+      ),
+      subjectLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject_label'],
+      )!,
+      prompt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}prompt'],
+      )!,
+      params: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}params'],
+      )!,
+      refs: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}refs'],
+      )!,
+      before: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}before'],
+      )!,
+      attemptNo: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}attempt_no'],
+      )!,
+      grantLimit: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}grant_limit'],
+      )!,
+      grantFingerprint: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}grant_fingerprint'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      resultPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}result_path'],
+      ),
+      errorMessage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}error_message'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $GenerationAttemptsTable createAlias(String alias) {
+    return $GenerationAttemptsTable(attachedDatabase, alias);
+  }
+}
+
+class GenerationAttempt extends DataClass
+    implements Insertable<GenerationAttempt> {
+  final int id;
+  final int? projectId;
+  final String subjectType;
+  final int? subjectId;
+  final String subjectLabel;
+  final String prompt;
+  final String params;
+  final String refs;
+  final String before;
+  final int attemptNo;
+  final int grantLimit;
+  final String grantFingerprint;
+  final String status;
+  final String? resultPath;
+  final String? errorMessage;
+  final DateTime createdAt;
+  const GenerationAttempt({
+    required this.id,
+    this.projectId,
+    required this.subjectType,
+    this.subjectId,
+    required this.subjectLabel,
+    required this.prompt,
+    required this.params,
+    required this.refs,
+    required this.before,
+    required this.attemptNo,
+    required this.grantLimit,
+    required this.grantFingerprint,
+    required this.status,
+    this.resultPath,
+    this.errorMessage,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || projectId != null) {
+      map['project_id'] = Variable<int>(projectId);
+    }
+    map['subject_type'] = Variable<String>(subjectType);
+    if (!nullToAbsent || subjectId != null) {
+      map['subject_id'] = Variable<int>(subjectId);
+    }
+    map['subject_label'] = Variable<String>(subjectLabel);
+    map['prompt'] = Variable<String>(prompt);
+    map['params'] = Variable<String>(params);
+    map['refs'] = Variable<String>(refs);
+    map['before'] = Variable<String>(before);
+    map['attempt_no'] = Variable<int>(attemptNo);
+    map['grant_limit'] = Variable<int>(grantLimit);
+    map['grant_fingerprint'] = Variable<String>(grantFingerprint);
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || resultPath != null) {
+      map['result_path'] = Variable<String>(resultPath);
+    }
+    if (!nullToAbsent || errorMessage != null) {
+      map['error_message'] = Variable<String>(errorMessage);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  GenerationAttemptsCompanion toCompanion(bool nullToAbsent) {
+    return GenerationAttemptsCompanion(
+      id: Value(id),
+      projectId: projectId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(projectId),
+      subjectType: Value(subjectType),
+      subjectId: subjectId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(subjectId),
+      subjectLabel: Value(subjectLabel),
+      prompt: Value(prompt),
+      params: Value(params),
+      refs: Value(refs),
+      before: Value(before),
+      attemptNo: Value(attemptNo),
+      grantLimit: Value(grantLimit),
+      grantFingerprint: Value(grantFingerprint),
+      status: Value(status),
+      resultPath: resultPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resultPath),
+      errorMessage: errorMessage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(errorMessage),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory GenerationAttempt.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GenerationAttempt(
+      id: serializer.fromJson<int>(json['id']),
+      projectId: serializer.fromJson<int?>(json['projectId']),
+      subjectType: serializer.fromJson<String>(json['subjectType']),
+      subjectId: serializer.fromJson<int?>(json['subjectId']),
+      subjectLabel: serializer.fromJson<String>(json['subjectLabel']),
+      prompt: serializer.fromJson<String>(json['prompt']),
+      params: serializer.fromJson<String>(json['params']),
+      refs: serializer.fromJson<String>(json['refs']),
+      before: serializer.fromJson<String>(json['before']),
+      attemptNo: serializer.fromJson<int>(json['attemptNo']),
+      grantLimit: serializer.fromJson<int>(json['grantLimit']),
+      grantFingerprint: serializer.fromJson<String>(json['grantFingerprint']),
+      status: serializer.fromJson<String>(json['status']),
+      resultPath: serializer.fromJson<String?>(json['resultPath']),
+      errorMessage: serializer.fromJson<String?>(json['errorMessage']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'projectId': serializer.toJson<int?>(projectId),
+      'subjectType': serializer.toJson<String>(subjectType),
+      'subjectId': serializer.toJson<int?>(subjectId),
+      'subjectLabel': serializer.toJson<String>(subjectLabel),
+      'prompt': serializer.toJson<String>(prompt),
+      'params': serializer.toJson<String>(params),
+      'refs': serializer.toJson<String>(refs),
+      'before': serializer.toJson<String>(before),
+      'attemptNo': serializer.toJson<int>(attemptNo),
+      'grantLimit': serializer.toJson<int>(grantLimit),
+      'grantFingerprint': serializer.toJson<String>(grantFingerprint),
+      'status': serializer.toJson<String>(status),
+      'resultPath': serializer.toJson<String?>(resultPath),
+      'errorMessage': serializer.toJson<String?>(errorMessage),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  GenerationAttempt copyWith({
+    int? id,
+    Value<int?> projectId = const Value.absent(),
+    String? subjectType,
+    Value<int?> subjectId = const Value.absent(),
+    String? subjectLabel,
+    String? prompt,
+    String? params,
+    String? refs,
+    String? before,
+    int? attemptNo,
+    int? grantLimit,
+    String? grantFingerprint,
+    String? status,
+    Value<String?> resultPath = const Value.absent(),
+    Value<String?> errorMessage = const Value.absent(),
+    DateTime? createdAt,
+  }) => GenerationAttempt(
+    id: id ?? this.id,
+    projectId: projectId.present ? projectId.value : this.projectId,
+    subjectType: subjectType ?? this.subjectType,
+    subjectId: subjectId.present ? subjectId.value : this.subjectId,
+    subjectLabel: subjectLabel ?? this.subjectLabel,
+    prompt: prompt ?? this.prompt,
+    params: params ?? this.params,
+    refs: refs ?? this.refs,
+    before: before ?? this.before,
+    attemptNo: attemptNo ?? this.attemptNo,
+    grantLimit: grantLimit ?? this.grantLimit,
+    grantFingerprint: grantFingerprint ?? this.grantFingerprint,
+    status: status ?? this.status,
+    resultPath: resultPath.present ? resultPath.value : this.resultPath,
+    errorMessage: errorMessage.present ? errorMessage.value : this.errorMessage,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  GenerationAttempt copyWithCompanion(GenerationAttemptsCompanion data) {
+    return GenerationAttempt(
+      id: data.id.present ? data.id.value : this.id,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
+      subjectType: data.subjectType.present
+          ? data.subjectType.value
+          : this.subjectType,
+      subjectId: data.subjectId.present ? data.subjectId.value : this.subjectId,
+      subjectLabel: data.subjectLabel.present
+          ? data.subjectLabel.value
+          : this.subjectLabel,
+      prompt: data.prompt.present ? data.prompt.value : this.prompt,
+      params: data.params.present ? data.params.value : this.params,
+      refs: data.refs.present ? data.refs.value : this.refs,
+      before: data.before.present ? data.before.value : this.before,
+      attemptNo: data.attemptNo.present ? data.attemptNo.value : this.attemptNo,
+      grantLimit: data.grantLimit.present
+          ? data.grantLimit.value
+          : this.grantLimit,
+      grantFingerprint: data.grantFingerprint.present
+          ? data.grantFingerprint.value
+          : this.grantFingerprint,
+      status: data.status.present ? data.status.value : this.status,
+      resultPath: data.resultPath.present
+          ? data.resultPath.value
+          : this.resultPath,
+      errorMessage: data.errorMessage.present
+          ? data.errorMessage.value
+          : this.errorMessage,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GenerationAttempt(')
+          ..write('id: $id, ')
+          ..write('projectId: $projectId, ')
+          ..write('subjectType: $subjectType, ')
+          ..write('subjectId: $subjectId, ')
+          ..write('subjectLabel: $subjectLabel, ')
+          ..write('prompt: $prompt, ')
+          ..write('params: $params, ')
+          ..write('refs: $refs, ')
+          ..write('before: $before, ')
+          ..write('attemptNo: $attemptNo, ')
+          ..write('grantLimit: $grantLimit, ')
+          ..write('grantFingerprint: $grantFingerprint, ')
+          ..write('status: $status, ')
+          ..write('resultPath: $resultPath, ')
+          ..write('errorMessage: $errorMessage, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    projectId,
+    subjectType,
+    subjectId,
+    subjectLabel,
+    prompt,
+    params,
+    refs,
+    before,
+    attemptNo,
+    grantLimit,
+    grantFingerprint,
+    status,
+    resultPath,
+    errorMessage,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GenerationAttempt &&
+          other.id == this.id &&
+          other.projectId == this.projectId &&
+          other.subjectType == this.subjectType &&
+          other.subjectId == this.subjectId &&
+          other.subjectLabel == this.subjectLabel &&
+          other.prompt == this.prompt &&
+          other.params == this.params &&
+          other.refs == this.refs &&
+          other.before == this.before &&
+          other.attemptNo == this.attemptNo &&
+          other.grantLimit == this.grantLimit &&
+          other.grantFingerprint == this.grantFingerprint &&
+          other.status == this.status &&
+          other.resultPath == this.resultPath &&
+          other.errorMessage == this.errorMessage &&
+          other.createdAt == this.createdAt);
+}
+
+class GenerationAttemptsCompanion extends UpdateCompanion<GenerationAttempt> {
+  final Value<int> id;
+  final Value<int?> projectId;
+  final Value<String> subjectType;
+  final Value<int?> subjectId;
+  final Value<String> subjectLabel;
+  final Value<String> prompt;
+  final Value<String> params;
+  final Value<String> refs;
+  final Value<String> before;
+  final Value<int> attemptNo;
+  final Value<int> grantLimit;
+  final Value<String> grantFingerprint;
+  final Value<String> status;
+  final Value<String?> resultPath;
+  final Value<String?> errorMessage;
+  final Value<DateTime> createdAt;
+  const GenerationAttemptsCompanion({
+    this.id = const Value.absent(),
+    this.projectId = const Value.absent(),
+    this.subjectType = const Value.absent(),
+    this.subjectId = const Value.absent(),
+    this.subjectLabel = const Value.absent(),
+    this.prompt = const Value.absent(),
+    this.params = const Value.absent(),
+    this.refs = const Value.absent(),
+    this.before = const Value.absent(),
+    this.attemptNo = const Value.absent(),
+    this.grantLimit = const Value.absent(),
+    this.grantFingerprint = const Value.absent(),
+    this.status = const Value.absent(),
+    this.resultPath = const Value.absent(),
+    this.errorMessage = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  GenerationAttemptsCompanion.insert({
+    this.id = const Value.absent(),
+    this.projectId = const Value.absent(),
+    required String subjectType,
+    this.subjectId = const Value.absent(),
+    this.subjectLabel = const Value.absent(),
+    required String prompt,
+    this.params = const Value.absent(),
+    this.refs = const Value.absent(),
+    this.before = const Value.absent(),
+    this.attemptNo = const Value.absent(),
+    this.grantLimit = const Value.absent(),
+    this.grantFingerprint = const Value.absent(),
+    this.status = const Value.absent(),
+    this.resultPath = const Value.absent(),
+    this.errorMessage = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : subjectType = Value(subjectType),
+       prompt = Value(prompt);
+  static Insertable<GenerationAttempt> custom({
+    Expression<int>? id,
+    Expression<int>? projectId,
+    Expression<String>? subjectType,
+    Expression<int>? subjectId,
+    Expression<String>? subjectLabel,
+    Expression<String>? prompt,
+    Expression<String>? params,
+    Expression<String>? refs,
+    Expression<String>? before,
+    Expression<int>? attemptNo,
+    Expression<int>? grantLimit,
+    Expression<String>? grantFingerprint,
+    Expression<String>? status,
+    Expression<String>? resultPath,
+    Expression<String>? errorMessage,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (projectId != null) 'project_id': projectId,
+      if (subjectType != null) 'subject_type': subjectType,
+      if (subjectId != null) 'subject_id': subjectId,
+      if (subjectLabel != null) 'subject_label': subjectLabel,
+      if (prompt != null) 'prompt': prompt,
+      if (params != null) 'params': params,
+      if (refs != null) 'refs': refs,
+      if (before != null) 'before': before,
+      if (attemptNo != null) 'attempt_no': attemptNo,
+      if (grantLimit != null) 'grant_limit': grantLimit,
+      if (grantFingerprint != null) 'grant_fingerprint': grantFingerprint,
+      if (status != null) 'status': status,
+      if (resultPath != null) 'result_path': resultPath,
+      if (errorMessage != null) 'error_message': errorMessage,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  GenerationAttemptsCompanion copyWith({
+    Value<int>? id,
+    Value<int?>? projectId,
+    Value<String>? subjectType,
+    Value<int?>? subjectId,
+    Value<String>? subjectLabel,
+    Value<String>? prompt,
+    Value<String>? params,
+    Value<String>? refs,
+    Value<String>? before,
+    Value<int>? attemptNo,
+    Value<int>? grantLimit,
+    Value<String>? grantFingerprint,
+    Value<String>? status,
+    Value<String?>? resultPath,
+    Value<String?>? errorMessage,
+    Value<DateTime>? createdAt,
+  }) {
+    return GenerationAttemptsCompanion(
+      id: id ?? this.id,
+      projectId: projectId ?? this.projectId,
+      subjectType: subjectType ?? this.subjectType,
+      subjectId: subjectId ?? this.subjectId,
+      subjectLabel: subjectLabel ?? this.subjectLabel,
+      prompt: prompt ?? this.prompt,
+      params: params ?? this.params,
+      refs: refs ?? this.refs,
+      before: before ?? this.before,
+      attemptNo: attemptNo ?? this.attemptNo,
+      grantLimit: grantLimit ?? this.grantLimit,
+      grantFingerprint: grantFingerprint ?? this.grantFingerprint,
+      status: status ?? this.status,
+      resultPath: resultPath ?? this.resultPath,
+      errorMessage: errorMessage ?? this.errorMessage,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (projectId.present) {
+      map['project_id'] = Variable<int>(projectId.value);
+    }
+    if (subjectType.present) {
+      map['subject_type'] = Variable<String>(subjectType.value);
+    }
+    if (subjectId.present) {
+      map['subject_id'] = Variable<int>(subjectId.value);
+    }
+    if (subjectLabel.present) {
+      map['subject_label'] = Variable<String>(subjectLabel.value);
+    }
+    if (prompt.present) {
+      map['prompt'] = Variable<String>(prompt.value);
+    }
+    if (params.present) {
+      map['params'] = Variable<String>(params.value);
+    }
+    if (refs.present) {
+      map['refs'] = Variable<String>(refs.value);
+    }
+    if (before.present) {
+      map['before'] = Variable<String>(before.value);
+    }
+    if (attemptNo.present) {
+      map['attempt_no'] = Variable<int>(attemptNo.value);
+    }
+    if (grantLimit.present) {
+      map['grant_limit'] = Variable<int>(grantLimit.value);
+    }
+    if (grantFingerprint.present) {
+      map['grant_fingerprint'] = Variable<String>(grantFingerprint.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (resultPath.present) {
+      map['result_path'] = Variable<String>(resultPath.value);
+    }
+    if (errorMessage.present) {
+      map['error_message'] = Variable<String>(errorMessage.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GenerationAttemptsCompanion(')
+          ..write('id: $id, ')
+          ..write('projectId: $projectId, ')
+          ..write('subjectType: $subjectType, ')
+          ..write('subjectId: $subjectId, ')
+          ..write('subjectLabel: $subjectLabel, ')
+          ..write('prompt: $prompt, ')
+          ..write('params: $params, ')
+          ..write('refs: $refs, ')
+          ..write('before: $before, ')
+          ..write('attemptNo: $attemptNo, ')
+          ..write('grantLimit: $grantLimit, ')
+          ..write('grantFingerprint: $grantFingerprint, ')
+          ..write('status: $status, ')
+          ..write('resultPath: $resultPath, ')
+          ..write('errorMessage: $errorMessage, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -8421,6 +10292,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ProviderConfigsTable providerConfigs = $ProviderConfigsTable(
     this,
   );
+  late final $ShotRevisionsTable shotRevisions = $ShotRevisionsTable(this);
+  late final $AssetRevisionsTable assetRevisions = $AssetRevisionsTable(this);
+  late final $GenerationAttemptsTable generationAttempts =
+      $GenerationAttemptsTable(this);
   late final ProjectDao projectDao = ProjectDao(this as AppDatabase);
   late final NovelDao novelDao = NovelDao(this as AppDatabase);
   late final CascadeDao cascadeDao = CascadeDao(this as AppDatabase);
@@ -8440,6 +10315,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final ShotFrameDao shotFrameDao = ShotFrameDao(this as AppDatabase);
   late final VideoTaskDao videoTaskDao = VideoTaskDao(this as AppDatabase);
   late final ProviderDao providerDao = ProviderDao(this as AppDatabase);
+  late final RevisionDao revisionDao = RevisionDao(this as AppDatabase);
+  late final GenerationAttemptDao generationAttemptDao = GenerationAttemptDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8460,6 +10339,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     assetRefs,
     videoTasks,
     providerConfigs,
+    shotRevisions,
+    assetRevisions,
+    generationAttempts,
   ];
 }
 
@@ -12775,6 +14657,24 @@ final class $$AssetsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$AssetRevisionsTable, List<AssetRevision>>
+  _assetRevisionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.assetRevisions,
+    aliasName: 'assets__id__asset_revisions__asset_id',
+  );
+
+  $$AssetRevisionsTableProcessedTableManager get assetRevisionsRefs {
+    final manager = $$AssetRevisionsTableTableManager(
+      $_db,
+      $_db.assetRevisions,
+    ).filter((f) => f.assetId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_assetRevisionsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$AssetsTableFilterComposer
@@ -12875,6 +14775,31 @@ class $$AssetsTableFilterComposer
           }) => $$AssetRefsTableFilterComposer(
             $db: $db,
             $table: $db.assetRefs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> assetRevisionsRefs(
+    Expression<bool> Function($$AssetRevisionsTableFilterComposer f) f,
+  ) {
+    final $$AssetRevisionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.assetRevisions,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetRevisionsTableFilterComposer(
+            $db: $db,
+            $table: $db.assetRevisions,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -13058,6 +14983,31 @@ class $$AssetsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> assetRevisionsRefs<T extends Object>(
+    Expression<T> Function($$AssetRevisionsTableAnnotationComposer a) f,
+  ) {
+    final $$AssetRevisionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.assetRevisions,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetRevisionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.assetRevisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$AssetsTableTableManager
@@ -13073,7 +15023,11 @@ class $$AssetsTableTableManager
           $$AssetsTableUpdateCompanionBuilder,
           (Asset, $$AssetsTableReferences),
           Asset,
-          PrefetchHooks Function({bool scriptId, bool assetRefsRefs})
+          PrefetchHooks Function({
+            bool scriptId,
+            bool assetRefsRefs,
+            bool assetRevisionsRefs,
+          })
         > {
   $$AssetsTableTableManager(_$AppDatabase db, $AssetsTable table)
     : super(
@@ -13146,58 +15100,96 @@ class $$AssetsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({scriptId = false, assetRefsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (assetRefsRefs) db.assetRefs],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (scriptId) {
-                      state = state.withJoin(
-                        currentTable: table,
-                        currentColumn: table.scriptId,
-                        referencedTable: $$AssetsTableReferences._scriptIdTable(
-                          db,
-                        ),
-                        referencedColumn: $$AssetsTableReferences
-                            ._scriptIdTable(db)
-                            .id,
-                      ) as T;
-                    }
+          prefetchHooksCallback:
+              ({
+                scriptId = false,
+                assetRefsRefs = false,
+                assetRevisionsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (assetRefsRefs) db.assetRefs,
+                    if (assetRevisionsRefs) db.assetRevisions,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (scriptId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.scriptId,
+                            referencedTable: $$AssetsTableReferences
+                                ._scriptIdTable(db),
+                            referencedColumn: $$AssetsTableReferences
+                                ._scriptIdTable(db)
+                                .id,
+                          ) as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (assetRefsRefs)
+                        await $_getPrefetchedData<
+                          Asset,
+                          $AssetsTable,
+                          AssetRef
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AssetsTableReferences
+                              ._assetRefsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AssetsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).assetRefsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.assetId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (assetRevisionsRefs)
+                        await $_getPrefetchedData<
+                          Asset,
+                          $AssetsTable,
+                          AssetRevision
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AssetsTableReferences
+                              ._assetRevisionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AssetsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).assetRevisionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.assetId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (assetRefsRefs)
-                    await $_getPrefetchedData<Asset, $AssetsTable, AssetRef>(
-                      currentTable: table,
-                      referencedTable: $$AssetsTableReferences
-                          ._assetRefsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$AssetsTableReferences(db, table, p0).assetRefsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.assetId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -13214,7 +15206,11 @@ typedef $$AssetsTableProcessedTableManager =
       $$AssetsTableUpdateCompanionBuilder,
       (Asset, $$AssetsTableReferences),
       Asset,
-      PrefetchHooks Function({bool scriptId, bool assetRefsRefs})
+      PrefetchHooks Function({
+        bool scriptId,
+        bool assetRefsRefs,
+        bool assetRevisionsRefs,
+      })
     >;
 typedef $$ShotsTableCreateCompanionBuilder = ShotsCompanion Function({
   Value<int> id,
@@ -13321,6 +15317,24 @@ final class $$ShotsTableReferences
     ).filter((f) => f.shotId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_videoTasksRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ShotRevisionsTable, List<ShotRevision>>
+  _shotRevisionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.shotRevisions,
+    aliasName: 'shots__id__shot_revisions__shot_id',
+  );
+
+  $$ShotRevisionsTableProcessedTableManager get shotRevisionsRefs {
+    final manager = $$ShotRevisionsTableTableManager(
+      $_db,
+      $_db.shotRevisions,
+    ).filter((f) => f.shotId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_shotRevisionsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -13494,6 +15508,31 @@ class $$ShotsTableFilterComposer extends Composer<_$AppDatabase, $ShotsTable> {
           }) => $$VideoTasksTableFilterComposer(
             $db: $db,
             $table: $db.videoTasks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> shotRevisionsRefs(
+    Expression<bool> Function($$ShotRevisionsTableFilterComposer f) f,
+  ) {
+    final $$ShotRevisionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.shotRevisions,
+      getReferencedColumn: (t) => t.shotId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShotRevisionsTableFilterComposer(
+            $db: $db,
+            $table: $db.shotRevisions,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -13767,6 +15806,31 @@ class $$ShotsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> shotRevisionsRefs<T extends Object>(
+    Expression<T> Function($$ShotRevisionsTableAnnotationComposer a) f,
+  ) {
+    final $$ShotRevisionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.shotRevisions,
+      getReferencedColumn: (t) => t.shotId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShotRevisionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shotRevisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ShotsTableTableManager
@@ -13787,6 +15851,7 @@ class $$ShotsTableTableManager
             bool shotFramesRefs,
             bool assetRefsRefs,
             bool videoTasksRefs,
+            bool shotRevisionsRefs,
           })
         > {
   $$ShotsTableTableManager(_$AppDatabase db, $ShotsTable table)
@@ -13882,6 +15947,7 @@ class $$ShotsTableTableManager
                 shotFramesRefs = false,
                 assetRefsRefs = false,
                 videoTasksRefs = false,
+                shotRevisionsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -13889,6 +15955,7 @@ class $$ShotsTableTableManager
                     if (shotFramesRefs) db.shotFrames,
                     if (assetRefsRefs) db.assetRefs,
                     if (videoTasksRefs) db.videoTasks,
+                    if (shotRevisionsRefs) db.shotRevisions,
                   ],
                   addJoins:
                       <
@@ -13973,6 +16040,27 @@ class $$ShotsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (shotRevisionsRefs)
+                        await $_getPrefetchedData<
+                          Shot,
+                          $ShotsTable,
+                          ShotRevision
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShotsTableReferences
+                              ._shotRevisionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShotsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).shotRevisionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shotId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -13998,6 +16086,7 @@ typedef $$ShotsTableProcessedTableManager =
         bool shotFramesRefs,
         bool assetRefsRefs,
         bool videoTasksRefs,
+        bool shotRevisionsRefs,
       })
     >;
 typedef $$ShotFramesTableCreateCompanionBuilder = ShotFramesCompanion Function({
@@ -15513,6 +17602,1187 @@ typedef $$ProviderConfigsTableProcessedTableManager =
       ProviderConfig,
       PrefetchHooks Function()
     >;
+typedef $$ShotRevisionsTableCreateCompanionBuilder =
+    ShotRevisionsCompanion Function({
+      Value<int> id,
+      required int shotId,
+      required int revision,
+      Value<String> state,
+      required String kind,
+      Value<String> snapshot,
+      Value<String> summary,
+      Value<DateTime> createdAt,
+    });
+typedef $$ShotRevisionsTableUpdateCompanionBuilder =
+    ShotRevisionsCompanion Function({
+      Value<int> id,
+      Value<int> shotId,
+      Value<int> revision,
+      Value<String> state,
+      Value<String> kind,
+      Value<String> snapshot,
+      Value<String> summary,
+      Value<DateTime> createdAt,
+    });
+
+final class $$ShotRevisionsTableReferences
+    extends BaseReferences<_$AppDatabase, $ShotRevisionsTable, ShotRevision> {
+  $$ShotRevisionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShotsTable _shotIdTable(_$AppDatabase db) =>
+      db.shots.createAlias('shot_revisions__shot_id__shots__id');
+
+  $$ShotsTableProcessedTableManager get shotId {
+    final $_column = $_itemColumn<int>('shot_id')!;
+
+    final manager = $$ShotsTableTableManager(
+      $_db,
+      $_db.shots,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shotIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ShotRevisionsTableFilterComposer
+    extends Composer<_$AppDatabase, $ShotRevisionsTable> {
+  $$ShotRevisionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get snapshot => $composableBuilder(
+    column: $table.snapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShotsTableFilterComposer get shotId {
+    final $$ShotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shotId,
+      referencedTable: $db.shots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShotsTableFilterComposer(
+            $db: $db,
+            $table: $db.shots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ShotRevisionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ShotRevisionsTable> {
+  $$ShotRevisionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get snapshot => $composableBuilder(
+    column: $table.snapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShotsTableOrderingComposer get shotId {
+    final $$ShotsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shotId,
+      referencedTable: $db.shots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShotsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ShotRevisionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ShotRevisionsTable> {
+  $$ShotRevisionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get snapshot =>
+      $composableBuilder(column: $table.snapshot, builder: (column) => column);
+
+  GeneratedColumn<String> get summary =>
+      $composableBuilder(column: $table.summary, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ShotsTableAnnotationComposer get shotId {
+    final $$ShotsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shotId,
+      referencedTable: $db.shots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShotsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ShotRevisionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ShotRevisionsTable,
+          ShotRevision,
+          $$ShotRevisionsTableFilterComposer,
+          $$ShotRevisionsTableOrderingComposer,
+          $$ShotRevisionsTableAnnotationComposer,
+          $$ShotRevisionsTableCreateCompanionBuilder,
+          $$ShotRevisionsTableUpdateCompanionBuilder,
+          (ShotRevision, $$ShotRevisionsTableReferences),
+          ShotRevision,
+          PrefetchHooks Function({bool shotId})
+        > {
+  $$ShotRevisionsTableTableManager(_$AppDatabase db, $ShotRevisionsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ShotRevisionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ShotRevisionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ShotRevisionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shotId = const Value.absent(),
+                Value<int> revision = const Value.absent(),
+                Value<String> state = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> snapshot = const Value.absent(),
+                Value<String> summary = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ShotRevisionsCompanion(
+                id: id,
+                shotId: shotId,
+                revision: revision,
+                state: state,
+                kind: kind,
+                snapshot: snapshot,
+                summary: summary,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shotId,
+                required int revision,
+                Value<String> state = const Value.absent(),
+                required String kind,
+                Value<String> snapshot = const Value.absent(),
+                Value<String> summary = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ShotRevisionsCompanion.insert(
+                id: id,
+                shotId: shotId,
+                revision: revision,
+                state: state,
+                kind: kind,
+                snapshot: snapshot,
+                summary: summary,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ShotRevisionsTable, ShotRevision>(table),
+                  $$ShotRevisionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({shotId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (shotId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.shotId,
+                        referencedTable: $$ShotRevisionsTableReferences
+                            ._shotIdTable(db),
+                        referencedColumn: $$ShotRevisionsTableReferences
+                            ._shotIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ShotRevisionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ShotRevisionsTable,
+      ShotRevision,
+      $$ShotRevisionsTableFilterComposer,
+      $$ShotRevisionsTableOrderingComposer,
+      $$ShotRevisionsTableAnnotationComposer,
+      $$ShotRevisionsTableCreateCompanionBuilder,
+      $$ShotRevisionsTableUpdateCompanionBuilder,
+      (ShotRevision, $$ShotRevisionsTableReferences),
+      ShotRevision,
+      PrefetchHooks Function({bool shotId})
+    >;
+typedef $$AssetRevisionsTableCreateCompanionBuilder =
+    AssetRevisionsCompanion Function({
+      Value<int> id,
+      required int assetId,
+      required int revision,
+      Value<String> state,
+      required String kind,
+      Value<String> snapshot,
+      Value<String> summary,
+      Value<DateTime> createdAt,
+    });
+typedef $$AssetRevisionsTableUpdateCompanionBuilder =
+    AssetRevisionsCompanion Function({
+      Value<int> id,
+      Value<int> assetId,
+      Value<int> revision,
+      Value<String> state,
+      Value<String> kind,
+      Value<String> snapshot,
+      Value<String> summary,
+      Value<DateTime> createdAt,
+    });
+
+final class $$AssetRevisionsTableReferences
+    extends BaseReferences<_$AppDatabase, $AssetRevisionsTable, AssetRevision> {
+  $$AssetRevisionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $AssetsTable _assetIdTable(_$AppDatabase db) =>
+      db.assets.createAlias('asset_revisions__asset_id__assets__id');
+
+  $$AssetsTableProcessedTableManager get assetId {
+    final $_column = $_itemColumn<int>('asset_id')!;
+
+    final manager = $$AssetsTableTableManager(
+      $_db,
+      $_db.assets,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_assetIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$AssetRevisionsTableFilterComposer
+    extends Composer<_$AppDatabase, $AssetRevisionsTable> {
+  $$AssetRevisionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get snapshot => $composableBuilder(
+    column: $table.snapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$AssetsTableFilterComposer get assetId {
+    final $$AssetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetsTableFilterComposer(
+            $db: $db,
+            $table: $db.assets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AssetRevisionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AssetRevisionsTable> {
+  $$AssetRevisionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get snapshot => $composableBuilder(
+    column: $table.snapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$AssetsTableOrderingComposer get assetId {
+    final $$AssetsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetsTableOrderingComposer(
+            $db: $db,
+            $table: $db.assets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AssetRevisionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AssetRevisionsTable> {
+  $$AssetRevisionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get snapshot =>
+      $composableBuilder(column: $table.snapshot, builder: (column) => column);
+
+  GeneratedColumn<String> get summary =>
+      $composableBuilder(column: $table.summary, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$AssetsTableAnnotationComposer get assetId {
+    final $$AssetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.assets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AssetRevisionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AssetRevisionsTable,
+          AssetRevision,
+          $$AssetRevisionsTableFilterComposer,
+          $$AssetRevisionsTableOrderingComposer,
+          $$AssetRevisionsTableAnnotationComposer,
+          $$AssetRevisionsTableCreateCompanionBuilder,
+          $$AssetRevisionsTableUpdateCompanionBuilder,
+          (AssetRevision, $$AssetRevisionsTableReferences),
+          AssetRevision,
+          PrefetchHooks Function({bool assetId})
+        > {
+  $$AssetRevisionsTableTableManager(
+    _$AppDatabase db,
+    $AssetRevisionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AssetRevisionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AssetRevisionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AssetRevisionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> assetId = const Value.absent(),
+                Value<int> revision = const Value.absent(),
+                Value<String> state = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> snapshot = const Value.absent(),
+                Value<String> summary = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => AssetRevisionsCompanion(
+                id: id,
+                assetId: assetId,
+                revision: revision,
+                state: state,
+                kind: kind,
+                snapshot: snapshot,
+                summary: summary,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int assetId,
+                required int revision,
+                Value<String> state = const Value.absent(),
+                required String kind,
+                Value<String> snapshot = const Value.absent(),
+                Value<String> summary = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => AssetRevisionsCompanion.insert(
+                id: id,
+                assetId: assetId,
+                revision: revision,
+                state: state,
+                kind: kind,
+                snapshot: snapshot,
+                summary: summary,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$AssetRevisionsTable, AssetRevision>(table),
+                  $$AssetRevisionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({assetId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (assetId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.assetId,
+                        referencedTable: $$AssetRevisionsTableReferences
+                            ._assetIdTable(db),
+                        referencedColumn: $$AssetRevisionsTableReferences
+                            ._assetIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$AssetRevisionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AssetRevisionsTable,
+      AssetRevision,
+      $$AssetRevisionsTableFilterComposer,
+      $$AssetRevisionsTableOrderingComposer,
+      $$AssetRevisionsTableAnnotationComposer,
+      $$AssetRevisionsTableCreateCompanionBuilder,
+      $$AssetRevisionsTableUpdateCompanionBuilder,
+      (AssetRevision, $$AssetRevisionsTableReferences),
+      AssetRevision,
+      PrefetchHooks Function({bool assetId})
+    >;
+typedef $$GenerationAttemptsTableCreateCompanionBuilder =
+    GenerationAttemptsCompanion Function({
+      Value<int> id,
+      Value<int?> projectId,
+      required String subjectType,
+      Value<int?> subjectId,
+      Value<String> subjectLabel,
+      required String prompt,
+      Value<String> params,
+      Value<String> refs,
+      Value<String> before,
+      Value<int> attemptNo,
+      Value<int> grantLimit,
+      Value<String> grantFingerprint,
+      Value<String> status,
+      Value<String?> resultPath,
+      Value<String?> errorMessage,
+      Value<DateTime> createdAt,
+    });
+typedef $$GenerationAttemptsTableUpdateCompanionBuilder =
+    GenerationAttemptsCompanion Function({
+      Value<int> id,
+      Value<int?> projectId,
+      Value<String> subjectType,
+      Value<int?> subjectId,
+      Value<String> subjectLabel,
+      Value<String> prompt,
+      Value<String> params,
+      Value<String> refs,
+      Value<String> before,
+      Value<int> attemptNo,
+      Value<int> grantLimit,
+      Value<String> grantFingerprint,
+      Value<String> status,
+      Value<String?> resultPath,
+      Value<String?> errorMessage,
+      Value<DateTime> createdAt,
+    });
+
+class $$GenerationAttemptsTableFilterComposer
+    extends Composer<_$AppDatabase, $GenerationAttemptsTable> {
+  $$GenerationAttemptsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get projectId => $composableBuilder(
+    column: $table.projectId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subjectType => $composableBuilder(
+    column: $table.subjectType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get subjectId => $composableBuilder(
+    column: $table.subjectId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subjectLabel => $composableBuilder(
+    column: $table.subjectLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get prompt => $composableBuilder(
+    column: $table.prompt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get params => $composableBuilder(
+    column: $table.params,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get refs => $composableBuilder(
+    column: $table.refs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get before => $composableBuilder(
+    column: $table.before,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get attemptNo => $composableBuilder(
+    column: $table.attemptNo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get grantLimit => $composableBuilder(
+    column: $table.grantLimit,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get grantFingerprint => $composableBuilder(
+    column: $table.grantFingerprint,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get resultPath => $composableBuilder(
+    column: $table.resultPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get errorMessage => $composableBuilder(
+    column: $table.errorMessage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GenerationAttemptsTableOrderingComposer
+    extends Composer<_$AppDatabase, $GenerationAttemptsTable> {
+  $$GenerationAttemptsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get projectId => $composableBuilder(
+    column: $table.projectId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subjectType => $composableBuilder(
+    column: $table.subjectType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get subjectId => $composableBuilder(
+    column: $table.subjectId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subjectLabel => $composableBuilder(
+    column: $table.subjectLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get prompt => $composableBuilder(
+    column: $table.prompt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get params => $composableBuilder(
+    column: $table.params,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get refs => $composableBuilder(
+    column: $table.refs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get before => $composableBuilder(
+    column: $table.before,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get attemptNo => $composableBuilder(
+    column: $table.attemptNo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get grantLimit => $composableBuilder(
+    column: $table.grantLimit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get grantFingerprint => $composableBuilder(
+    column: $table.grantFingerprint,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get resultPath => $composableBuilder(
+    column: $table.resultPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get errorMessage => $composableBuilder(
+    column: $table.errorMessage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GenerationAttemptsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GenerationAttemptsTable> {
+  $$GenerationAttemptsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get projectId =>
+      $composableBuilder(column: $table.projectId, builder: (column) => column);
+
+  GeneratedColumn<String> get subjectType => $composableBuilder(
+    column: $table.subjectType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get subjectId =>
+      $composableBuilder(column: $table.subjectId, builder: (column) => column);
+
+  GeneratedColumn<String> get subjectLabel => $composableBuilder(
+    column: $table.subjectLabel,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get prompt =>
+      $composableBuilder(column: $table.prompt, builder: (column) => column);
+
+  GeneratedColumn<String> get params =>
+      $composableBuilder(column: $table.params, builder: (column) => column);
+
+  GeneratedColumn<String> get refs =>
+      $composableBuilder(column: $table.refs, builder: (column) => column);
+
+  GeneratedColumn<String> get before =>
+      $composableBuilder(column: $table.before, builder: (column) => column);
+
+  GeneratedColumn<int> get attemptNo =>
+      $composableBuilder(column: $table.attemptNo, builder: (column) => column);
+
+  GeneratedColumn<int> get grantLimit => $composableBuilder(
+    column: $table.grantLimit,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get grantFingerprint => $composableBuilder(
+    column: $table.grantFingerprint,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get resultPath => $composableBuilder(
+    column: $table.resultPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get errorMessage => $composableBuilder(
+    column: $table.errorMessage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$GenerationAttemptsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GenerationAttemptsTable,
+          GenerationAttempt,
+          $$GenerationAttemptsTableFilterComposer,
+          $$GenerationAttemptsTableOrderingComposer,
+          $$GenerationAttemptsTableAnnotationComposer,
+          $$GenerationAttemptsTableCreateCompanionBuilder,
+          $$GenerationAttemptsTableUpdateCompanionBuilder,
+          (
+            GenerationAttempt,
+            BaseReferences<
+              _$AppDatabase,
+              $GenerationAttemptsTable,
+              GenerationAttempt
+            >,
+          ),
+          GenerationAttempt,
+          PrefetchHooks Function()
+        > {
+  $$GenerationAttemptsTableTableManager(
+    _$AppDatabase db,
+    $GenerationAttemptsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GenerationAttemptsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GenerationAttemptsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GenerationAttemptsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> projectId = const Value.absent(),
+                Value<String> subjectType = const Value.absent(),
+                Value<int?> subjectId = const Value.absent(),
+                Value<String> subjectLabel = const Value.absent(),
+                Value<String> prompt = const Value.absent(),
+                Value<String> params = const Value.absent(),
+                Value<String> refs = const Value.absent(),
+                Value<String> before = const Value.absent(),
+                Value<int> attemptNo = const Value.absent(),
+                Value<int> grantLimit = const Value.absent(),
+                Value<String> grantFingerprint = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> resultPath = const Value.absent(),
+                Value<String?> errorMessage = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => GenerationAttemptsCompanion(
+                id: id,
+                projectId: projectId,
+                subjectType: subjectType,
+                subjectId: subjectId,
+                subjectLabel: subjectLabel,
+                prompt: prompt,
+                params: params,
+                refs: refs,
+                before: before,
+                attemptNo: attemptNo,
+                grantLimit: grantLimit,
+                grantFingerprint: grantFingerprint,
+                status: status,
+                resultPath: resultPath,
+                errorMessage: errorMessage,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> projectId = const Value.absent(),
+                required String subjectType,
+                Value<int?> subjectId = const Value.absent(),
+                Value<String> subjectLabel = const Value.absent(),
+                required String prompt,
+                Value<String> params = const Value.absent(),
+                Value<String> refs = const Value.absent(),
+                Value<String> before = const Value.absent(),
+                Value<int> attemptNo = const Value.absent(),
+                Value<int> grantLimit = const Value.absent(),
+                Value<String> grantFingerprint = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> resultPath = const Value.absent(),
+                Value<String?> errorMessage = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => GenerationAttemptsCompanion.insert(
+                id: id,
+                projectId: projectId,
+                subjectType: subjectType,
+                subjectId: subjectId,
+                subjectLabel: subjectLabel,
+                prompt: prompt,
+                params: params,
+                refs: refs,
+                before: before,
+                attemptNo: attemptNo,
+                grantLimit: grantLimit,
+                grantFingerprint: grantFingerprint,
+                status: status,
+                resultPath: resultPath,
+                errorMessage: errorMessage,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$GenerationAttemptsTable, GenerationAttempt>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $GenerationAttemptsTable,
+                    GenerationAttempt
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GenerationAttemptsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GenerationAttemptsTable,
+      GenerationAttempt,
+      $$GenerationAttemptsTableFilterComposer,
+      $$GenerationAttemptsTableOrderingComposer,
+      $$GenerationAttemptsTableAnnotationComposer,
+      $$GenerationAttemptsTableCreateCompanionBuilder,
+      $$GenerationAttemptsTableUpdateCompanionBuilder,
+      (
+        GenerationAttempt,
+        BaseReferences<
+          _$AppDatabase,
+          $GenerationAttemptsTable,
+          GenerationAttempt
+        >,
+      ),
+      GenerationAttempt,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -15547,4 +18817,10 @@ class $AppDatabaseManager {
       $$VideoTasksTableTableManager(_db, _db.videoTasks);
   $$ProviderConfigsTableTableManager get providerConfigs =>
       $$ProviderConfigsTableTableManager(_db, _db.providerConfigs);
+  $$ShotRevisionsTableTableManager get shotRevisions =>
+      $$ShotRevisionsTableTableManager(_db, _db.shotRevisions);
+  $$AssetRevisionsTableTableManager get assetRevisions =>
+      $$AssetRevisionsTableTableManager(_db, _db.assetRevisions);
+  $$GenerationAttemptsTableTableManager get generationAttempts =>
+      $$GenerationAttemptsTableTableManager(_db, _db.generationAttempts);
 }

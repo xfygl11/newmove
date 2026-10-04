@@ -106,6 +106,7 @@ class _AssetGalleryPageState extends ConsumerState<AssetGalleryPage> {
     if (!await ConfirmSheet.confirm(
       context,
       objectName: '资产清单提取',
+      gate: '资产清单提取（产出的资产需逐条验收后才可生成图片）',
       quantity: '1 次提取',
       promptPreview: prompt,
       params: ['供应商：${llm.provider.label}', '模型：${llm.modelId}'],

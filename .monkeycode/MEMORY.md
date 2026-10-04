@@ -79,9 +79,20 @@ Entries discovered by the Agent during task execution should follow this format:
 - Context: 每次改动后最小验证
 - Category: Testing Methods
 - Instructions:
-  - 跑核心测试（约 35 秒）：`/opt/flutter/bin/flutter test test/novel_service_test.dart test/backup_service_test.dart test/daos_test.dart test/truth_file_store_test.dart`
-  - 全量 `flutter test` 曾超时，优先跑核心四个文件
-  - 当前基线：18/18 通过，`flutter analyze` 零问题
+  - 跑核心测试（约 35 秒）：`/opt/flutter/bin/flutter test test/novel_service_test.dart test/backup_service_test.dart test/daos_test.dart test/truth_file_store_test.dart test/revision_and_attempt_test.dart`
+  - 全量 `/opt/flutter/bin/flutter test` 约 7 分钟、峰值约 1.5 GiB，用 background terminal + `memory_percent: 60` 跑
+  - 当前基线：22 例新增（`test/revision_and_attempt_test.dart`）+ 全量约 174 例全通过，`/opt/flutter/bin/dart analyze` 零问题
+
+[drift 2.35 更新语义与 Companion 限制（踩坑记录）]
+- Date: 2026-10-04
+- Context: 给 `GenerationAttemptDao.finishAttempt` 增加可选回写字段时发现
+- Category: Build & Compilation
+- Instructions:
+  - **更新时 `Value(null)` 是显式置 NULL，不是「跳过该列」**：`finishAttempt` 里写 `subjectId: Value(null)` 会把已有关联 id 清成空值，导致 `listBySubject` 查不到行。可选字段必须写成 `subjectId == null ? const Value.absent() : Value(subjectId)`
+  - `Companion` 字段全是 `final`，**没有 setter**，不能 `companion.x = ...` 分步赋值；有默认值的列参数类型是 `Value<T>?` 但默认值是 `const Value.absent()`，传 `null` 会报类型错误，只能用 `const Value.absent()`
+  - `Companion` 上**没有 `count()` 方法**，统计用 `select().get().length`
+  - `GeneratedCompanion` 不是类，需要降级写入时用具体类型的 Companion（如 `ShotRevisionsCompanion`）
+  - 带默认值的列在 `Companion.insert` 里参数类型是 `Value<String>`（要包 `Value(...)`），无默认值的必填列直接收 `String`；nullable 且非必填（如 `subjectLabel`）传 `String?` 时必须用 `Value.absent()` 分支，否则报 `String? → String` 不匹配
 
 [纯 Dart 语义与依赖 API 的本地验证方法]
 - Date: 2026-10-04

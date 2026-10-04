@@ -9,6 +9,8 @@ import '../../data/daos/chapter_revision_dao.dart';
 import '../../data/daos/novel_dao.dart';
 import '../../data/daos/project_dao.dart';
 import '../../data/daos/provider_dao.dart';
+import '../../data/daos/revision_dao.dart';
+import '../../data/daos/generation_attempt_dao.dart';
 import '../../data/daos/scene_dao.dart';
 import '../../data/daos/script_dao.dart';
 import '../../data/daos/script_revision_dao.dart';
@@ -87,6 +89,14 @@ final shotFrameDaoProvider = Provider<ShotFrameDao>(
 
 final videoTaskDaoProvider = Provider<VideoTaskDao>(
   (ref) => ref.watch(databaseProvider).videoTaskDao,
+);
+
+final revisionDaoProvider = Provider<RevisionDao>(
+  (ref) => ref.watch(databaseProvider).revisionDao,
+);
+
+final generationAttemptDaoProvider = Provider<GenerationAttemptDao>(
+  (ref) => ref.watch(databaseProvider).generationAttemptDao,
 );
 
 final secureKeyStoreProvider = Provider<SecureKeyStore>(

@@ -271,3 +271,76 @@ class ScriptRevisions extends Table {
   TextColumn get content => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
+
+/// 镜头产物版本快照（M14 T16.6）：重新导演 / 重新生成分镜图 / 生成视频后，
+/// 把当时的完整产物快照存档。`state` 只有 `current` 与 `superseded` 两态，
+/// 同一镜头至多一条 `current`；实体的 `status` 字段承担「待验收 / 已采用」生命周期，
+/// 快照表不重复建模。
+@DataClassName('ShotRevision')
+class ShotRevisions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get shotId => integer().references(Shots, #id)();
+  IntColumn get revision => integer()();
+  // current / superseded
+  TextColumn get state => text().withDefault(const Constant('current'))();
+  // 快照类型：direction / image / video。
+  TextColumn get kind => text()();
+  // 该镜头当时的完整产物（prompt / status / outputPath / 帧 / 参考绑定）。
+  TextColumn get snapshot => text().withDefault(const Constant('{}'))();
+  // 摘要，供列表页展示不必解包 snapshot。
+  TextColumn get summary => text().withDefault(const Constant(''))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// 资产产物版本快照（M14 T16.6）。语义同 ShotRevisions。
+@DataClassName('AssetRevision')
+class AssetRevisions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get assetId => integer().references(Assets, #id)();
+  IntColumn get revision => integer()();
+  // current / superseded
+  TextColumn get state => text().withDefault(const Constant('current'))();
+  // 快照类型：prompt / image / edit。
+  TextColumn get kind => text()();
+  // 该资产当时的完整产物（name / prompt / imagePath / appearanceAnchor / variantOf）。
+  TextColumn get snapshot => text().withDefault(const Constant('{}'))();
+  TextColumn get summary => text().withDefault(const Constant(''))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// 生成尝试台账（M14 T16.5.4，对齐 Toonflow 8 列）：每次消耗算力的调用都落一行。
+/// 提示词、参数、引用与授权在调用前写入，之后的编辑不回写这一行，
+/// 因此可以事后查证「当时到底用的是什么提示词和参考图」。
+@DataClassName('GenerationAttempt')
+class GenerationAttempts extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // 归属项目，便于全库备份与按项目清理。
+  IntColumn get projectId => integer().nullable()();
+  // 对象类型：novel_plan / novel_write / novel_review / novel_settle /
+  // script_adapt / skeleton_extract / asset_extract / shot_image / shot_video。
+  TextColumn get subjectType => text()();
+  // 对象 id（生成前不存在的对象为 null）。
+  IntColumn get subjectId => integer().nullable()();
+  // 对象的可读名（如「第 3 章」「G02」「主角」）。
+  TextColumn get subjectLabel => text().withDefault(const Constant(''))();
+  // 本次实际使用的完整提示词（裁剪后）。
+  TextColumn get prompt => text()();
+  // JSON：{ model, providerName, temperature, maxToken, size, ... }。
+  TextColumn get params => text().withDefault(const Constant('{}'))();
+  // JSON 数组，按传入顺序：[{ assetId, name, role, variantOf }]。
+  TextColumn get refs => text().withDefault(const Constant('[]'))();
+  // JSON：调用前的对象状态快照（如镜头当前 status / outputPath）。
+  TextColumn get before => text().withDefault(const Constant('{}'))();
+  // 本次为对象的第几次尝试。
+  IntColumn get attemptNo => integer().withDefault(const Constant(1))();
+  // 授权范围：本次确认允许的最大执行次数（1 = 单个，N = 批量）。
+  IntColumn get grantLimit => integer().withDefault(const Constant(1))();
+  // 授权对象指纹（数量 / 提示词 / 模式 / 引用顺序的摘要），用于临执行复核比对。
+  TextColumn get grantFingerprint => text().withDefault(const Constant(''))();
+  // pending / running / succeeded / failed / cancelled。
+  TextColumn get status => text().withDefault(const Constant('pending'))();
+  // 实际落盘的文件路径（图片或视频）。
+  TextColumn get resultPath => text().nullable()();
+  TextColumn get errorMessage => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}

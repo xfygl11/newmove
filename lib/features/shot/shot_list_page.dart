@@ -216,6 +216,7 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
     if (!await ConfirmSheet.confirm(
       context,
       objectName: '分镜提示词',
+      gate: '重新导演（覆盖全部镜头的分镜提示词与帧）',
       quantity: '${shots.length} 个镜头',
       promptPreview: prompt,
       params: ['供应商：${llm.provider.label}', '模型：${llm.modelId}'],
@@ -260,6 +261,7 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
     if (!await ConfirmSheet.confirm(
       context,
       objectName: '批量分镜图',
+      gate: '批量分镜图生成（小样不代表批量，验收需单独进行）',
       quantity: '${ids.length} 次生成',
       promptPreview: shots
           .map((s) => '${s.globalSeq}：${s.prompt}')

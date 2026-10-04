@@ -9,6 +9,7 @@ import 'package:drift/drift.dart' show Value;
 import '../../agent/active_image.dart';
 import '../../agent/active_llm.dart';
 import '../../agent/active_video.dart';
+import '../../core/json_values.dart';
 import '../../core/network/image_provider_adapter.dart';
 import '../../core/network/video_provider_adapter.dart';
 import '../../core/storage/shot_file_store.dart';
@@ -17,6 +18,8 @@ import '../../data/app_database.dart';
 import '../../data/daos/asset_dao.dart';
 import '../../data/daos/asset_ref_dao.dart';
 import '../../data/daos/beat_dao.dart';
+import '../../data/daos/generation_attempt_dao.dart';
+import '../../data/daos/revision_dao.dart';
 import '../../data/daos/scene_dao.dart';
 import '../../data/daos/script_dao.dart';
 import '../../data/daos/shot_dao.dart';
@@ -46,6 +49,8 @@ class ShotService {
     required this.videoFileStore,
     required this.videoTaskDao,
     required this.providerDao,
+    this.revisionDao,
+    this.attemptDao,
   });
 
   final ScriptDao scriptDao;
@@ -63,6 +68,12 @@ class ShotService {
   final VideoTaskDao videoTaskDao;
   final ProviderDao providerDao;
 
+  /// 产物版本快照（M14 T16.6）。未注入时跳过。
+  final RevisionDao? revisionDao;
+
+  /// 生成尝试台账（M14 T16.5.4）。未注入时跳过。
+  final GenerationAttemptDao? attemptDao;
+
   /// 数据库实例：多表重建统一走 [AppDatabase.transaction]。
   final AppDatabase db;
 
@@ -77,6 +88,167 @@ class ShotService {
 
   /// 正在轮询的任务：taskId → 进行中的 Future（去重锁）。
   static final Map<int, Future<VideoTask>> _pollingTasks = {};
+
+  // ---- 产物版本快照与生成尝试台账（M14 T16.6 / T16.5.4） ----
+
+  /// 组装镜头产物快照：提示词 / 状态 / 产物路径 / 帧 / 参考绑定。
+  Future<String> snapshotOf(Shot shot) async {
+    final frames = await shotFrameDao.listByShot(shot.id);
+    final refs = await assetRefDao.listByShot(shot.id);
+    final assets = {
+      for (final a in await assetDao.listByScript(shot.scriptId)) a.id: a,
+    };
+    return jsonEncode({
+      'globalSeq': shot.globalSeq,
+      'batch': shot.batch,
+      'durationMs': shot.durationMs,
+      'timeRange': shot.globalTimeRange,
+      'beatRefs': jsonList(shot.beatRefs),
+      'shotType': shot.shotType,
+      'sceneId': shot.sceneId,
+      'prompt': shot.prompt,
+      'status': shot.status,
+      'outputPath': shot.outputPath,
+      'outputType': shot.outputType,
+      'frames': [
+        for (final f in frames)
+          {
+            {
+              'seq': f.seq,
+              'timeRange': f.timeRange,
+              'subject': f.subject,
+              'shotSize': f.shotSize,
+              'angle': f.angle,
+              'camera': f.camera,
+              'blocking': f.blocking,
+              'performance': f.performance,
+              'dialogue': f.dialogue,
+            },
+          },
+      ],
+      'refs': [
+        for (final r in refs)
+          {
+            {
+              'assetId': r.assetId,
+              'name': assets[r.assetId]?.name,
+              'role': r.role,
+              'order': r.order,
+            },
+          },
+      ],
+    });
+  }
+
+  /// 保存一次产物快照；未注入 RevisionDao 时静默跳过。
+  Future<void> _saveShotSnapshot(
+    int shotId,
+    String kind,
+    String summary,
+  ) async {
+    final dao = revisionDao;
+    if (dao == null) return;
+    final shot = await shotDao.find(shotId);
+    if (shot == null) return;
+    try {
+      await dao.saveShot(
+        shotId: shotId,
+        kind: kind,
+        snapshot: await snapshotOf(shot),
+        summary: summary,
+      );
+    } catch (_) {
+      // 快照失败不得阻塞生成主流程。
+    }
+  }
+
+  /// 登记一次生成尝试：返回台账 id，用于结束后回写结果；未注入时返回 null。
+  Future<int?> _recordAttempt({
+    required String subjectType,
+    required int subjectId,
+    required String subjectLabel,
+    required String prompt,
+    required String params,
+    List<Map<String, dynamic>> refs = const [],
+    Map<String, dynamic> before = const {},
+    int grantLimit = 1,
+    int? projectId,
+  }) async {
+    final dao = attemptDao;
+    if (dao == null) return null;
+    try {
+      return await dao.insert(
+        GenerationAttemptsCompanion.insert(
+          projectId: Value(projectId),
+          subjectType: subjectType,
+          subjectId: Value(subjectId),
+          subjectLabel: Value(subjectLabel),
+          prompt: prompt,
+          params: Value(params),
+          refs: Value(jsonEncode(refs)),
+          before: Value(jsonEncode(before)),
+          attemptNo: Value(await dao.nextAttemptNo(subjectType, subjectId)),
+          grantLimit: Value(grantLimit),
+          grantFingerprint: Value(
+            _fingerprint(subjectType, subjectId, prompt, refs, grantLimit),
+          ),
+          status: const Value(AttemptStatuses.running),
+        ),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 回写尝试结果。
+  Future<void> _finishAttempt({
+    int? id,
+    required String status,
+    String? resultPath,
+    String? error,
+  }) async {
+    final dao = attemptDao;
+    if (dao == null || id == null) return;
+    try {
+      await dao.finishAttempt(
+        id: id,
+        status: status,
+        resultPath: resultPath,
+        errorMessage: error,
+      );
+    } catch (_) {
+      // 台账回写失败不影响主流程。
+    }
+  }
+
+  /// 授权指纹：数量 / 提示词 / 模式 / 引用顺序的摘要，供临执行复核比对。
+  static String _fingerprint(
+    String subjectType,
+    int subjectId,
+    String prompt,
+    List<Map<String, dynamic>> refs,
+    int grantLimit,
+  ) {
+    final sb = StringBuffer('$subjectType|$subjectId|$grantLimit|');
+    sb.write(refs.map((r) => '${r['assetId']}:${r['role']}').join(','));
+    sb.write('|');
+    sb.write(prompt.length > 300 ? prompt.substring(0, 300) : prompt);
+    return Object.hashAll(sb.toString().codeUnits).toRadixString(16);
+  }
+
+  /// 组装镜头参考文件台账行，顺序即上传顺序。
+  Future<List<Map<String, dynamic>>> _refRowsOf(Shot shot) async {
+    final refs = await assetRefDao.listByShot(shot.id);
+    return [
+      for (final r in refs)
+        {
+          'assetId': r.assetId,
+          'role': r.role,
+          'order': r.order,
+          'variantOf': (await assetDao.find(r.assetId))?.variantOf,
+        },
+    ];
+  }
 
   // ---- 分镜提示词（T6.2 / T6.3） ----
 
@@ -148,7 +320,23 @@ class ShotService {
     required ActiveLlm llm,
   }) async {
     final context = await buildDirectionContext(scriptId);
+    final directionAttempt = await _recordAttempt(
+      subjectType: AttemptSubjects.shotDirection,
+      subjectId: scriptId,
+      subjectLabel: '剧本 #$scriptId 重新导演',
+      prompt: context,
+      params: jsonEncode({
+        'provider': llm.provider.label,
+        'model': llm.modelId,
+        'maxOutputTokens': llm.model.maxOutputTokens,
+        'budgetTokens': llm.budgetTokens,
+      }),
+    );
     final result = await agents.direct(prompt: context, llm: llm);
+    await _finishAttempt(
+      id: directionAttempt,
+      status: AttemptStatuses.succeeded,
+    );
 
     final shots = await shotDao.listByScript(scriptId);
     final drafts = _matchDrafts(result.shots, shots);
@@ -218,6 +406,13 @@ class ShotService {
         }
       }
 
+      for (final draft in drafts) {
+        await _saveShotSnapshot(
+          shots.firstWhere((s) => s.globalSeq == draft.globalSeq).id,
+          'direction',
+          '重新导演：提示词与帧已更新',
+        );
+      }
       return ShotDirectionSummary(
         shotCount: drafts.length,
         frameCount: frameCount,
@@ -238,6 +433,25 @@ class ShotService {
     if (shot == null) throw StateError('镜头不存在：$shotId');
     if (shot.prompt.isEmpty) throw StateError('镜头尚未生成分镜提示词');
 
+    // 台账在调用前写入：提示词、参数、参考顺序与调用前状态，之后的编辑不回写。
+    final prompt = await _resolvePrompt(
+      shot,
+      await assetRefDao.listByShot(shotId),
+    );
+    final attemptId = await _recordAttempt(
+      subjectType: AttemptSubjects.shotImage,
+      subjectId: shotId,
+      subjectLabel: shot.globalSeq,
+      prompt: prompt,
+      params: jsonEncode({
+        'provider': image.provider.label,
+        'model': image.modelId,
+        'protocol': image.protocol,
+      }),
+      refs: await _refRowsOf(shot),
+      before: {'status': shot.status, 'outputPath': shot.outputPath},
+    );
+
     await shotDao.updateById(
       shotId,
       ShotsCompanion(status: const Value(ShotStatuses.generating)),
@@ -256,18 +470,34 @@ class ShotService {
           status: const Value(ShotStatuses.reviewing),
         ),
       );
+      await _saveShotSnapshot(shotId, 'image', '分镜图已生成');
+      await _finishAttempt(
+        id: attemptId,
+        status: AttemptStatuses.succeeded,
+        resultPath: path,
+      );
       return (await shotDao.find(shotId))!;
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) {
         cancelToken?.cancel();
       }
+      await _finishAttempt(
+        id: attemptId,
+        status: AttemptStatuses.cancelled,
+        error: '已取消',
+      );
       // 失败回滚到「待分镜图」，保留提示词便于重试。
       await shotDao.updateById(
         shotId,
         ShotsCompanion(status: const Value(ShotStatuses.awaitingImage)),
       );
       rethrow;
-    } catch (_) {
+    } catch (e) {
+      await _finishAttempt(
+        id: attemptId,
+        status: AttemptStatuses.failed,
+        error: '$e',
+      );
       // 失败回滚到「待分镜图」，保留提示词便于重试。
       await shotDao.updateById(
         shotId,
@@ -570,6 +800,17 @@ class ShotService {
       durationSec: params.durationSec,
     );
 
+    // 台账在提交前写入：视频提示词与完整参数，供事后查证。
+    final attemptId = await _recordAttempt(
+      subjectType: AttemptSubjects.shotVideo,
+      subjectId: shotId,
+      subjectLabel: shot.globalSeq,
+      prompt: prompt,
+      params: jsonEncode(actualParams.encode()),
+      refs: await _refRowsOf(shot),
+      before: {'status': shot.status, 'outputPath': shot.outputPath},
+    );
+
     // 提交（状态：视频生成中）。
     await shotDao.updateById(
       shotId,
@@ -604,8 +845,14 @@ class ShotService {
           paramsJson: Value(actualParams.encode()),
         ),
       );
+      await _finishAttempt(id: attemptId, status: AttemptStatuses.succeeded);
       return (await videoTaskDao.find(id))!;
     } catch (e) {
+      await _finishAttempt(
+        id: attemptId,
+        status: AttemptStatuses.failed,
+        error: '$e',
+      );
       // 提交失败回滚镜头状态。
       await shotDao.updateById(
         shotId,
@@ -859,6 +1106,7 @@ class ShotService {
         status: const Value(ShotStatuses.videoDone),
       ),
     );
+    await _saveShotSnapshot(shotId, 'video', '手动替换视频：$path');
   }
 
   // ---- 验收与编辑 ----

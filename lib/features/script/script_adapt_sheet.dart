@@ -63,6 +63,7 @@ class _AdaptSheetState extends ConsumerState<AdaptSheet> {
     if (!await ConfirmSheet.confirm(
       context,
       objectName: widget.existing == null ? '新建剧本' : '重新改编',
+      gate: '剧本改编（产物需人工验收后才可提取骨架）',
       quantity: '${sourceTexts.length} 章原文',
       promptPreview: prompt,
       params: [

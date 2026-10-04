@@ -5,6 +5,7 @@ import 'package:drift/drift.dart' show Value;
 import '../../agent/active_llm.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/beat_dao.dart';
+import '../../data/daos/generation_attempt_dao.dart';
 import '../../data/daos/cascade_dao.dart';
 import '../../data/daos/scene_dao.dart';
 import '../../data/daos/script_dao.dart';
@@ -22,7 +23,8 @@ class SkeletonService {
     required this.shotDao,
     required this.cascadeDao,
     required this.agents,
-  });
+    GenerationAttemptDao? attemptDao,
+  }) : _attempts = attemptDao == null ? null : AttemptRecorder(attemptDao);
 
   final AppDatabase db;
   final ScriptDao scriptDao;
@@ -30,6 +32,41 @@ class SkeletonService {
   final BeatDao beatDao;
   final ShotDao shotDao;
   final CascadeDao cascadeDao;
+
+  /// 生成尝试台账；未注入时所有登记静默跳过。
+  final AttemptRecorder? _attempts;
+
+  static String _paramsOf(ActiveLlm llm) => jsonEncode({
+    'model': llm.modelId,
+    'provider': llm.provider.label,
+    'maxToken': llm.model.maxOutputTokens,
+    'budgetTokens': llm.budgetTokens,
+  });
+
+  Future<int?> _start({
+    required String subjectType,
+    int? subjectId,
+    required String subjectLabel,
+    required String prompt,
+    required String params,
+  }) {
+    final rec = _attempts;
+    if (rec == null) return Future.value(null);
+    return rec.start(
+      subjectType: subjectType,
+      subjectId: subjectId,
+      subjectLabel: subjectLabel,
+      prompt: prompt,
+      params: params,
+    );
+  }
+
+  Future<void> _finish(int? id, String status, {String? error}) async {
+    final rec = _attempts;
+    if (rec == null) return;
+    await rec.finish(id: id, status: status, error: error);
+  }
+
   final SkeletonAgents agents;
 
   /// 默认单段时长上限（Seedance 2.0 单段 15s）。
@@ -67,58 +104,70 @@ class SkeletonService {
       scenes: scenes,
       durationCapMs: durationCapMs,
     );
-    final result = await agents.extract(prompt: prompt, llm: llm);
-
-    final sceneIdBySeq = <int, int>{for (final s in scenes) s.seq: s.id};
-
-    // 删旧 + 插新整体包在事务内：中途失败整段回滚，不会留下空骨架。
-    await db.transaction(() async {
-      await cascadeDao.deleteSkeletonCascade(script.id);
-
-      for (var i = 0; i < result.beats.length; i++) {
-        final b = result.beats[i];
-        final sceneId = sceneIdBySeq[b.sceneSeq];
-        if (sceneId == null) {
-          // 场景引用无法解析时跳过，避免外键失败；由校验/日志暴露。
-          continue;
-        }
-        await beatDao.insert(
-          BeatsCompanion.insert(
-            sceneId: sceneId,
-            seq: i + 1,
-            type: b.type.isEmpty ? '动作' : b.type,
-            who: Value(b.who),
-            content: b.content,
-            object: Value(b.object.isEmpty ? null : b.object),
-            sourceRef: b.id.isEmpty ? 'E${i + 1}' : b.id,
-            estDurationMs: Value(b.estDurationMs),
-            tags: Value(jsonEncode(b.tags)),
-          ),
-        );
-      }
-
-      for (final seg in result.segments) {
-        await shotDao.insert(
-          ShotsCompanion.insert(
-            scriptId: script.id,
-            globalSeq: seg.id,
-            batch: Value(seg.batch),
-            durationMs: Value(seg.durationMs),
-            globalTimeRange: seg.globalTimeRange.isEmpty
-                ? '-'
-                : seg.globalTimeRange,
-            beatRefs: Value(jsonEncode(seg.beatRefs)),
-            assetStates: Value(jsonEncode(seg.assets.toJson())),
-          ),
-        );
-      }
-    });
-
-    return SkeletonExtractionSummary(
-      beatCount: result.beats.length,
-      segmentCount: result.segments.length,
-      globalDurationMs: result.globalDurationMs,
+    final attempt = await _start(
+      subjectType: AttemptSubjects.skeletonExtract,
+      subjectId: script.id,
+      subjectLabel: script.title,
+      prompt: prompt,
+      params: _paramsOf(llm),
     );
+    try {
+      final result = await agents.extract(prompt: prompt, llm: llm);
+      final sceneIdBySeq = <int, int>{for (final s in scenes) s.seq: s.id};
+
+      // 删旧 + 插新整体包在事务内：中途失败整段回滚，不会留下空骨架。
+      await db.transaction(() async {
+        await cascadeDao.deleteSkeletonCascade(script.id);
+
+        for (var i = 0; i < result.beats.length; i++) {
+          final b = result.beats[i];
+          final sceneId = sceneIdBySeq[b.sceneSeq];
+          if (sceneId == null) {
+            // 场景引用无法解析时跳过，避免外键失败；由校验/日志暴露。
+            continue;
+          }
+          await beatDao.insert(
+            BeatsCompanion.insert(
+              sceneId: sceneId,
+              seq: i + 1,
+              type: b.type.isEmpty ? '动作' : b.type,
+              who: Value(b.who),
+              content: b.content,
+              object: Value(b.object.isEmpty ? null : b.object),
+              sourceRef: b.id.isEmpty ? 'E${i + 1}' : b.id,
+              estDurationMs: Value(b.estDurationMs),
+              tags: Value(jsonEncode(b.tags)),
+            ),
+          );
+        }
+
+        for (final seg in result.segments) {
+          await shotDao.insert(
+            ShotsCompanion.insert(
+              scriptId: script.id,
+              globalSeq: seg.id,
+              batch: Value(seg.batch),
+              durationMs: Value(seg.durationMs),
+              globalTimeRange: seg.globalTimeRange.isEmpty
+                  ? '-'
+                  : seg.globalTimeRange,
+              beatRefs: Value(jsonEncode(seg.beatRefs)),
+              assetStates: Value(jsonEncode(seg.assets.toJson())),
+            ),
+          );
+        }
+      });
+
+      await _finish(attempt, AttemptStatuses.succeeded);
+      return SkeletonExtractionSummary(
+        beatCount: result.beats.length,
+        segmentCount: result.segments.length,
+        globalDurationMs: result.globalDurationMs,
+      );
+    } catch (e) {
+      await _finish(attempt, AttemptStatuses.failed, error: e.toString());
+      rethrow;
+    }
   }
 
   // ---- 源剧情账本 E## 映射校验（T3.3） ----

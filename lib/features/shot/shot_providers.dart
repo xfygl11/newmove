@@ -51,6 +51,18 @@ final shotProvider = StreamProvider.family<Shot?, int>(
   (ref, shotId) => ref.watch(shotDaoProvider).watch(shotId),
 );
 
+/// 单个镜头的产物版本快照（最新在前）。
+final shotRevisionsProvider = FutureProvider.family<List<ShotRevision>, int>(
+  (ref, shotId) => ref.watch(revisionDaoProvider).listShots(shotId),
+);
+
+/// 某个对象类型的全部生成尝试（最新在前）。
+final generationAttemptsBySubjectProvider =
+    FutureProvider.family<List<GenerationAttempt>, (String, int)>(
+      (ref, key) =>
+          ref.watch(generationAttemptDaoProvider).listBySubject(key.$1, key.$2),
+    );
+
 /// 单个镜头的分帧列表。
 final shotFramesProvider = StreamProvider.family<List<ShotFrame>, int>(
   (ref, shotId) => ref.watch(shotFrameDaoProvider).watchByShot(shotId),

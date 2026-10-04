@@ -140,23 +140,26 @@ lib/
 - **压缩包导入**：解压条目名一律经 `BackupService._resolveMediaPath` 解析——拒绝绝对路径、`..`/`.`/空段，并校验解析后绝对路径前缀（防 zip slip 越界写文件）。任何接收用户提供的 zip/文件名并落盘的路径都必须做同等校验。
 - **APK 体积**：`build.gradle.kts` 的 `defaultConfig` 用 `ndk.abiFilters = ["arm64-v8a"]` 只打单 ABI，FFmpeg 用 `ffmpeg_kit_flutter_new_min_gpl`；CI 构建命令带 `-P disable-abi-filtering=true`，产物为 `app-{release,debug}.apk`。**不要用 `splits.abi`**：Flutter Gradle 插件在未传 `-P split-per-abi` 时会把 `armeabi-v7a/arm64-v8a/x86_64` 写进 `defaultConfig.ndk.abiFilters`，与 `splits.abi` 互斥，Gradle configure 阶段直接报 `Conflicting configuration` 使 CI 构建失败。
 
- ### 数据完整性、上下文预算与执行约定（M14，T16.5.3 / 5.4 / T16.6 / T16.7 / T16.8.4 未完成）
+ ### 数据完整性、上下文预算与执行约定（M14，T16.7.3 / T16.9.4 未完成）
 
- > M14 任务清单见 `docs/04` 第 8.y 节（T16.1–T16.9），架构约定见 `docs/02` 6.5–6.9，
- > 全量复研结论见 `docs/01` 第 8 节。**M13 全量扫描未覆盖以下问题，动手前先读这三处。**
- >
- > **落地位置（新增代码必须对齐，不得另起一套）**：
- > - 事务化与级联删除：`lib/data/daos/cascade_dao.dart` 的 `CascadeDao`。新增删除或重建路径必须走它。
- > - 文本导入与字数：`lib/core/text/chapter_import.dart` 的 `ChapterImport`（大小上限 / 编码探测 / HTML 清洗 / 标题提取 / 字数）。
- > - 上下文预算：`lib/features/novel/context_budget.dart` 的 `ContextBudget`（token 估算 / TruthFile 裁剪 / 原文切片）；`ActiveLlm` 暴露 `contextTokens` / `budgetTokens`。所有 LLM 调用点必须传入预算。
- > - 统一确认：`lib/widgets/confirm_sheet.dart` 的 `ConfirmSheet`（`.confirm` 决定是否弹框，`.show` 渲染七项，主按钮两阶段实现临执行复核）。所有消耗算力的入口必须走它。
- > - 状态徽章：`lib/widgets/status_badge.dart` 的 `StatusBadge` + `StatusKinds`（单一状态表）。
- > - 协议常量：`lib/core/network/protocols.dart` 的 `Protocols`（`require` 未知协议抛错）。
- > - 导入测试：`test/import_and_protocols_test.dart`；预算测试：`test/context_budget_test.dart`。
- >
- > **仍未覆盖**：生成尝试台账（T16.5.4）、shot/asset 产物版本快照（T16.6）、
- > Hook 状态机与乐观锁（T16.7）、`Asset.variantOf` 外键（T16.8.4）、阶段门纪律（T16.5.3）。
- > 这四组都涉及新建表或表结构变更，需 bump `schemaVersion` 并跑 build_runner。
+  > M14 任务清单见 `docs/04` 第 8.y 节（T16.1–T16.9），架构约定见 `docs/02` 6.5–6.9，
+  > 全量复研结论见 `docs/01` 第 8 节。**M13 全量扫描未覆盖以下问题，动手前先读这三处。**
+  >
+  > **落地位置（新增代码必须对齐，不得另起一套）**：
+  > - 事务化与级联删除：`lib/data/daos/cascade_dao.dart` 的 `CascadeDao`。新增删除或重建路径必须走它。
+  > - 文本导入与字数：`lib/core/text/chapter_import.dart` 的 `ChapterImport`（大小上限 / 编码探测 / HTML 清洗 / 标题提取 / 字数）。
+  > - 上下文预算：`lib/features/novel/context_budget.dart` 的 `ContextBudget`（token 估算 / TruthFile 裁剪 / 原文切片）；`ActiveLlm` 暴露 `contextTokens` / `budgetTokens`。所有 LLM 调用点必须传入预算。
+  > - 统一确认：`lib/widgets/confirm_sheet.dart` 的 `ConfirmSheet`（`.confirm` 决定是否弹框，`.show` 渲染七项，主按钮两阶段实现临执行复核，`gate` 参数写清阶段门）。所有消耗算力的入口必须走它。
+  > - 状态徽章：`lib/widgets/status_badge.dart` 的 `StatusBadge` + `StatusKinds`（单一状态表）。
+  > - 协议常量：`lib/core/network/protocols.dart` 的 `Protocols`（`require` 未知协议抛错）。
+  > - 产物版本快照：`lib/data/daos/revision_dao.dart` 的 `RevisionDao`（`ShotRevisions` / `AssetRevisions`，`state` 只 `current` / `superseded` 两态，同一对象同 kind 至多一条 `current`）。重新导演 / 出图 / 换视频必须存快照。
+  > - 生成尝试台账：`lib/data/daos/generation_attempt_dao.dart` 的 `GenerationAttemptDao` + `AttemptRecorder`（对象类型走 `AttemptSubjects` 常量）。生成前写 `prompt` / `params` / `refs` / `before` 快照，`finish` 只回写 `status` / `resultPath` / `errorMessage`，**绝不回写提示词与参数**。所有 AI 入口必须登记。
+  > - TruthFile 乐观锁：`TruthFileStore.write(kind, content, {int? expectedRevision})`。读改写路径（Settler 固化五个 `_applyX`）必须传 `expectedRevision`，不匹配抛 `ConcurrentWriteConflict` 而非静默覆盖；`readRow` 取含 revision 的行。
+  > - Hook 状态机：`HookStates`（`open` / `progressing` / `deferred` / `resolved` / `superseded` + `transitions` 表 + `allows`）。`_applyHooks` 校验转移，非法转移不阻塞固化而是记入 `rejectedTransitions`。
+  > - 变体父校验：`AssetDao.insert` / `updateById` 校验 `variantOf` 存在且同 `scriptId`，`deleteById` 先解绑子变体再删。
+  > - 测试：`test/import_and_protocols_test.dart`、`test/context_budget_test.dart`、`test/revision_and_attempt_test.dart`（快照 / 台账 / 乐观锁 / HookStates / variantOf / 级联）。
+  >
+  > **仍未覆盖**：结构化审校产出（T16.7.3）、`Scripts` 死字段清理（T16.9.4）。
 
 - **多表写必须事务化**：全库当前仅 `backup_service.dart:337` 一处 `transaction`，五个 service 的多表写全部裸写，中间态（JSON 解码抛错、磁盘满、进程被杀）永久落库且无回滚。DAO 层提供「按父 id 重建」复合方法并内置事务，业务层不直接拼 `deleteByX` + 多次 `insert`。
 - **删除顺序最下游先行**：`VideoTasks → AssetRefs → ShotFrames → Shots → Beats → Scenes`。`skeleton_service.dart:69-70` 先删 Beats 再删 Shots 违反此序，任一镜头有下游数据时删除抛冲突而 Beats 已不可恢复。

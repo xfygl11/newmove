@@ -13,6 +13,10 @@ import '../core/settings/app_settings.dart';
 ///
 /// 临执行复核：主按钮第一下只进入「已复核」态，第二下才执行，
 /// 供用户在按下执行前再扫一遍参考文件顺序与执行次数。
+///
+/// 阶段门纪律：[show] / [confirm] 的 [gate] 标明本次确认属于流水线哪一阶段
+/// （如「分镜图生成」≠「视频生成」≠「成片验收」）。每个阶段门的确认只授权
+/// 该阶段，不得被下游阶段复用；批量小样与批量生产也必须分开授权。
 class ConfirmSheet {
   const ConfirmSheet._();
 
@@ -24,6 +28,9 @@ class ConfirmSheet {
 
   /// 主按钮「已复核」态文案。
   static const String reviewLabel = '已复核 · 执行';
+
+  /// 阶段门默认前缀。
+  static const String gateLabel = '阶段门';
 
   /// 值里出现这些词时高亮，防止用户扫读时漏掉风险提示。
   static const List<String> attentionWords = ['超限', '裁剪', '覆盖', '丢失', '计费'];
@@ -42,6 +49,7 @@ class ConfirmSheet {
     String note = '',
     String cost = '未知',
     String title = defaultTitle,
+    String gate = '',
     String confirmLabel = ConfirmSheet.confirmLabel,
     bool confirmedByDefault = false,
     bool dismissible = false,
@@ -57,6 +65,7 @@ class ConfirmSheet {
         refs: refs,
         note: note,
         cost: cost,
+        gate: gate,
         confirmLabel: confirmLabel,
         confirmedByDefault: confirmedByDefault,
         dismissible: dismissible,
@@ -76,6 +85,7 @@ class ConfirmSheet {
     String note = '',
     String cost = '未知',
     String title = defaultTitle,
+    String gate = '',
     String confirmLabel = ConfirmSheet.confirmLabel,
     bool confirmedByDefault = false,
   }) async {
@@ -94,6 +104,7 @@ class ConfirmSheet {
       note: note,
       cost: cost,
       title: title,
+      gate: gate,
       confirmLabel: confirmLabel,
       confirmedByDefault: confirmedByDefault,
     );
@@ -147,6 +158,7 @@ class _ConfirmDialog extends StatefulWidget {
     required this.refs,
     required this.note,
     required this.cost,
+    required this.gate,
     required this.confirmLabel,
     required this.confirmedByDefault,
     required this.dismissible,
@@ -160,6 +172,7 @@ class _ConfirmDialog extends StatefulWidget {
   final List<String> refs;
   final String note;
   final String cost;
+  final String gate;
   final String confirmLabel;
   final bool confirmedByDefault;
   final bool dismissible;
@@ -197,6 +210,8 @@ class _ConfirmDialogState extends State<_ConfirmDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (widget.gate.trim().isNotEmpty)
+                  _GateBanner(gate: widget.gate.trim()),
                 ConfirmSheet.row(
                   context,
                   '对象',
@@ -258,6 +273,44 @@ class _ConfirmDialogState extends State<_ConfirmDialog> {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 阶段门横幅：明确本次确认授权的流水线阶段与授权边界。
+class _GateBanner extends StatelessWidget {
+  const _GateBanner({required this.gate});
+
+  final String gate;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.gavel, size: 18, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${ConfirmSheet.gateLabel}：本次只授权「$gate」。'
+              '后续阶段（分镜图 → 视频 → 成片验收）需各自单独授权，'
+              '本确认不构成对下游阶段的放行。',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
           ),
         ],
       ),

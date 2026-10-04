@@ -112,6 +112,7 @@ class _SkeletonPageState extends ConsumerState<SkeletonPage> {
     if (!await ConfirmSheet.confirm(
       context,
       objectName: '骨架提取',
+      gate: '骨架重新提取（覆盖场次、节拍与分段结构）',
       quantity: '${scenes.length} 场',
       promptPreview: svc.buildExtractionPrompt(script: script, scenes: scenes),
       params: ['供应商：${llm.provider.label}', '模型：${llm.modelId}'],
