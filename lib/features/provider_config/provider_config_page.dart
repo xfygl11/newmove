@@ -377,6 +377,7 @@ class _AgnesPresetRow extends ConsumerWidget {
         ],
       ),
     );
+    keyController.dispose();
 
     if (key == null || key.isEmpty) return;
 

@@ -149,6 +149,7 @@ class _SkeletonPageState extends ConsumerState<SkeletonPage> {
   }
 
   void _toast(String text) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 }

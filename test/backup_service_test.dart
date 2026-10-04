@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,8 +34,7 @@ void main() {
   late Directory root;
 
   setUp(() async {
-    root =
-        await Directory.systemTemp.createTemp('newmove_backup_test');
+    root = await Directory.systemTemp.createTemp('newmove_backup_test');
     PathProviderPlatform.instance = _FakePathProvider(root.path);
     await Directory('${root.path}/doc').create(recursive: true);
     await Directory('${root.path}/tmp').create(recursive: true);
@@ -132,11 +133,7 @@ void main() {
       ),
     );
     await db.assetRefDao.insert(
-      AssetRefsCompanion.insert(
-        shotId: shotId,
-        assetId: assetId,
-        role: '角色参考',
-      ),
+      AssetRefsCompanion.insert(shotId: shotId, assetId: assetId, role: '角色参考'),
     );
     await db.videoTaskDao.insert(
       VideoTasksCompanion.insert(
@@ -206,12 +203,8 @@ void main() {
     final asset = (await db.assetDao.listByScript(script.id)).single;
     expect(asset.name, '阿青');
     // 相对路径 assets/asset_1.png 解压回文档目录，绝对路径与源一致且文件存在。
-    expect(
-      asset.imagePath,
-      '${root.path}/doc/assets/asset_1.png',
-    );
-    expect(File(asset.imagePath!).existsSync(), isTrue,
-        reason: '媒体文件已从包内恢复');
+    expect(asset.imagePath, '${root.path}/doc/assets/asset_1.png');
+    expect(File(asset.imagePath!).existsSync(), isTrue, reason: '媒体文件已从包内恢复');
 
     final shot = (await db.shotDao.listByScript(script.id)).single;
     expect(shot.globalSeq, 'G01');
@@ -246,5 +239,45 @@ void main() {
       service.importProject(bad.path),
       throwsA(isA<FormatException>()),
     );
+  });
+
+  test('导入越界路径包：拒绝 zip slip 写出文档目录', () async {
+    final evil = File('${root.path}/tmp/evil.zip');
+    final archive = Archive();
+    final jsonBytes = utf8.encode(jsonEncode({'scope': 'project'}));
+    archive.addFile(ArchiveFile('backup.json', jsonBytes.length, jsonBytes));
+    final evilBytes = utf8.encode('evil');
+    archive.addFile(
+      ArchiveFile('../../pwned.png', evilBytes.length, evilBytes),
+    );
+    await evil.writeAsBytes(ZipEncoder().encode(archive));
+
+    await expectLater(
+      service.importProject(evil.path),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      File('${root.path}/pwned.png').existsSync(),
+      isFalse,
+      reason: '越界路径不得写出文档目录',
+    );
+  });
+
+  test('导入绝对路径包：拒绝写出应用目录之外', () async {
+    final abs = File('${root.path}/tmp/abs.zip');
+    final archive = Archive();
+    final jsonBytes = utf8.encode(jsonEncode({'scope': 'project'}));
+    archive.addFile(ArchiveFile('backup.json', jsonBytes.length, jsonBytes));
+    final evilBytes = utf8.encode('evil');
+    archive.addFile(
+      ArchiveFile('/tmp/newmove_escape.png', evilBytes.length, evilBytes),
+    );
+    await abs.writeAsBytes(ZipEncoder().encode(archive));
+
+    await expectLater(
+      service.importProject(abs.path),
+      throwsA(isA<FormatException>()),
+    );
+    expect(File('/tmp/newmove_escape.png').existsSync(), isFalse);
   });
 }

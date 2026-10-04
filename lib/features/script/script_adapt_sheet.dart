@@ -73,6 +73,7 @@ class _AdaptSheetState extends ConsumerState<AdaptSheet> {
   }
 
   void _toast(String text) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 

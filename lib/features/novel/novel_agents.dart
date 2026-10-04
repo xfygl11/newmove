@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import '../../agent/active_llm.dart';
 import '../../agent/skill_loader.dart';
 import '../../core/json_values.dart';
@@ -41,7 +39,7 @@ class NovelAgents {
       ],
       temperature: 0.7,
     );
-    return SetupResult.fromJson(_extractJson(reply));
+    return SetupResult.fromJson(extractJsonObject(reply));
   }
 
   // ---- 章节规划（Planner，P3-13） ----
@@ -62,7 +60,7 @@ class NovelAgents {
       ],
       temperature: 0.5,
     );
-    return _extractJson(reply);
+    return extractJsonObject(reply);
   }
 
   // ---- 章节写作（Writer，流式） ----
@@ -101,7 +99,7 @@ class NovelAgents {
       ],
       temperature: 0.3,
     );
-    final map = _extractJson(reply);
+    final map = extractJsonObject(reply);
     final issues = jsonList(map['issues']);
     return [for (final i in issues) ReviewIssue.fromJson(jsonMap(i))];
   }
@@ -146,25 +144,6 @@ class NovelAgents {
       ],
       temperature: 0.2,
     );
-    return SettleDelta.fromJson(_extractJson(reply));
-  }
-
-  // ---- 内部辅助 ----
-
-  /// 从 LLM 回复中提取 JSON 对象（容忍 markdown 代码块包裹）。
-  Map<String, dynamic> _extractJson(String reply) {
-    var text = reply.trim();
-    final fence = RegExp(r'```(?:json)?\s*([\s\S]*?)```');
-    final m = fence.firstMatch(text);
-    if (m != null) text = m.group(1)!.trim();
-
-    final start = text.indexOf('{');
-    final end = text.lastIndexOf('}');
-    if (start >= 0 && end > start) {
-      text = text.substring(start, end + 1);
-    }
-    final decoded = jsonDecode(text);
-    if (decoded is Map<String, dynamic>) return decoded;
-    return <String, dynamic>{};
+    return SettleDelta.fromJson(extractJsonObject(reply));
   }
 }

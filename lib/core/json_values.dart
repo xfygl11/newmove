@@ -6,6 +6,8 @@
 /// 导致整段生成结果解析失败。这里统一做「能转就转，转不了用兜底值」。
 library;
 
+import 'dart:convert';
+
 /// 取字符串：非 null 一律 `toString()`，null 用 [fallback]。
 String jsonString(Object? value, [String fallback = '']) {
   if (value == null) return fallback;
@@ -42,3 +44,37 @@ List<dynamic> jsonList(Object? value) => value is List ? value : const [];
 /// 取对象：非 Map 返回空 Map。
 Map<String, dynamic> jsonMap(Object? value) =>
     value is Map ? value.cast<String, dynamic>() : const {};
+
+/// 从 LLM 回复中提取 JSON 对象。
+///
+/// 容忍 markdown 代码块包裹（```json ... ```）以及 JSON 前后的解释文字。
+/// 提取失败抛 [FormatException] 并给出可读原因——**不吞成空 Map**：
+/// 上层若把空结果当作成功落库，会在删旧数据后插入零条，造成静默数据丢失。
+Map<String, dynamic> extractJsonObject(String reply) {
+  var text = reply.trim();
+  final fence = RegExp(r'```(?:json)?\s*([\s\S]*?)```');
+  final m = fence.firstMatch(text);
+  if (m != null) text = m.group(1)!.trim();
+
+  final direct = _decodeObject(text);
+  if (direct != null) return direct;
+
+  final start = text.indexOf('{');
+  final end = text.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    final sliced = _decodeObject(text.substring(start, end + 1));
+    if (sliced != null) return sliced;
+  }
+  throw const FormatException('AI 返回内容不是有效 JSON，请重试');
+}
+
+Map<String, dynamic>? _decodeObject(String text) {
+  try {
+    final decoded = jsonDecode(text);
+    if (decoded is Map<String, dynamic>) return decoded;
+    if (decoded is Map) return decoded.cast<String, dynamic>();
+  } on FormatException {
+    return null;
+  }
+  return null;
+}

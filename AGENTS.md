@@ -133,9 +133,11 @@ lib/
 
 ### 健壮性约定（M13）
 
-- **宽容 JSON 解析**：解析 AI 输出 / 落库 JSON 一律走 `lib/core/json_values.dart` 的 `jsonString` / `jsonStringOrNull` / `jsonInt` / `jsonBool` / `jsonList` / `jsonMap`，**禁止对外部数据直接 `as` 强转**（LLM 常把数字写成字符串、布尔写成 `"true"`，强转会抛 TypeError 让整段生成结果解析失败）。
+- **宽容 JSON 解析**：解析 AI 输出 / 落库 JSON 一律走 `lib/core/json_values.dart` 的 `jsonString` / `jsonStringOrNull` / `jsonInt` / `jsonBool` / `jsonList` / `jsonMap`，**禁止对外部数据直接 `as` 强转**（LLM 常把数字写成字符串、布尔写成 `"true"`，强转会抛 TypeError 让整段生成结果解析失败）。Agent 剥 JSON 包裹统一用同文件的 `extractJsonObject(reply)`：支持 ```` ```json ```` 代码块与前后解释文字；解析失败必须抛 `FormatException`，禁止返回空 Map（空结果会让上游删旧数据后插入零条，造成静默数据丢失）。
 - **网络层**：供应商响应先做 `is List` / `is Map` 类型守卫再取字段；SSE 用 `utf8.decode(bytes, allowMalformed: true)`；错误提示截断按实际长度判断，勿直接 `substring(0, N)`。
 - **列表页加载**：异步数据在 `initState` 加载一次 + `_loading`/`_error`/`_reload` 状态；禁止 `build` 里 `FutureBuilder(future: _load())`。
+- **await 后 Toast**：任何 `_toast` 类方法必须首行 `if (!mounted) return;`，长耗时 AI 调用期间用户可能已离开页面（"Looking up a deactivated widget's ancestor is unsafe"）。同理，弹窗 / 导航 / Controller 持有也需检查。
+- **压缩包导入**：解压条目名一律经 `BackupService._resolveMediaPath` 解析——拒绝绝对路径、`..`/`.`/空段，并校验解析后绝对路径前缀（防 zip slip 越界写文件）。任何接收用户提供的 zip/文件名并落盘的路径都必须做同等校验。
 - **APK 体积**：`build.gradle.kts` 只打 `arm64-v8a` 单 ABI（`splits.abi`），FFmpeg 用 `ffmpeg_kit_flutter_new_min_gpl`；CI 产物路径为 `app-{release,debug}-arm64-v8a.apk`。
 
 ---

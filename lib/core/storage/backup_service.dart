@@ -326,7 +326,7 @@ class BackupService {
     final mediaMap = <String, String>{};
     for (final f in archive.files) {
       if (f.name == 'backup.json') continue;
-      final out = File('${docDir.path}/${f.name}');
+      final out = _resolveMediaPath(docDir, f.name);
       await out.parent.create(recursive: true);
       await out.writeAsBytes(f.content as List<int>);
       mediaMap[f.name] = out.path;
@@ -552,6 +552,29 @@ class BackupService {
   }
 
   static final _isoPattern = RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}');
+
+  /// 把压缩包内相对路径解析到 [docDir] 之内。
+  ///
+  /// 拒绝绝对路径与 `.`/`..` 段，防止构造过的备份包越界写文件
+  /// （zip slip）；解析后仍校验绝对路径前缀，双重保险。
+  static File _resolveMediaPath(Directory docDir, String name) {
+    // 绝对路径（含 Windows 盘符）直接拒绝，避免构造包指定任意目标位置。
+    if (RegExp(r'^[\\/]|[A-Za-z]:[\\/]').hasMatch(name)) {
+      throw FormatException('备份包包含非法媒体路径：$name');
+    }
+    final rel = name.replaceAll('\\', '/');
+    final segments = rel.split('/');
+    if (rel.isEmpty ||
+        segments.any((s) => s == '..' || s == '.' || s.isEmpty)) {
+      throw FormatException('备份包包含非法媒体路径：$name');
+    }
+    final root = docDir.absolute.path;
+    final resolved = File('$root/$rel').absolute.path;
+    if (resolved != root && !resolved.startsWith('$root/')) {
+      throw FormatException('备份包包含越界媒体路径：$name');
+    }
+    return File(resolved);
+  }
 
   /// camelCase 字段名 → snake_case 列名（drift 默认命名）。
   String _snake(String name) {
