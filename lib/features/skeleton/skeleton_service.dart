@@ -25,8 +25,8 @@ class SkeletonService {
     required this.shotDao,
     required this.cascadeDao,
     required this.agents,
-    GenerationAttemptDao? attemptDao,
-  }) : _attempts = attemptDao == null ? null : AttemptRecorder(attemptDao);
+    required GenerationAttemptDao attemptDao,
+  }) : _attempts = AttemptRecorder(attemptDao);
 
   final AppDatabase db;
   final ScriptDao scriptDao;
@@ -35,8 +35,8 @@ class SkeletonService {
   final ShotDao shotDao;
   final CascadeDao cascadeDao;
 
-  /// 生成尝试台账；未注入时所有登记静默跳过。
-  final AttemptRecorder? _attempts;
+  /// 生成尝试台账（M18 T20.1 起必填，见 [AttemptRecorder]）。
+  final AttemptRecorder _attempts;
 
   static String _paramsOf(ActiveLlm llm) => jsonEncode({
     'model': llm.modelId,
@@ -51,22 +51,20 @@ class SkeletonService {
     required String subjectLabel,
     required String prompt,
     required String params,
+    int? bookId,
   }) {
-    final rec = _attempts;
-    if (rec == null) return Future.value(null);
-    return rec.start(
+    return _attempts.start(
       subjectType: subjectType,
       subjectId: subjectId,
       subjectLabel: subjectLabel,
       prompt: prompt,
       params: params,
+      bookId: bookId,
     );
   }
 
   Future<void> _finish(int? id, String status, {String? error}) async {
-    final rec = _attempts;
-    if (rec == null) return;
-    await rec.finish(id: id, status: status, error: error);
+    await _attempts.finish(id: id, status: status, error: error);
   }
 
   final SkeletonAgents agents;
@@ -129,6 +127,7 @@ class SkeletonService {
       subjectLabel: script.title,
       prompt: prompt,
       params: _paramsOf(llm),
+      bookId: script.bookId,
     );
     try {
       final result = await agents.extract(prompt: prompt, llm: llm);

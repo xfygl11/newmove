@@ -136,6 +136,8 @@ void main() {
       agents: AssetAgents(adapter: _FakeLlmAdapter(_cannedAssets)),
       imageAdapter: _FakeImageAdapter(),
       fileStore: _FakeFileStore(),
+      revisionDao: db.revisionDao,
+      attemptDao: db.generationAttemptDao,
     );
 
     final projectId = await db.projectDao.insertProject(

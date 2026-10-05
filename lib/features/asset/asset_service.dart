@@ -6,6 +6,7 @@ import 'package:drift/drift.dart' show Value;
 
 import '../../agent/active_image.dart';
 import '../../agent/active_llm.dart';
+import '../../core/app_log.dart';
 import '../../core/network/image_provider_adapter.dart';
 import '../../core/storage/asset_file_store.dart';
 import '../../core/storage/storage_rules.dart';
@@ -33,9 +34,9 @@ class AssetService {
     required this.agents,
     required this.imageAdapter,
     required this.fileStore,
-    this.revisionDao,
-    this.attemptDao,
-  });
+    required this.revisionDao,
+    required this.attemptDao,
+  }) : _recorder = AttemptRecorder(attemptDao);
 
   final AssetDao assetDao;
   final BeatDao beatDao;
@@ -45,17 +46,14 @@ class AssetService {
   final ImageProviderAdapter imageAdapter;
   final AssetFileStore fileStore;
 
-  /// 产物版本快照（M14 T16.6）。未注入时跳过。
-  final RevisionDao? revisionDao;
+  /// 产物版本快照（M14 T16.6 / M18 T20.1 起必填）。
+  final RevisionDao revisionDao;
 
-  /// 生成尝试台账（M14 T16.5.4）。未注入时跳过。
-  AttemptRecorder? get _recorder {
-    final dao = attemptDao;
-    return dao == null ? null : AttemptRecorder(dao);
-  }
+  /// 生成尝试台账（M14 T16.5.4 / M18 T20.1 起必填）。
+  final AttemptRecorder _recorder;
 
-  /// 生成尝试台账（M14 T16.5.4）。未注入时跳过。
-  final GenerationAttemptDao? attemptDao;
+  /// 生成尝试台账 DAO。
+  final GenerationAttemptDao attemptDao;
 
   // ---- 清单提取（T5.2） ----
 
@@ -102,21 +100,19 @@ class AssetService {
     required ActiveLlm llm,
   }) async {
     final context = await buildSkeletonContext(scriptId);
-    final rec = _recorder;
-    final attemptId = rec == null
-        ? null
-        : await rec.start(
-            subjectType: AttemptSubjects.assetExtract,
-            subjectId: scriptId,
-            subjectLabel: '资产提取',
-            prompt: context,
-            params: jsonEncode({
-              'provider': llm.provider.label,
-              'model': llm.modelId,
-              'maxToken': llm.model.maxOutputTokens,
-              'budgetTokens': llm.budgetTokens,
-            }),
-          );
+    final attemptId = await _recorder.start(
+      subjectType: AttemptSubjects.assetExtract,
+      subjectId: scriptId,
+      subjectLabel: '资产提取',
+      prompt: context,
+      params: jsonEncode({
+        'provider': llm.provider.label,
+        'model': llm.modelId,
+        'maxToken': llm.model.maxOutputTokens,
+        'budgetTokens': llm.budgetTokens,
+      }),
+      bookId: (await scriptDao.find(scriptId))?.bookId,
+    );
     final result = await agents.extract(skeletonContext: context, llm: llm);
 
     try {
@@ -179,7 +175,7 @@ class AssetService {
         variants++;
       }
 
-      await rec?.finish(
+      await _recorder.finish(
         id: attemptId,
         status: AttemptStatuses.succeeded,
         resultPath: '新建 $created / 变体 $variants / 复用 $reused',
@@ -190,7 +186,7 @@ class AssetService {
         variants: variants,
       );
     } catch (e) {
-      await rec?.finish(
+      await _recorder.finish(
         id: attemptId,
         status: AttemptStatuses.failed,
         error: e.toString(),
@@ -221,17 +217,20 @@ class AssetService {
     required String kind,
     required String summary,
   }) async {
-    final dao = revisionDao;
-    if (dao == null) return;
     try {
-      await dao.saveAsset(
+      await revisionDao.saveAsset(
         assetId: asset.id,
         kind: kind,
         snapshot: _snapshotOf(asset),
         summary: summary,
       );
-    } catch (_) {
-      // 快照失败不得阻塞生成主流程。
+    } catch (e, st) {
+      appLog(
+        'asset_snapshot',
+        'asset=${asset.id} kind=$kind',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -240,11 +239,13 @@ class AssetService {
     required Asset asset,
     required ActiveImage image,
   }) async {
-    final dao = attemptDao;
-    if (dao == null) return null;
     try {
-      return await dao.insert(
+      final bookId = (await scriptDao.find(asset.scriptId))?.bookId;
+      return await attemptDao.insert(
         GenerationAttemptsCompanion.insert(
+          projectId: Value(
+            bookId == null ? null : await attemptDao.projectOfBook(bookId),
+          ),
           subjectType: subjectType,
           subjectId: Value(asset.id),
           subjectLabel: Value('${asset.type}「${asset.name}」'),
@@ -259,10 +260,18 @@ class AssetService {
           before: Value(
             jsonEncode({'status': asset.status, 'imagePath': asset.imagePath}),
           ),
-          attemptNo: Value(await dao.nextAttemptNo(subjectType, asset.id)),
+          attemptNo: Value(
+            await attemptDao.nextAttemptNo(subjectType, asset.id),
+          ),
         ),
       );
-    } catch (_) {
+    } catch (e, st) {
+      appLog(
+        'attempt_start',
+        '$subjectType#${asset.id}',
+        error: e,
+        stackTrace: st,
+      );
       return null;
     }
   }
@@ -273,17 +282,16 @@ class AssetService {
     String? resultPath,
     String? error,
   }) async {
-    final dao = attemptDao;
-    if (dao == null || id == null) return;
+    if (id == null) return;
     try {
-      await dao.finishAttempt(
+      await attemptDao.finishAttempt(
         id: id,
         status: status,
         resultPath: resultPath,
         errorMessage: error,
       );
-    } catch (_) {
-      // 台账回写失败不影响主流程。
+    } catch (e, st) {
+      appLog('attempt_finish', '#$id -> $status', error: e, stackTrace: st);
     }
   }
 

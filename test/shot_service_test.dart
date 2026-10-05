@@ -285,6 +285,8 @@ void main() {
       videoFileStore: _FakeVideoFileStore(),
       videoTaskDao: db.videoTaskDao,
       providerDao: db.providerDao,
+      revisionDao: db.revisionDao,
+      attemptDao: db.generationAttemptDao,
     );
     // 测试不经过安全存储，直接注入固定 Key。
     service.readProviderKey = (_) async => 'k';

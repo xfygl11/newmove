@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../app_database.dart';
 import '../tables/tables.dart';
+import 'generation_attempt_dao.dart';
 
 part 'cascade_dao.g.dart';
 
@@ -80,10 +81,23 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
     await attachedDatabase.transaction(() => _deleteShotSubtree(shotId));
   }
 
-  /// 删除资产及其参考引用。
+  /// 删除资产及其参考引用 / 版本快照 / 生成台账。
+  ///
+  /// 必须一并删 `assetRevisions`：该表有指向 Assets 的外键，而库已开
+  /// `PRAGMA foreign_keys=ON`，只删 assets 会让任何出过图的资产
+  /// `deleteAssetCascade` 直接抛约束冲突。台账无外键但按逻辑归属一并清理。
   Future<void> deleteAssetCascade(int assetId) async {
     await attachedDatabase.transaction(() async {
+      await (delete(
+        assetRevisions,
+      )..where((t) => t.assetId.equals(assetId))).go();
       await (delete(assetRefs)..where((t) => t.assetId.equals(assetId))).go();
+      await (delete(generationAttempts)..where(
+            (t) =>
+                t.subjectId.equals(assetId) &
+                t.subjectType.equals(AttemptSubjects.assetImage),
+          ))
+          .go();
       await (delete(assets)..where((t) => t.id.equals(assetId))).go();
     });
   }

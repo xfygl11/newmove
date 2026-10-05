@@ -272,6 +272,10 @@ class BackupService {
   /// 备份包导入上限 500MB（备份含被引用媒体，超大包全量载入内存有 OOM 风险）。
   static const int maxImportBytes = 500 * 1024 * 1024;
 
+  /// 解压后总量上限。PNG/MP4 几乎不可压缩，中央目录声明的解压总量远大于压缩包时
+  /// 是典型的 zip bomb：解压前判断，避免写出几个 GB 后再 OOM。
+  static const int maxExtractedBytes = 2 * 1024 * 1024 * 1024;
+
   /// 校验备份包大小，超限抛 [StateError]（先校验再读取，避免全量读入内存）。
   static Future<void> _guardImportSize(String zipPath) async {
     final file = File(zipPath);
@@ -281,30 +285,59 @@ class BackupService {
     }
   }
 
+  /// 流式读取 zip：只解析中央目录建立索引，各条目内容按需解压。
+  ///
+  /// 替代旧的 `readAsBytes` + `decodeBytes`——那份写法让压缩包原始字节与解压后
+  /// 字节同时驻留内存，两个 500MB 包直接突破 358MiB 预算。`input.close()` 必须
+  /// 调用，`ArchiveFile` 惰性引用该流的当前位置。
+  Future<Archive> _openArchive(String zipPath) async {
+    final input = InputFileStream(zipPath);
+    try {
+      return ZipDecoder().decodeStream(input);
+    } finally {
+      await input.close();
+    }
+  }
+
+  /// 校验解压后总量（zip bomb 防护），同时顺带验证包可正常解析。
+  Future<void> _guardExtractedSize(Archive archive) async {
+    var total = 0;
+    for (final f in archive.files) {
+      if (f.name == 'backup.json') continue;
+      total += f.size;
+      if (total > maxExtractedBytes) {
+        throw StateError('备份包解压后超过 2GB 上限，可能是损坏或异常的包，已拒绝导入');
+      }
+    }
+  }
+
   /// 解析 zip 中的项目名列表（不写入 DB），用于导入前冲突提示。
   ///
   /// 返回包内所有项目名；单项目包返回 1 项，全库包返回 N 项。
   Future<List<String>> peekProjectNames(String zipPath) async {
     await _guardImportSize(zipPath);
-    final bytes = await File(zipPath).readAsBytes();
-    final archive = ZipDecoder().decodeBytes(bytes);
-    final jsonFile = archive.findFile('backup.json');
-    if (jsonFile == null) {
-      throw const FormatException('备份包缺少 backup.json');
-    }
-    final data = (jsonDecode(utf8.decode(jsonFile.content as List<int>)) as Map)
-        .cast<String, dynamic>();
-    if (data['scope'] == 'full' && data['projects'] != null) {
+    final archive = await _openArchive(zipPath);
+    try {
+      final jsonFile = archive.findFile('backup.json');
+      if (jsonFile == null) {
+        throw const FormatException('备份包缺少 backup.json');
+      }
+      final data = _decodeBackupJson(jsonFile.content as List<int>);
+      if (data['scope'] == 'full' && data['projects'] != null) {
+        return [
+          for (final p
+              in (data['projects'] as List).cast<Map<String, dynamic>>())
+            p['name'] as String? ?? '',
+        ];
+      }
       return [
-        for (final p in (data['projects'] as List).cast<Map<String, dynamic>>())
-          p['name'] as String? ?? '',
+        (data['project'] as Map<String, dynamic>? ?? const {})['name']
+                as String? ??
+            '',
       ];
+    } finally {
+      archive.clearSync();
     }
-    return [
-      (data['project'] as Map<String, dynamic>? ?? const {})['name']
-              as String? ??
-          '',
-    ];
   }
 
   /// 检查包内项目名是否已存在于本地，返回冲突项列表。
@@ -327,13 +360,22 @@ class BackupService {
   /// 外键，导入时按映射链重写。
   Future<int> importProject(String zipPath) async {
     await _guardImportSize(zipPath);
-    final bytes = await File(zipPath).readAsBytes();
-    final archive = ZipDecoder().decodeBytes(bytes);
+    final archive = await _openArchive(zipPath);
+    var result = 0;
+    try {
+      result = await _importArchive(archive);
+    } finally {
+      archive.clearSync();
+    }
+    return result;
+  }
 
+  /// 解析包内 backup.json 并完成全部落盘与入库。
+  Future<int> _importArchive(Archive archive) async {
     final jsonFile = archive.findFile('backup.json');
     if (jsonFile == null) throw const FormatException('备份包缺少 backup.json');
-    final data = (jsonDecode(utf8.decode(jsonFile.content as List<int>)) as Map)
-        .cast<String, dynamic>();
+    final data = _decodeBackupJson(jsonFile.content as List<int>);
+    await _guardExtractedSize(archive);
 
     // 解压媒体文件到应用文档目录，记录 相对路径 → 新绝对路径。
     final docDir = await getApplicationDocumentsDirectory();
@@ -342,6 +384,10 @@ class BackupService {
       if (f.name == 'backup.json') continue;
       final out = _resolveMediaPath(docDir, f.name);
       await out.parent.create(recursive: true);
+      // 先查声明长度再写：超大条目不整体载入内存。
+      if (f.size > maxImportBytes) {
+        throw StateError('备份包内 ${f.name} 超过 500MB 上限，已拒绝导入');
+      }
       await out.writeAsBytes(f.content as List<int>);
       mediaMap[f.name] = out.path;
     }
@@ -529,6 +575,28 @@ class BackupService {
 
       return firstNewProjectId;
     });
+  }
+
+  /// 解析 backup.json。用户提供的包，任何脏数据都不该让整次导入以未捕获
+  /// 异常结束——统一抛 [FormatException]，UI 层统一提示「备份包已损坏」。
+  static Map<String, dynamic> _decodeBackupJson(List<int> bytes) {
+    String text;
+    try {
+      text = utf8.decode(bytes);
+    } on FormatException {
+      throw const FormatException('备份包已损坏：backup.json 不是合法 UTF-8');
+    }
+    try {
+      final decoded = jsonDecode(text);
+      if (decoded is! Map) {
+        throw const FormatException('备份包已损坏：backup.json 顶层不是对象');
+      }
+      return decoded.cast<String, dynamic>();
+    } on FormatException {
+      rethrow;
+    } on Object {
+      throw const FormatException('备份包已损坏：backup.json 不是合法 JSON');
+    }
   }
 
   /// 行副本：排除 id、应用显式映射（值为旧 id 的键在 transform 内重写）。

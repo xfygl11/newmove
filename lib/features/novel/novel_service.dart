@@ -23,16 +23,16 @@ class NovelService {
     required this.truthDao,
     required this.revisionDao,
     required this.agents,
-    GenerationAttemptDao? attemptDao,
-  }) : _attempts = attemptDao == null ? null : AttemptRecorder(attemptDao);
+    required GenerationAttemptDao attemptDao,
+  }) : _attempts = AttemptRecorder(attemptDao);
 
   final NovelDao novelDao;
   final TruthFileDao truthDao;
   final ChapterRevisionDao revisionDao;
   final NovelAgents agents;
 
-  /// 生成尝试台账；未注入时所有登记静默跳过。
-  final AttemptRecorder? _attempts;
+  /// 生成尝试台账（M18 T20.1 起必填，见 [AttemptRecorder]）。
+  final AttemptRecorder _attempts;
 
   static String _paramsOf(ActiveLlm llm) => jsonEncode({
     'model': llm.modelId,
@@ -48,16 +48,16 @@ class NovelService {
     required String prompt,
     required String params,
     Map<String, dynamic> before = const {},
+    int? bookId,
   }) {
-    final rec = _attempts;
-    if (rec == null) return Future.value(null);
-    return rec.start(
+    return _attempts.start(
       subjectType: subjectType,
       subjectId: subjectId,
       subjectLabel: subjectLabel,
       prompt: prompt,
       params: params,
       before: before,
+      bookId: bookId,
     );
   }
 
@@ -67,9 +67,7 @@ class NovelService {
     String? error,
     int? subjectId,
   }) async {
-    final rec = _attempts;
-    if (rec == null) return;
-    await rec.finish(
+    await _attempts.finish(
       id: id,
       status: status,
       error: error,
@@ -96,6 +94,7 @@ class NovelService {
       subjectLabel: '设定生成',
       prompt: 'idea=$idea; genre=$genre; workType=$workType',
       params: params,
+      bookId: bookId,
     );
     try {
       final result = await agents.generateSetup(
@@ -162,6 +161,7 @@ class NovelService {
       subjectLabel: '第 $chapterNumber 章',
       prompt: prompt,
       params: params,
+      bookId: bookId,
     );
     try {
       yield* agents.writeChapter(prompt: prompt, llm: llm);
@@ -201,6 +201,7 @@ class NovelService {
       subjectLabel: '第 $chapterNumber 章 规划',
       prompt: prompt.toString(),
       params: params,
+      bookId: bookId,
     );
     try {
       final plan = await agents.planChapter(
@@ -303,6 +304,7 @@ class NovelService {
       subjectLabel: '章节审校',
       prompt: prompt,
       params: params,
+      bookId: bookId,
     );
     try {
       final issues = await agents.review(prompt: prompt, llm: llm);
@@ -337,6 +339,7 @@ class NovelService {
       prompt: prompt,
       params: params,
       before: {'contentRevision': chapter.revision},
+      bookId: chapter.bookId,
     );
     try {
       final revised = await agents.revise(prompt: prompt, llm: llm);
@@ -402,6 +405,7 @@ class NovelService {
       subjectLabel: '第 ${chapter.seq} 章 固化',
       prompt: prompt.toString(),
       params: params,
+      bookId: chapter.bookId,
     );
     try {
       final delta = await agents.settle(prompt: prompt.toString(), llm: llm);

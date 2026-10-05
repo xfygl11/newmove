@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../../core/app_log.dart';
 import '../app_database.dart';
 import '../tables/tables.dart';
 
@@ -35,7 +36,7 @@ abstract final class AttemptStatuses {
 ///
 /// 台账在调用前写入提示词、参数、引用与授权快照；调用结束后只回写
 /// `status` / `resultPath` / `errorMessage` 三列，提示词与参数不被后续编辑覆盖。
-@DriftAccessor(tables: [GenerationAttempts])
+@DriftAccessor(tables: [GenerationAttempts, NovelBooks])
 class GenerationAttemptDao extends DatabaseAccessor<AppDatabase>
     with _$GenerationAttemptDaoMixin {
   GenerationAttemptDao(super.db);
@@ -53,6 +54,20 @@ class GenerationAttemptDao extends DatabaseAccessor<AppDatabase>
     return rows.length + 1;
   }
 
+  /// 作品 id → 项目 id。
+  ///
+  /// 台账登记点只持有「对象类型 + 对象 id」，未必持有 projectId；而台账的
+  /// 「按项目过滤」与「按项目级联清理」都依赖 `projectId` 有值。M18 T20.2：
+  /// 此前全库无任何调用点传入，导致台账页项目过滤恒为空、每行项目名恒为空。
+  Future<int?> projectOfBook(int bookId) async {
+    final row =
+        await (selectOnly(novelBooks)
+              ..addColumns([novelBooks.id, novelBooks.projectId])
+              ..where(novelBooks.id.equals(bookId)))
+            .getSingleOrNull();
+    return row?.read(novelBooks.projectId);
+  }
+
   Future<int> insert(GenerationAttemptsCompanion entry) {
     return into(generationAttempts).insert(entry);
   }
@@ -65,7 +80,6 @@ class GenerationAttemptDao extends DatabaseAccessor<AppDatabase>
     String? errorMessage,
     int? subjectId,
     String? subjectLabel,
-    int? projectId,
   }) {
     final companion = GenerationAttemptsCompanion(
       status: Value(status),
@@ -77,7 +91,6 @@ class GenerationAttemptDao extends DatabaseAccessor<AppDatabase>
       subjectLabel: subjectLabel == null
           ? const Value.absent()
           : Value(subjectLabel),
-      projectId: projectId == null ? const Value.absent() : Value(projectId),
     );
     return (update(
       generationAttempts,
@@ -169,6 +182,8 @@ class AttemptRecorder {
   }
 
   /// 登记一次生成尝试，返回台账 id；失败返回 null。
+  ///
+  /// [bookId] 由这里解析为 `projectId` 后落库，调用点不必自己反查。
   Future<int?> start({
     required String subjectType,
     int? subjectId,
@@ -178,12 +193,14 @@ class AttemptRecorder {
     List<Map<String, dynamic>> refs = const [],
     Map<String, dynamic> before = const {},
     int grantLimit = 1,
-    int? projectId,
+    int? bookId,
   }) async {
     try {
       return await dao.insert(
         GenerationAttemptsCompanion.insert(
-          projectId: Value(projectId),
+          projectId: Value(
+            bookId == null ? null : await dao.projectOfBook(bookId),
+          ),
           subjectType: subjectType,
           subjectId: Value(subjectId),
           subjectLabel: subjectLabel == null
@@ -211,7 +228,13 @@ class AttemptRecorder {
           status: const Value(AttemptStatuses.running),
         ),
       );
-    } catch (_) {
+    } catch (e, st) {
+      appLog(
+        'attempt_start',
+        '$subjectType#${subjectId ?? '-'}',
+        error: e,
+        stackTrace: st,
+      );
       return null;
     }
   }
@@ -224,7 +247,6 @@ class AttemptRecorder {
     String? error,
     int? subjectId,
     String? subjectLabel,
-    int? projectId,
   }) async {
     if (id == null) return;
     try {
@@ -235,10 +257,9 @@ class AttemptRecorder {
         errorMessage: error,
         subjectId: subjectId,
         subjectLabel: subjectLabel,
-        projectId: projectId,
       );
-    } catch (_) {
-      // 台账回写失败不影响主流程。
+    } catch (e, st) {
+      appLog('attempt_finish', '#$id -> $status', error: e, stackTrace: st);
     }
   }
 }

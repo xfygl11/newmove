@@ -126,18 +126,30 @@ class TruthFileStore {
   }
 
   /// 把 SettleDelta 应用到 7 类状态。
-  Future<void> applyDelta(SettleDelta delta, int chapterNumber) async {
-    await _applyFacts(delta, chapterNumber);
-    await _applyCharacters(delta);
-    await _applyResources(delta);
-    await _applyHooks(delta);
-    await _applySummary(delta);
-    if (delta.authorIntent.trim().isNotEmpty) {
-      await write(TruthFileKind.authorIntent, {'text': delta.authorIntent});
-    }
-    if (delta.currentFocus.trim().isNotEmpty) {
-      await write(TruthFileKind.currentFocus, {'text': delta.currentFocus});
-    }
+  ///
+  /// 整体包在事务里：中途抛错（非法状态转移、并发写冲突、内容损坏）必须整段
+  /// 回滚。否则前面几类已提交、后面几类没写，用户看到的是半套固化结果——
+  /// 下一轮写作会基于残缺的真相继续跑，且没有任何痕迹。
+  Future<void> applyDelta(SettleDelta delta, int chapterNumber) {
+    return dao.attachedDatabase.transaction(() async {
+      await _applyFacts(delta, chapterNumber);
+      await _applyCharacters(delta);
+      await _applyResources(delta);
+      await _applyHooks(delta);
+      await _applySummary(delta);
+      if (delta.authorIntent.trim().isNotEmpty) {
+        await _writeTextLocked(TruthFileKind.authorIntent, delta.authorIntent);
+      }
+      if (delta.currentFocus.trim().isNotEmpty) {
+        await _writeTextLocked(TruthFileKind.currentFocus, delta.currentFocus);
+      }
+    });
+  }
+
+  /// 覆盖写入单字段文本，带乐观锁。
+  Future<void> _writeTextLocked(String kind, String text) async {
+    final row = await readRow(kind);
+    await write(kind, {'text': text}, expectedRevision: row?.revision);
   }
 
   Future<void> _applyFacts(SettleDelta delta, int chapterNumber) async {
@@ -224,14 +236,17 @@ class TruthFileStore {
 
     for (final up in delta.hookUpsert) {
       final idx = hooks.indexWhere((h) => h['id'] == up['id']);
-      final next = up['status']?.toString() ?? '';
+      // 不直接 as String：LLM 可能回数字或布尔（{"status":1}），强转会抛
+      // TypeError 并中断整轮固化。统一归一成字符串，非法值交给 allows 拒绝。
+      final next = (up['status']?.toString() ?? '').trim();
       if (next.isEmpty) {
         // 新建且未给状态时默认 open；历史条目无状态视为 open。
         up['status'] = HookStates.open;
       }
+      final target = up['status']?.toString() ?? '';
       final from = idx >= 0 ? hooks[idx]['status']?.toString() : null;
-      if (!HookStates.allows(from, up['status'] as String)) {
-        rejected.add('${up['id']} ${HookStates.label(from)} → ${up['status']}');
+      if (!HookStates.allows(from, target)) {
+        rejected.add('${up['id']} ${HookStates.label(from)} → $target');
         continue;
       }
       if (idx >= 0) {
@@ -256,10 +271,11 @@ class TruthFileStore {
     }, expectedRevision: row?.revision);
     if (rejected.isNotEmpty) {
       // 终态不可回退：不阻塞整章固化，但把被拒转移记入内容，用户可在伏笔池查证。
+      final updated = await readRow(TruthFileKind.hooks);
       await write(TruthFileKind.hooks, {
-        ..._contentOf(await readRow(TruthFileKind.hooks)),
+        ..._contentOf(updated),
         'rejectedTransitions': rejected,
-      });
+      }, expectedRevision: updated?.revision);
     }
   }
 

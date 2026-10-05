@@ -203,7 +203,61 @@ lib/
 - **状态常量需统一且覆盖全枚举**：`task_page.dart:380-399` 的 `_TaskBadge` 只识别 8 个状态中的 2 个，6 个落灰色 default 使「已完成」与「排队中」外观一致。抽统一 `StatusBadge` + 单一状态常量类。状态迁移需幂等：`shot_service.dart:147-154` 重新导演无条件写 `awaitingImage` 会把已出视频镜头降级，对应视频任务仍「已完成」。
 - **文件校验需在读取前**：`shot_service.dart:721-722` 先 `readAsBytes()` 再判 100MB，超大文件先全量载入内存致 OOM（本机环境 358 MiB）。任何「读整个文件再校验」改为先 `File.length()` 或流式分块。
 - **用户文本不得拼进命令串**：`shot_compose_service.dart:52` 把剧本标题（`script_detail_page.dart:247`）拼进 FFmpeg 命令串，标题含 `"` 时输出路径可控。文件名白名单过滤 `[^\w\-]` → `_`，输出路径由服务内部生成，用 `executeWithArguments` 数组传参。同步长任务用 `FFmpegSession` + 进度回调 + `cancelExecution` + `Isolate.run`；`apad` 必须带 `whole_dur`（默认无限补静音致成片尾部黑帧）；成功后删临时文件。
-- **协议常量需统一枚举**：`agnes_presets.dart` 的 `openai-chat` / `openai-images` / `openai-videos` 与适配器实际分支不一致，LLM 侧 `protocol` 是死字段，图片/视频侧不匹配会静默落到默认分支。统一枚举 + 适配器显式分支 + 未知协议抛错，不得静默降级。
+ - **协议常量需统一枚举**：`agnes_presets.dart` 的 `openai-chat` / `openai-images` / `openai-videos` 与适配器实际分支不一致，LLM 侧 `protocol` 是死字段，图片/视频侧不匹配会静默落到默认分支。统一枚举 + 适配器显式分支 + 未知协议抛错，不得静默降级。
+
+### 可靠性接线约定（M18，阻断级已完成）
+
+  > 审计与任务清单见 `docs/06-全量审计报告.md` 与 `docs/04` §8.bb M18。
+  > M18 的核心教训：**M17 交付的产物可回溯在分镜链路一行未执行**——
+  > `revisionDao` / `attemptDao` 是可选构造参数 + 内部 `if (dao == null) return`
+  > + 五处 `catch (_) {}` 无日志，三道防线同时失效而 231 例测试全绿。
+  > 根因是「可靠性能力」被写成了「可选增强」，编译期没有防线。
+
+  - **可靠性依赖必须 `required`**：`ShotService` / `AssetService` / `NovelService` /
+    `ScriptService` / `SkeletonService` 的 `revisionDao` / `attemptDao` 一律 `required`，
+    字段无 `?`，内部不再判空短路。改依赖顺序不可反：**先把参数改 `required`
+    再补 provider 注入**，让编译期强制暴露所有漏注入点——这正是当初分镜链路漏掉
+    `revisionDao` / `attemptDao` 而无人发现的原因。
+  - **台账项目归属由 bookId 解析，不由调用点传**：`GenerationAttemptDao.projectOfBook`
+    是唯一解析入口，`AttemptRecorder.start` 只收 `bookId`。`finishAttempt`
+    不接受 `projectId`——台账写入只发生一次，事后回写会造成「项目迁移后台账失联」。
+    新增登记点必须走 `bookId`，禁止自己拼 bookId → projectId。
+  - **静默 catch 一律留痕不阻塞**：辅助能力（快照、台账）失败不阻塞主流程，但必须
+    走 `lib/core/app_log.dart` 的 `appLog(tag, message, {error, stackTrace})`
+    （`dart:developer.log` level 900，release 也输出到 logcat，消息截断 300 字符）。
+    禁止裸 `catch (_) {}`——那是把可靠性功能降级成装饰性功能。
+    `appLog` 只记 tag + 异常类型 + 截断消息，**禁止传提示词、正文、API Key**。
+  - **Settler 固化必须整段事务化**：`TruthFileStore.applyDelta` 包
+    `attachedDatabase.transaction`，五类 `_applyX` 与 authorIntent / currentFocus 同处一个
+    事务；中途抛错（非法状态转移、并发写冲突、内容损坏）整段回滚。
+    除 revision 外 TruthFile 无「定稿完成」痕迹，半套固化会让下一章写作基于残缺真相继续跑。
+  - **TruthFile 写入一律带锁**：`write(kind, content, {expectedRevision})` 的所有调用点
+    必须传 `expectedRevision`（读同一行后再写）。新增写入口先取 `readRow(kind)` 再写，
+    禁止绕过 `expectedRevision` 的裸 `write`。
+  - **LLM 输出状态值一律归一化再判**：`HookStates` 校验路径统一
+    `(v?.toString() ?? '').trim()`，禁止 `as String`。LLM 回 `{"status":1}` 时强转抛
+    `TypeError` 会吞掉整轮固化（facts / characters / resources / summary 全部不落库）；
+    归一化后非法值进 `HookStates.allows` 判定，被拒转移记入 `rejectedTransitions`，不阻塞其余固化。
+  - **`deleteAssetCascade` 必须删 `assetRevisions`**：该表有指向 `Assets` 的外键，
+    库已开 `PRAGMA foreign_keys = ON`；只删 `assets` 会让任何出过图的资产删除直接抛
+    `FOREIGN KEY constraint failed`。删除顺序照 `CascadeDao` 文件头注释的拓扑序。
+  - **备份包必须流式解析，禁止 `decodeBytes` 全量驻留**：`BackupService._openArchive`
+    用 `ZipDecoder().decodeStream(InputFileStream)` 只解析中央目录、条目内容按需解压，
+    用完 `archive.clearSync()`。PNG/MP4 几乎不可压缩，压缩包大小 ≈ 解压后大小，
+    旧的 `readAsBytes` + `decodeBytes` 让两份全量字节同时驻留，500MB 包在
+    358MiB 预算上是必然 OOM。
+  - **解压前双重校验**：`maxImportBytes`（包体 500MB）与 `maxExtractedBytes`
+    （解压后 2GB）两个常量单一来源。`_guardExtractedSize` 按中央目录声明的
+    `ArchiveFile.size` 累加判断，校验必须在写出任何文件之前完成——否则 zip bomb
+    已经落盘才报错，用户看到的是几个 GB 的垃圾文件。
+  - **`backup.json` 走宽容解析**：`_decodeBackupJson` 统一把非法 UTF-8 / 非法 JSON /
+    顶层非对象都收敛成 `FormatException('备份包已损坏：…')`，UI 层只需处理一种异常。
+    用户提供的包任何脏数据都不该以未捕获异常结束。
+
+  - **Manifest 必须自带 `INTERNET` 权限**：`android/app/src/main/AndroidManifest.xml`
+    的 `uses-permission` 不能只存在于 `src/debug/` 与 `src/profile/`——Release 构建的
+    manifest merger 拿不到 debug 变体，联网权限会整段丢失。改 manifest 后必须
+    确认 release 产物也能联网。
 
 ---
 

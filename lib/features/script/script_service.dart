@@ -29,8 +29,8 @@ class ScriptService {
     required this.truthDao,
     required this.cascadeDao,
     required this.agents,
-    GenerationAttemptDao? attemptDao,
-  }) : _attempts = attemptDao == null ? null : AttemptRecorder(attemptDao);
+    required GenerationAttemptDao attemptDao,
+  }) : _attempts = AttemptRecorder(attemptDao);
 
   final AppDatabase db;
   final ScriptDao scriptDao;
@@ -40,8 +40,8 @@ class ScriptService {
   final TruthFileDao truthDao;
   final CascadeDao cascadeDao;
 
-  /// 生成尝试台账；未注入时所有登记静默跳过。
-  final AttemptRecorder? _attempts;
+  /// 生成尝试台账（M18 T20.1 起必填，见 [AttemptRecorder]）。
+  final AttemptRecorder _attempts;
 
   static String _paramsOf(ActiveLlm llm) => jsonEncode({
     'model': llm.modelId,
@@ -57,16 +57,16 @@ class ScriptService {
     required String prompt,
     required String params,
     Map<String, dynamic> before = const {},
+    int? bookId,
   }) {
-    final rec = _attempts;
-    if (rec == null) return Future.value(null);
-    return rec.start(
+    return _attempts.start(
       subjectType: subjectType,
       subjectId: subjectId,
       subjectLabel: subjectLabel,
       prompt: prompt,
       params: params,
       before: before,
+      bookId: bookId,
     );
   }
 
@@ -77,9 +77,7 @@ class ScriptService {
     int? subjectId,
     String? subjectLabel,
   }) async {
-    final rec = _attempts;
-    if (rec == null) return;
-    await rec.finish(
+    await _attempts.finish(
       id: id,
       status: status,
       error: error,
@@ -163,6 +161,7 @@ class ScriptService {
         'version': existing?.version,
         'fidelityMode': existing?.fidelityMode,
       },
+      bookId: bookId,
     );
     try {
       final result = await agents.adapt(prompt: prompt, llm: llm);

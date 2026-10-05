@@ -31,6 +31,10 @@ final shotServiceProvider = Provider<ShotService>((ref) {
     videoFileStore: ref.watch(videoFileStoreProvider),
     videoTaskDao: ref.watch(videoTaskDaoProvider),
     providerDao: ref.watch(providerDaoProvider),
+    // M18 T20.1：这两项此前漏注入，ShotService 内以 null 静默跳过，
+    // 导致分镜图历史面板永远空、三类生成台账永无记录。
+    revisionDao: ref.watch(revisionDaoProvider),
+    attemptDao: ref.watch(generationAttemptDaoProvider),
   );
   // 轮询恢复时从安全存储读 Key。
   final keyStore = ref.watch(secureKeyStoreProvider);

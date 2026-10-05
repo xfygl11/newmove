@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Release 构建也必须有联网权限，否则 manifest merger 拿不到 INTERNET。 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
-        android:label="newmove"
+        android:label="小说动漫工坊"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

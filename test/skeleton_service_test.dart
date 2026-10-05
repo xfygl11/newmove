@@ -94,6 +94,7 @@ void main() {
       shotDao: db.shotDao,
       cascadeDao: db.cascadeDao,
       agents: SkeletonAgents(adapter: _FakeAdapter(_cannedJson)),
+      attemptDao: db.generationAttemptDao,
     );
 
     final projectId = await db.projectDao.insertProject(

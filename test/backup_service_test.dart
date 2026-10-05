@@ -280,4 +280,39 @@ void main() {
     );
     expect(File('/tmp/newmove_escape.png').existsSync(), isFalse);
   });
+
+  test('导入解压后超限包：中央目录声明的解压总量超 2GB 直接拒绝', () async {
+    // 中央目录声明的解压大小远超实际内容：不写出任何文件就应中止。
+    final bomb = File('${root.path}/tmp/bomb.zip');
+    final archive = Archive();
+    final jsonBytes = utf8.encode(jsonEncode({'scope': 'project'}));
+    archive.addFile(ArchiveFile('backup.json', jsonBytes.length, jsonBytes));
+    archive.addFile(
+      ArchiveFile('videos/large.mp4', 3 * 1024 * 1024 * 1024, Uint8List(0)),
+    );
+    await bomb.writeAsBytes(ZipEncoder().encode(archive));
+
+    await expectLater(
+      service.importProject(bomb.path),
+      throwsA(isA<StateError>()),
+    );
+    expect(
+      File('${root.path}/doc/videos/large.mp4').existsSync(),
+      isFalse,
+      reason: '校验应在写出文件前完成',
+    );
+  });
+
+  test('导入损坏 backup.json：抛 FormatException 而非未捕获异常', () async {
+    final bad = File('${root.path}/tmp/bad.json.zip');
+    final archive = Archive();
+    final raw = utf8.encode('this is not json');
+    archive.addFile(ArchiveFile('backup.json', raw.length, raw));
+    await bad.writeAsBytes(ZipEncoder().encode(archive));
+
+    await expectLater(
+      service.importProject(bad.path),
+      throwsA(isA<FormatException>()),
+    );
+  });
 }

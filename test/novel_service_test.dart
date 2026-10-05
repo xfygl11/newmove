@@ -20,6 +20,7 @@ void main() {
       truthDao: db.truthFileDao,
       revisionDao: db.chapterRevisionDao,
       agents: NovelAgents(adapter: LlmProviderAdapter()),
+      attemptDao: db.generationAttemptDao,
     );
     final projectId = await db.projectDao.insertProject(
       ProjectsCompanion.insert(name: '测试项目'),

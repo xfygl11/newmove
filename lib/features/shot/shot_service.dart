@@ -9,6 +9,7 @@ import 'package:drift/drift.dart' show Value;
 import '../../agent/active_image.dart';
 import '../../agent/active_llm.dart';
 import '../../agent/active_video.dart';
+import '../../core/app_log.dart';
 import '../../core/json_values.dart';
 import '../../core/network/image_provider_adapter.dart';
 import '../../core/network/video_provider_adapter.dart';
@@ -52,8 +53,8 @@ class ShotService {
     required this.videoFileStore,
     required this.videoTaskDao,
     required this.providerDao,
-    this.revisionDao,
-    this.attemptDao,
+    required this.revisionDao,
+    required this.attemptDao,
   });
 
   final ScriptDao scriptDao;
@@ -71,11 +72,14 @@ class ShotService {
   final VideoTaskDao videoTaskDao;
   final ProviderDao providerDao;
 
-  /// 产物版本快照（M14 T16.6）。未注入时跳过。
-  final RevisionDao? revisionDao;
+  /// 产物版本快照（M14 T16.6 / M18 T20.1）。
+  ///
+  /// 必填：曾是可选项，生产 provider 漏注入导致 M17 分镜侧快照与台账一行未执行，
+  /// 而测试夹具犯了同样的省略所以全绿。改必填后由编译期守住。
+  final RevisionDao revisionDao;
 
-  /// 生成尝试台账（M14 T16.5.4）。未注入时跳过。
-  final GenerationAttemptDao? attemptDao;
+  /// 生成尝试台账（M14 T16.5.4 / M18 T20.1）。同样必填，理由同上。
+  final GenerationAttemptDao attemptDao;
 
   /// 数据库实例：多表重建统一走 [AppDatabase.transaction]。
   final AppDatabase db;
@@ -143,29 +147,27 @@ class ShotService {
     });
   }
 
-  /// 保存一次产物快照；未注入 RevisionDao 时静默跳过。
+  /// 保存一次产物快照。失败不得阻塞生成主流程，但必须留痕。
   Future<void> _saveShotSnapshot(
     int shotId,
     String kind,
     String summary,
   ) async {
-    final dao = revisionDao;
-    if (dao == null) return;
     final shot = await shotDao.find(shotId);
     if (shot == null) return;
     try {
-      await dao.saveShot(
+      await revisionDao.saveShot(
         shotId: shotId,
         kind: kind,
         snapshot: await snapshotOf(shot),
         summary: summary,
       );
-    } catch (_) {
-      // 快照失败不得阻塞生成主流程。
+    } catch (e, st) {
+      appLog('shot_snapshot', 'shot=$shotId kind=$kind', error: e, stackTrace: st);
     }
   }
 
-  /// 登记一次生成尝试：返回台账 id，用于结束后回写结果；未注入时返回 null。
+  /// 登记一次生成尝试：返回台账 id，用于结束后回写结果；失败返回 null。
   Future<int?> _recordAttempt({
     required String subjectType,
     required int subjectId,
@@ -175,14 +177,14 @@ class ShotService {
     List<Map<String, dynamic>> refs = const [],
     Map<String, dynamic> before = const {},
     int grantLimit = 1,
-    int? projectId,
+    int? bookId,
   }) async {
-    final dao = attemptDao;
-    if (dao == null) return null;
     try {
-      return await dao.insert(
+      return await attemptDao.insert(
         GenerationAttemptsCompanion.insert(
-          projectId: Value(projectId),
+          projectId: Value(
+            bookId == null ? null : await attemptDao.projectOfBook(bookId),
+          ),
           subjectType: subjectType,
           subjectId: Value(subjectId),
           subjectLabel: Value(subjectLabel),
@@ -190,7 +192,7 @@ class ShotService {
           params: Value(params),
           refs: Value(jsonEncode(refs)),
           before: Value(jsonEncode(before)),
-          attemptNo: Value(await dao.nextAttemptNo(subjectType, subjectId)),
+          attemptNo: Value(await attemptDao.nextAttemptNo(subjectType, subjectId)),
           grantLimit: Value(grantLimit),
           grantFingerprint: Value(
             _fingerprint(subjectType, subjectId, prompt, refs, grantLimit),
@@ -198,7 +200,13 @@ class ShotService {
           status: const Value(AttemptStatuses.running),
         ),
       );
-    } catch (_) {
+    } catch (e, st) {
+      appLog(
+        'attempt_start',
+        '$subjectType#$subjectId',
+        error: e,
+        stackTrace: st,
+      );
       return null;
     }
   }
@@ -210,17 +218,16 @@ class ShotService {
     String? resultPath,
     String? error,
   }) async {
-    final dao = attemptDao;
-    if (dao == null || id == null) return;
+    if (id == null) return;
     try {
-      await dao.finishAttempt(
+      await attemptDao.finishAttempt(
         id: id,
         status: status,
         resultPath: resultPath,
         errorMessage: error,
       );
-    } catch (_) {
-      // 台账回写失败不影响主流程。
+    } catch (e, st) {
+      appLog('attempt_finish', '#$id -> $status', error: e, stackTrace: st);
     }
   }
 
@@ -334,6 +341,7 @@ class ShotService {
         'maxOutputTokens': llm.model.maxOutputTokens,
         'budgetTokens': llm.budgetTokens,
       }),
+      bookId: (await scriptDao.find(scriptId))?.bookId,
     );
     final result = await agents.direct(prompt: context, llm: llm);
     await _finishAttempt(
@@ -453,6 +461,7 @@ class ShotService {
       }),
       refs: await _refRowsOf(shot),
       before: {'status': shot.status, 'outputPath': shot.outputPath},
+      bookId: (await scriptDao.find(shot.scriptId))?.bookId,
     );
 
     await shotDao.updateById(
@@ -849,6 +858,7 @@ class ShotService {
       params: jsonEncode(actualParams.encode()),
       refs: await _refRowsOf(shot),
       before: {'status': shot.status, 'outputPath': shot.outputPath},
+      bookId: (await scriptDao.find(shot.scriptId))?.bookId,
     );
 
     // 提交（状态：视频生成中）。

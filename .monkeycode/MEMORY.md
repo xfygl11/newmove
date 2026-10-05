@@ -113,15 +113,20 @@ Entries discovered by the Agent during task execution should follow this format:
   - `Companion` 上**没有 `count()` 方法**，统计用 `select().get().length`
   - `GeneratedCompanion` 不是类，需要降级写入时用具体类型的 Companion（如 `ShotRevisionsCompanion`）
   - 带默认值的列在 `Companion.insert` 里参数类型是 `Value<String>`（要包 `Value(...)`），无默认值的必填列直接收 `String`；nullable 且非必填（如 `subjectLabel`）传 `String?` 时必须用 `Value.absent()` 分支，否则报 `String? → String` 不匹配
+  - **2.35.1 的 `get()` 不接受 `limit` 参数**：`query.get(limit: n)` 直接报 `undefined_named_parameter`；限制条数要先 `query.limit(n)`（来自 `LimitContainerMixin`）再 `query.get()`
+  - 条件 where 链要写成 `final q = select(t); if (x != null) q.where(...); q.orderBy(...); q.limit(n); return q.get();`——`where` / `orderBy` 都返回新 statement，链式调用会丢掉后面的子句；`const IsNull(false)` 这类写法不合法
 
 [纯 Dart 语义与依赖 API 的本地验证方法]
-- Date: 2026-10-04
+- Date: 2026-10-05
 - Context: 代码调研时需确认 Dart switch 语义与 dio 超时语义，避免凭记忆误判
 - Category: Testing Methods
 - Instructions:
   - 验证纯 Dart 语言行为/最小样例时，直接跑 `/opt/flutter/bin/cache/dart-sdk/bin/dart <file>`（秒级，不需要 flutter 完整环境，也不受 358 MiB 内存限制影响）
   - 第三方包的 API 语义一律去 `~/.pub-cache/hosted/pub.dev/<pkg>-<version>/` grep 源码确认，不要凭记忆下结论；例如 dio 5.11.1 中 `receiveTimeout` 同时覆盖「建连 + 首字节」以及「数据传输中每两个字节事件的间隔」，而 `connectTimeout` 默认 null（无限制）
   - Dart 非空 `switch case` 分支即使不写 `break`，CFE 也不会 fall-through（运行时验证：case 体末尾隐式跳出），analyzer 3.13 也不会报 `flow_control_transfer_required_in_switch`；不要把「case 缺 break」当成缺陷上报
+  - **字符串插值 `$id_` 会把 `id_` 当成一个完整标识符**（贪婪匹配下划线），报 `undefined_identifier`；标识符后面紧跟 `_` 或 `.` 之外字符时必须写 `${id}`
+  - `file_picker` 13.1 的 `FilePicker.pickFiles` 返回 `Future<List<PlatformFile>>`（**非空**），`result?.single.path` 会报 `invalid_null_aware_operator`；先 `if (result.isEmpty) return;` 再取 `result.single.path`（`path` 本身仍是 `String?`）
+  - 单测里 mock path_provider 的模式见 `test/backup_service_test.dart`：继承 `PathProviderPlatform` + `MockPlatformInterfaceMixin`，覆盖 `getApplicationDocumentsPath` 指向临时目录，再 `PathProviderPlatform.instance = ...`；`tearDown` 里删临时目录
 
 [借鉴项目缓存位置（做功能/流程比对时直接用）]
 - Date: 2026-10-04
@@ -134,17 +139,11 @@ Entries discovered by the Agent during task execution should follow this format:
   - `/tmp/opencode` 属临时目录，若目录缺失则按远端仓库重新克隆；两个项目均为只读参考，不要在其内部修改代码
   - 比对结论与「采纳/不采纳」决策记录在 `docs/01` 第 8 节，任务化条目在 `docs/04` 第 8.y 节（M14）
 
-[后续开发需同步更新 AGENTS.md 与 docs]
-- Date: 2026-10-04
+[工作流约定：同步文档 + 按阶段推进]
+- Date: 2026-10-05
 - Context: 用户要求
 - Category: Workflow & Collaboration
 - Instructions:
-  - 每次新增/修改功能都要及时同步 `AGENTS.md` 与 `docs/02-系统架构设计.md`、`docs/04-开发计划与任务.md`
-  - `AGENTS.md` 是 AI 协作规范，`docs/` 是详细设计，三者需保持一致
-
-[按阶段推进，完成当前要求后等待下一步指令]
-- Date: 2026-10-04
-- Context: 用户多次以「继续」推进
-- Instructions:
-  - 只实现用户当前明确要求的内容，不主动扩展功能、不加占位数据
-  - 完成当前要求并验证后停止，等待下一步指令，不擅自扩大范围
+  - 每次新增/修改功能都要及时同步 `AGENTS.md` 与 `docs/02-系统架构设计.md`、`docs/04-开发计划与任务.md`；`AGENTS.md` 是 AI 协作规范，`docs/` 是详细设计，三者需保持一致
+  - 只实现用户当前明确要求的内容，不主动扩展功能、不加占位数据；完成当前要求并验证后停止，等待下一步指令，不擅自扩大范围
+  - 文档先于代码：用户给出的方向先完整更新到 `docs/`，再按文档动手实现

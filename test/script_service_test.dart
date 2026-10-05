@@ -72,6 +72,7 @@ void main() {
       truthDao: db.truthFileDao,
       cascadeDao: db.cascadeDao,
       agents: ScriptAgents(adapter: _FakeAdapter(_cannedJson)),
+      attemptDao: db.generationAttemptDao,
     );
     final projectId = await db.projectDao.insertProject(
       ProjectsCompanion.insert(name: '测试项目'),
