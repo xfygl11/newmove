@@ -129,6 +129,16 @@ lib/
 - **资产提示词按模板生成**：`assets/skills/asset/asset_design.md` 给出角色四视图 / 场景主视图 / 道具 2x2 三套逐字模板与负向约束，LLM 只替换占位符，不自创散文；变体复用父资产模板 + `AssetService.variantPromptSuffix`，提示词里不写引用标记（父资产图由 App 自动上传）。
 - **变体提示词常量单一来源**：`AssetService.variantPromptSuffix` 同时用于落库与确认框 `promptPreview`，改文案只改这一处。
 
+### 集与时长预算约定（M16）
+
+- **一集 = 剧本表一行**：分集不加新表，`Scripts.episodeNo` / `targetDurationMs` / `modelVersion` 三列承载集元数据（schema v9）。`episodeNo` 空表示不参与分集；`targetDurationMs` 为 0 表示由内容自然节奏决定，此时跳过总量偏差校验。
+- **单段时长上限三级回落**：选中视频模型的 `ProviderModel.supportedDurations` 最大值 → 剧本 `modelVersion`（`2.0` = 15000ms / `2.5` = 30000ms）→ 通用默认 15000ms。禁止在业务代码里写死 `'15s'` / `'30s'` 字面量。
+- **分段预算只走 `SegmentBudget`**：`lib/features/shot/segment_budget.dart` 是时长与容量校验的唯一入口，纯函数、不写库。`maxSegmentMs` / `maxBatchSegments`（2.0 = 6 段 / 2.5 = 3 段）/ `theoreticalMinSegments`（`⌈目标/上限⌉`，只作下限提示）/ `validate()`。别的服务需要判定时长合法性必须调它，不自算。
+- **五条校验码稳定不变**：`over_limit` / `dialogue_overflow`（error）、`total_mismatch` / `too_few_segments` / `batch_too_large`（warn）。新增校验码先在本约定里登记再实现。`dialogue_overflow` 用 `beatRefs` 回溯 `Beats.estDurationMs` 求和，与 A3.2 对白硬门槛对齐——禁止靠快语速解决，禁止删词改词。
+- **10% 呼吸余量**：`mergeBudgetMs = maxSegmentMs × 0.9` 是合并节拍时的预算上限，`maxSegmentMs` 是生成时长硬上限；两个数字都透传给提取 prompt（`skeleton_service.extract`），避免自然朗读时间被压缩到必须靠异常快语速完成。
+- **error 阻塞视频提交，不阻塞骨架提取**：`ShotService.submitVideo` 在临执行复核前跑 `validate`，`error` 项写入 `ConfirmSheet` 的 `note`，用户明确确认后放行；`warn` 项只提示。提取是生成前动作，允许带冲突落库后由用户调整。
+- **A7 衔接与时长预算是两个独立面板**：`ShotService.listTransitionIssues` 负责画面区分度（主体相同且景别差 <2 档且角度差 <90°），`SegmentBudget.validate` 负责时长与容量。都只提示不改数据，UI 上并列展示，不合并成一条。
+
 ### 数据与备份约定（M11 P2 追加）
 
 - 全库备份：`BackupService.exportAll()` 导出所有项目为单 zip（`scope: full`），`importProject` 兼容全库包与单项目包；导入前经 `findConflicts` 做同名项目检测，冲突时弹窗确认。

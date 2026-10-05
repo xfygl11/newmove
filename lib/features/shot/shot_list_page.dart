@@ -10,6 +10,7 @@ import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
 import '../../widgets/status_badge.dart';
 import '../asset/asset_providers.dart';
+import 'segment_budget.dart';
 import 'shot_models.dart';
 import 'shot_providers.dart';
 import 'shot_service.dart' show GenerationCancelToken;
@@ -93,6 +94,46 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
             },
             orElse: () => const SizedBox.shrink(),
           ),
+
+          // 时长与容量预算（M16）。与 A7 面板并列：A7 管画面区分度，这里管时长。
+          // error 与 warn 分卡展示：前者需确认后才放行生成，后者只提示。
+          ref
+              .watch(shotBudgetIssuesProvider(widget.scriptId))
+              .maybeWhen(
+                data: (issues) {
+                  if (issues.isEmpty) return const SizedBox.shrink();
+                  final errors = issues.where((i) => i.isError).toList();
+                  final warns = issues.where((i) => !i.isError).toList();
+                  return Column(
+                    children: [
+                      if (errors.isNotEmpty)
+                        _issueCard(
+                          context: context,
+                          title: '时长约束冲突（${errors.length}）',
+                          message: '错误级：提交视频生成前需逐条确认',
+                          entries: [
+                            for (final issue in errors) _budgetLine(issue),
+                          ],
+                          color: Colors.red.shade900,
+                          tint: Colors.red.shade100,
+                        ),
+                      if (warns.isNotEmpty)
+                        _issueCard(
+                          context: context,
+                          title: '时长预算提示（${warns.length}）',
+                          message: '提示级：不阻塞生成，建议调整分段',
+                          entries: [
+                            for (final issue in warns) _budgetLine(issue),
+                          ],
+                          color: Colors.amber.shade900,
+                          tint: Colors.amber.shade100,
+                        ),
+                    ],
+                  );
+                },
+                orElse: () => const SizedBox.shrink(),
+              ),
+
           Expanded(
             child: shotsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -244,6 +285,53 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
   /// 只保留仍存在的镜头 id，不改动 [_selected]，避免在 build 内产生副作用。
   static Set<int> _prune(Set<int> selected, Iterable<int> existing) =>
       selected.where(existing.contains).toSet();
+
+  /// 提示面板共用结构（A7 与 M16 预算面板样式一致，仅内容不同）。
+  Widget _issueCard({
+    required BuildContext context,
+    required String title,
+    required String message,
+    required List<String> entries,
+    required Color color,
+    required Color tint,
+  }) {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      color: color.withValues(alpha: 0.25),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 4),
+            Text(message, style: TextStyle(color: tint)),
+            const SizedBox(height: 2),
+            for (final e in entries)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text('⚠ $e', style: TextStyle(color: tint)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 校验条目展示文案：严重度 + 段号 + 中文标签。
+  static String _budgetLine(SegmentBudgetIssue issue) =>
+      '[${issue.isError ? 'error' : 'warn'}] ${issue.seq}：'
+      '${_budgetLabelOf(issue.code)}';
+
+  /// M16 校验码 → 中文标签（对齐 docs/05 §12.2）。
+  static String _budgetLabelOf(String code) => switch (code) {
+    'over_limit' => '超出单段上限',
+    'dialogue_overflow' => '台词装不下',
+    'total_mismatch' => '与目标总时长偏差大',
+    'too_few_segments' => '段数偏少',
+    'batch_too_large' => '单批段数过多',
+    _ => code,
+  };
 
   /// 批量生成选中的分镜图（含确认 Sheet）。
   Future<void> _generateSelected() async {

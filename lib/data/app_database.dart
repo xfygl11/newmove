@@ -72,7 +72,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -117,6 +117,13 @@ class AppDatabase extends _$AppDatabase {
         // 映射 size 参数，另行规划。
         await m.dropColumn(scripts, 'aspect_ratio');
         await m.dropColumn(scripts, 'language');
+      }
+      if (from < 9) {
+        // M16：一集 = 剧本表一行。集元数据不新增表，剧本行承载集序号、
+        // 目标总时长与目标模型版本；单段时长上限仍由选中视频模型能力推导。
+        await m.addColumn(scripts, scripts.episodeNo);
+        await m.addColumn(scripts, scripts.targetDurationMs);
+        await m.addColumn(scripts, scripts.modelVersion);
       }
     },
     beforeOpen: (details) async {

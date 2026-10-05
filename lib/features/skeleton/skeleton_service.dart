@@ -10,6 +10,8 @@ import '../../data/daos/cascade_dao.dart';
 import '../../data/daos/scene_dao.dart';
 import '../../data/daos/script_dao.dart';
 import '../../data/daos/shot_dao.dart';
+import '../provider_config/provider_models.dart';
+import '../shot/segment_budget.dart';
 import 'skeleton_agents.dart';
 import 'skeleton_models.dart';
 
@@ -69,19 +71,36 @@ class SkeletonService {
 
   final SkeletonAgents agents;
 
-  /// 默认单段时长上限（Seedance 2.0 单段 15s）。
-  static const int defaultDurationCapMs = 15000;
+  // ---- 提取（T3.2 / T18.3） ----
 
-  // ---- 提取（T3.2） ----
+  /// 解析该剧本的分段预算：剧本集参数 + 当前视频模型能力。
+  static SegmentBudget budgetFor(Script script, {ProviderModel? videoModel}) {
+    return SegmentBudget(
+      script: script,
+      segments: const [],
+      beats: const [],
+      videoModel: videoModel,
+    );
+  }
 
   String buildExtractionPrompt({
     required Script script,
     required List<Scene> scenes,
-    int durationCapMs = defaultDurationCapMs,
+    ProviderModel? videoModel,
   }) {
+    final budget = budgetFor(script, videoModel: videoModel);
     final buf = StringBuffer();
     buf.writeln('【剧本标题】${script.title}');
-    buf.writeln('【目标模型单段上限】${durationCapMs}ms');
+    buf.writeln('【单段时长硬上限】${budget.maxSegmentMs}ms（不可超过）');
+    buf.writeln('【合段预算】${budget.mergeBudgetMs}ms（已扣除 10% 呼吸余量）');
+    if (script.targetDurationMs > 0) {
+      buf.writeln(
+        '【目标总时长】${script.targetDurationMs}ms'
+        '（理论最少 ${budget.theoreticalMinSegments(script.targetDurationMs)} 段，'
+        '只作下限参考）',
+      );
+    }
+    buf.writeln('【单批最多段数】${budget.maxBatchSegments}');
     buf.writeln('【定稿剧本（分场 JSON）】');
     buf.writeln(
       jsonEncode({
@@ -97,12 +116,12 @@ class SkeletonService {
     required Script script,
     required List<Scene> scenes,
     required ActiveLlm llm,
-    int durationCapMs = defaultDurationCapMs,
+    ProviderModel? videoModel,
   }) async {
     final prompt = buildExtractionPrompt(
       script: script,
       scenes: scenes,
-      durationCapMs: durationCapMs,
+      videoModel: videoModel,
     );
     final attempt = await _start(
       subjectType: AttemptSubjects.skeletonExtract,

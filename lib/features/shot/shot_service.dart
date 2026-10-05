@@ -30,6 +30,7 @@ import '../provider_config/provider_models.dart';
 import '../script/script_models.dart';
 import 'shot_agents.dart';
 import 'shot_models.dart';
+import 'segment_budget.dart';
 import 'video_prompt.dart';
 
 /// 分镜图的业务编排：上下文构建、导演落库、多参考图生成、衔接校验、视频生成。
@@ -732,6 +733,36 @@ class ShotService {
     if (text.contains('背')) return 180;
     if (text.contains('俯') || text.contains('仰')) return 45;
     return 0;
+  }
+
+  // ---- 时长预算校验（T18.4 / A2.3 / A3） ----
+
+  /// 某剧本的时长与容量校验结果（M16）。
+  ///
+  /// 与 [listTransitionIssues] 分工：那边管画面区分度，这里管时长与容量。
+  /// 都是纯校验、只提示不改数据。
+  Future<List<SegmentBudgetIssue>> listBudgetIssues(
+    int scriptId, {
+    ProviderModel? videoModel,
+  }) async {
+    final script = await scriptDao.find(scriptId);
+    if (script == null) return const [];
+    final segments = await shotDao.listByScript(scriptId);
+    final beats = await beatDao.listByScript(scriptId);
+    return SegmentBudget(
+      script: script,
+      segments: segments,
+      beats: beats,
+      videoModel: videoModel,
+    ).validate();
+  }
+
+  /// 校验结果里需要用户明确确认才能继续的 error 级条目。
+  List<SegmentBudgetIssue> errorIssuesOf(List<SegmentBudgetIssue> issues) {
+    return [
+      for (final i in issues)
+        if (i.isError) i,
+    ];
   }
 
   // ---- 视频生成（M6：T7.1–T7.4） ----

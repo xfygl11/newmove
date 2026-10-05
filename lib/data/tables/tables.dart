@@ -82,6 +82,12 @@ class Scripts extends Table {
   TextColumn get status => text().withDefault(const Constant('草案'))();
   // 结构化 JSON：{ scenes: [...] }。
   TextColumn get content => text().withDefault(const Constant('{}'))();
+  // M16 分集：集序号（空表示不参与分集）。
+  IntColumn get episodeNo => integer().nullable()();
+  // 目标总时长（毫秒）；0 表示由内容自然节奏决定，不做总量偏差校验。
+  IntColumn get targetDurationMs => integer().withDefault(const Constant(0))();
+  // 目标模型版本（'2.0' / '2.5'）；决定单段时长上限与批次容量的回落值。
+  TextColumn get modelVersion => text().nullable()();
 }
 
 /// 场。

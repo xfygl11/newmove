@@ -434,6 +434,25 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
     }
     // 「生成前确认」开关关闭时直接提交（设置页 T9.3）。
     final (_, params) = _effective(video);
+
+    // 临执行复核：时长与容量校验（M16）。error 级条目必须逐条回传，
+    // 由用户确认后才放行；warn 级只在列表页面板提示。
+    final models = ProviderModelCodec.decode(video.provider.models);
+    final selectedModel = models.firstWhere(
+      (m) => m.id == params.modelId,
+      orElse: () => video.model,
+    );
+    final svc = ref.read(shotServiceProvider);
+    final budgetIssues = await svc.listBudgetIssues(
+      widget.shot.scriptId,
+      videoModel: selectedModel,
+    );
+    if (!mounted) return;
+    final budgetErrors = svc.errorIssuesOf(budgetIssues);
+    final note = budgetErrors.isEmpty
+        ? ''
+        : '时长约束冲突（确认后仍会提交）：\n'
+              '${budgetErrors.map((e) => '· ${e.noteLine}').join('\n')}';
     if (!await ConfirmSheet.confirm(
       context,
       objectName: '镜头视频 · ${widget.shot.globalSeq}',
@@ -447,6 +466,10 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
         '供应商：${video.provider.label}',
         '模型：${params.modelId}',
       ],
+      note: note,
+      confirmLabel: budgetErrors.isEmpty
+          ? ConfirmSheet.confirmLabel
+          : '知道了，仍要提交',
     )) {
       return;
     }

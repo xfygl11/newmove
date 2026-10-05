@@ -2591,6 +2591,40 @@ class $ScriptsTable extends Scripts with TableInfo<$ScriptsTable, Script> {
     requiredDuringInsert: false,
     defaultValue: const Constant('{}'),
   );
+  static const VerificationMeta _episodeNoMeta = const VerificationMeta(
+    'episodeNo',
+  );
+  @override
+  late final GeneratedColumn<int> episodeNo = GeneratedColumn<int>(
+    'episode_no',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _targetDurationMsMeta = const VerificationMeta(
+    'targetDurationMs',
+  );
+  @override
+  late final GeneratedColumn<int> targetDurationMs = GeneratedColumn<int>(
+    'target_duration_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _modelVersionMeta = const VerificationMeta(
+    'modelVersion',
+  );
+  @override
+  late final GeneratedColumn<String> modelVersion = GeneratedColumn<String>(
+    'model_version',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2601,6 +2635,9 @@ class $ScriptsTable extends Scripts with TableInfo<$ScriptsTable, Script> {
     artStyle,
     status,
     content,
+    episodeNo,
+    targetDurationMs,
+    modelVersion,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2666,6 +2703,30 @@ class $ScriptsTable extends Scripts with TableInfo<$ScriptsTable, Script> {
         content.isAcceptableOrUnknown(data['content']!, _contentMeta),
       );
     }
+    if (data.containsKey('episode_no')) {
+      context.handle(
+        _episodeNoMeta,
+        episodeNo.isAcceptableOrUnknown(data['episode_no']!, _episodeNoMeta),
+      );
+    }
+    if (data.containsKey('target_duration_ms')) {
+      context.handle(
+        _targetDurationMsMeta,
+        targetDurationMs.isAcceptableOrUnknown(
+          data['target_duration_ms']!,
+          _targetDurationMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('model_version')) {
+      context.handle(
+        _modelVersionMeta,
+        modelVersion.isAcceptableOrUnknown(
+          data['model_version']!,
+          _modelVersionMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2707,6 +2768,18 @@ class $ScriptsTable extends Scripts with TableInfo<$ScriptsTable, Script> {
         DriftSqlType.string,
         data['${effectivePrefix}content'],
       )!,
+      episodeNo: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}episode_no'],
+      ),
+      targetDurationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}target_duration_ms'],
+      )!,
+      modelVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model_version'],
+      ),
     );
   }
 
@@ -2725,6 +2798,9 @@ class Script extends DataClass implements Insertable<Script> {
   final String? artStyle;
   final String status;
   final String content;
+  final int? episodeNo;
+  final int targetDurationMs;
+  final String? modelVersion;
   const Script({
     required this.id,
     required this.bookId,
@@ -2734,6 +2810,9 @@ class Script extends DataClass implements Insertable<Script> {
     this.artStyle,
     required this.status,
     required this.content,
+    this.episodeNo,
+    required this.targetDurationMs,
+    this.modelVersion,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2748,6 +2827,13 @@ class Script extends DataClass implements Insertable<Script> {
     }
     map['status'] = Variable<String>(status);
     map['content'] = Variable<String>(content);
+    if (!nullToAbsent || episodeNo != null) {
+      map['episode_no'] = Variable<int>(episodeNo);
+    }
+    map['target_duration_ms'] = Variable<int>(targetDurationMs);
+    if (!nullToAbsent || modelVersion != null) {
+      map['model_version'] = Variable<String>(modelVersion);
+    }
     return map;
   }
 
@@ -2763,6 +2849,13 @@ class Script extends DataClass implements Insertable<Script> {
           : Value(artStyle),
       status: Value(status),
       content: Value(content),
+      episodeNo: episodeNo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(episodeNo),
+      targetDurationMs: Value(targetDurationMs),
+      modelVersion: modelVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(modelVersion),
     );
   }
 
@@ -2780,6 +2873,9 @@ class Script extends DataClass implements Insertable<Script> {
       artStyle: serializer.fromJson<String?>(json['artStyle']),
       status: serializer.fromJson<String>(json['status']),
       content: serializer.fromJson<String>(json['content']),
+      episodeNo: serializer.fromJson<int?>(json['episodeNo']),
+      targetDurationMs: serializer.fromJson<int>(json['targetDurationMs']),
+      modelVersion: serializer.fromJson<String?>(json['modelVersion']),
     );
   }
   @override
@@ -2794,6 +2890,9 @@ class Script extends DataClass implements Insertable<Script> {
       'artStyle': serializer.toJson<String?>(artStyle),
       'status': serializer.toJson<String>(status),
       'content': serializer.toJson<String>(content),
+      'episodeNo': serializer.toJson<int?>(episodeNo),
+      'targetDurationMs': serializer.toJson<int>(targetDurationMs),
+      'modelVersion': serializer.toJson<String?>(modelVersion),
     };
   }
 
@@ -2806,6 +2905,9 @@ class Script extends DataClass implements Insertable<Script> {
     Value<String?> artStyle = const Value.absent(),
     String? status,
     String? content,
+    Value<int?> episodeNo = const Value.absent(),
+    int? targetDurationMs,
+    Value<String?> modelVersion = const Value.absent(),
   }) => Script(
     id: id ?? this.id,
     bookId: bookId ?? this.bookId,
@@ -2815,6 +2917,9 @@ class Script extends DataClass implements Insertable<Script> {
     artStyle: artStyle.present ? artStyle.value : this.artStyle,
     status: status ?? this.status,
     content: content ?? this.content,
+    episodeNo: episodeNo.present ? episodeNo.value : this.episodeNo,
+    targetDurationMs: targetDurationMs ?? this.targetDurationMs,
+    modelVersion: modelVersion.present ? modelVersion.value : this.modelVersion,
   );
   Script copyWithCompanion(ScriptsCompanion data) {
     return Script(
@@ -2828,6 +2933,13 @@ class Script extends DataClass implements Insertable<Script> {
       artStyle: data.artStyle.present ? data.artStyle.value : this.artStyle,
       status: data.status.present ? data.status.value : this.status,
       content: data.content.present ? data.content.value : this.content,
+      episodeNo: data.episodeNo.present ? data.episodeNo.value : this.episodeNo,
+      targetDurationMs: data.targetDurationMs.present
+          ? data.targetDurationMs.value
+          : this.targetDurationMs,
+      modelVersion: data.modelVersion.present
+          ? data.modelVersion.value
+          : this.modelVersion,
     );
   }
 
@@ -2841,7 +2953,10 @@ class Script extends DataClass implements Insertable<Script> {
           ..write('fidelityMode: $fidelityMode, ')
           ..write('artStyle: $artStyle, ')
           ..write('status: $status, ')
-          ..write('content: $content')
+          ..write('content: $content, ')
+          ..write('episodeNo: $episodeNo, ')
+          ..write('targetDurationMs: $targetDurationMs, ')
+          ..write('modelVersion: $modelVersion')
           ..write(')'))
         .toString();
   }
@@ -2856,6 +2971,9 @@ class Script extends DataClass implements Insertable<Script> {
     artStyle,
     status,
     content,
+    episodeNo,
+    targetDurationMs,
+    modelVersion,
   );
   @override
   bool operator ==(Object other) =>
@@ -2868,7 +2986,10 @@ class Script extends DataClass implements Insertable<Script> {
           other.fidelityMode == this.fidelityMode &&
           other.artStyle == this.artStyle &&
           other.status == this.status &&
-          other.content == this.content);
+          other.content == this.content &&
+          other.episodeNo == this.episodeNo &&
+          other.targetDurationMs == this.targetDurationMs &&
+          other.modelVersion == this.modelVersion);
 }
 
 class ScriptsCompanion extends UpdateCompanion<Script> {
@@ -2880,6 +3001,9 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
   final Value<String?> artStyle;
   final Value<String> status;
   final Value<String> content;
+  final Value<int?> episodeNo;
+  final Value<int> targetDurationMs;
+  final Value<String?> modelVersion;
   const ScriptsCompanion({
     this.id = const Value.absent(),
     this.bookId = const Value.absent(),
@@ -2889,6 +3013,9 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     this.artStyle = const Value.absent(),
     this.status = const Value.absent(),
     this.content = const Value.absent(),
+    this.episodeNo = const Value.absent(),
+    this.targetDurationMs = const Value.absent(),
+    this.modelVersion = const Value.absent(),
   });
   ScriptsCompanion.insert({
     this.id = const Value.absent(),
@@ -2899,6 +3026,9 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     this.artStyle = const Value.absent(),
     this.status = const Value.absent(),
     this.content = const Value.absent(),
+    this.episodeNo = const Value.absent(),
+    this.targetDurationMs = const Value.absent(),
+    this.modelVersion = const Value.absent(),
   }) : bookId = Value(bookId),
        title = Value(title);
   static Insertable<Script> custom({
@@ -2910,6 +3040,9 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     Expression<String>? artStyle,
     Expression<String>? status,
     Expression<String>? content,
+    Expression<int>? episodeNo,
+    Expression<int>? targetDurationMs,
+    Expression<String>? modelVersion,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2920,6 +3053,9 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
       if (artStyle != null) 'art_style': artStyle,
       if (status != null) 'status': status,
       if (content != null) 'content': content,
+      if (episodeNo != null) 'episode_no': episodeNo,
+      if (targetDurationMs != null) 'target_duration_ms': targetDurationMs,
+      if (modelVersion != null) 'model_version': modelVersion,
     });
   }
 
@@ -2932,6 +3068,9 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     Value<String?>? artStyle,
     Value<String>? status,
     Value<String>? content,
+    Value<int?>? episodeNo,
+    Value<int>? targetDurationMs,
+    Value<String?>? modelVersion,
   }) {
     return ScriptsCompanion(
       id: id ?? this.id,
@@ -2942,6 +3081,9 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
       artStyle: artStyle ?? this.artStyle,
       status: status ?? this.status,
       content: content ?? this.content,
+      episodeNo: episodeNo ?? this.episodeNo,
+      targetDurationMs: targetDurationMs ?? this.targetDurationMs,
+      modelVersion: modelVersion ?? this.modelVersion,
     );
   }
 
@@ -2972,6 +3114,15 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     if (content.present) {
       map['content'] = Variable<String>(content.value);
     }
+    if (episodeNo.present) {
+      map['episode_no'] = Variable<int>(episodeNo.value);
+    }
+    if (targetDurationMs.present) {
+      map['target_duration_ms'] = Variable<int>(targetDurationMs.value);
+    }
+    if (modelVersion.present) {
+      map['model_version'] = Variable<String>(modelVersion.value);
+    }
     return map;
   }
 
@@ -2985,7 +3136,10 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
           ..write('fidelityMode: $fidelityMode, ')
           ..write('artStyle: $artStyle, ')
           ..write('status: $status, ')
-          ..write('content: $content')
+          ..write('content: $content, ')
+          ..write('episodeNo: $episodeNo, ')
+          ..write('targetDurationMs: $targetDurationMs, ')
+          ..write('modelVersion: $modelVersion')
           ..write(')'))
         .toString();
   }
@@ -12460,6 +12614,9 @@ typedef $$ScriptsTableCreateCompanionBuilder = ScriptsCompanion Function({
   Value<String?> artStyle,
   Value<String> status,
   Value<String> content,
+  Value<int?> episodeNo,
+  Value<int> targetDurationMs,
+  Value<String?> modelVersion,
 });
 typedef $$ScriptsTableUpdateCompanionBuilder = ScriptsCompanion Function({
   Value<int> id,
@@ -12470,6 +12627,9 @@ typedef $$ScriptsTableUpdateCompanionBuilder = ScriptsCompanion Function({
   Value<String?> artStyle,
   Value<String> status,
   Value<String> content,
+  Value<int?> episodeNo,
+  Value<int> targetDurationMs,
+  Value<String?> modelVersion,
 });
 
 final class $$ScriptsTableReferences
@@ -12612,6 +12772,21 @@ class $$ScriptsTableFilterComposer
 
   ColumnFilters<String> get content => $composableBuilder(
     column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get episodeNo => $composableBuilder(
+    column: $table.episodeNo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get targetDurationMs => $composableBuilder(
+    column: $table.targetDurationMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get modelVersion => $composableBuilder(
+    column: $table.modelVersion,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12783,6 +12958,21 @@ class $$ScriptsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get episodeNo => $composableBuilder(
+    column: $table.episodeNo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get targetDurationMs => $composableBuilder(
+    column: $table.targetDurationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get modelVersion => $composableBuilder(
+    column: $table.modelVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$NovelBooksTableOrderingComposer get bookId {
     final $$NovelBooksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -12838,6 +13028,19 @@ class $$ScriptsTableAnnotationComposer
 
   GeneratedColumn<String> get content =>
       $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<int> get episodeNo =>
+      $composableBuilder(column: $table.episodeNo, builder: (column) => column);
+
+  GeneratedColumn<int> get targetDurationMs => $composableBuilder(
+    column: $table.targetDurationMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get modelVersion => $composableBuilder(
+    column: $table.modelVersion,
+    builder: (column) => column,
+  );
 
   $$NovelBooksTableAnnotationComposer get bookId {
     final $$NovelBooksTableAnnotationComposer composer = $composerBuilder(
@@ -13005,6 +13208,9 @@ class $$ScriptsTableTableManager
                 Value<String?> artStyle = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String> content = const Value.absent(),
+                Value<int?> episodeNo = const Value.absent(),
+                Value<int> targetDurationMs = const Value.absent(),
+                Value<String?> modelVersion = const Value.absent(),
               }) => ScriptsCompanion(
                 id: id,
                 bookId: bookId,
@@ -13014,6 +13220,9 @@ class $$ScriptsTableTableManager
                 artStyle: artStyle,
                 status: status,
                 content: content,
+                episodeNo: episodeNo,
+                targetDurationMs: targetDurationMs,
+                modelVersion: modelVersion,
               ),
           createCompanionCallback:
               ({
@@ -13025,6 +13234,9 @@ class $$ScriptsTableTableManager
                 Value<String?> artStyle = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String> content = const Value.absent(),
+                Value<int?> episodeNo = const Value.absent(),
+                Value<int> targetDurationMs = const Value.absent(),
+                Value<String?> modelVersion = const Value.absent(),
               }) => ScriptsCompanion.insert(
                 id: id,
                 bookId: bookId,
@@ -13034,6 +13246,9 @@ class $$ScriptsTableTableManager
                 artStyle: artStyle,
                 status: status,
                 content: content,
+                episodeNo: episodeNo,
+                targetDurationMs: targetDurationMs,
+                modelVersion: modelVersion,
               ),
           withReferenceMapper: (p0) => p0
               .map(

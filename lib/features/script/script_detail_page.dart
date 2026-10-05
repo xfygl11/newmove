@@ -167,6 +167,11 @@ class _HeaderCard extends ConsumerWidget {
               script: script,
               scriptDao: ref.read(scriptDaoProvider),
             ),
+            const Divider(height: 16),
+            _EpisodeParamEditor(
+              script: script,
+              scriptDao: ref.read(scriptDaoProvider),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -316,6 +321,157 @@ class _ArtStyleEditorState extends State<_ArtStyleEditor> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(text.isEmpty ? '已清除风格，按默认值执行' : '已保存风格')),
     );
+  }
+}
+
+/// 分集参数（M16）：集序号、目标总时长与目标模型版本。
+///
+/// 一集 = 剧本一行，不新增集表。保存后影响骨架提取的时长预算与
+/// 视频提交前的校验，不参与算力授权。
+class _EpisodeParamEditor extends StatefulWidget {
+  const _EpisodeParamEditor({required this.script, required this.scriptDao});
+
+  final Script script;
+  final ScriptDao scriptDao;
+
+  @override
+  State<_EpisodeParamEditor> createState() => _EpisodeParamEditorState();
+}
+
+class _EpisodeParamEditorState extends State<_EpisodeParamEditor> {
+  late final TextEditingController _episodeNo;
+  late final TextEditingController _targetDuration;
+
+  /// '' 表示未指定，单段上限与批次容量由选中的视频模型能力推导。
+  late String _modelVersion;
+
+  @override
+  void initState() {
+    super.initState();
+    final script = widget.script;
+    _episodeNo = TextEditingController(
+      text: script.episodeNo?.toString() ?? '',
+    );
+    _targetDuration = TextEditingController(
+      text: script.targetDurationMs > 0
+          ? '${script.targetDurationMs ~/ 1000}'
+          : '',
+    );
+    _modelVersion = script.modelVersion ?? '';
+  }
+
+  bool get _dirty {
+    final episodeText = _episodeNo.text.trim();
+    final episode = episodeText.isEmpty ? null : int.tryParse(episodeText);
+    if (episode != widget.script.episodeNo) return true;
+
+    final seconds = int.tryParse(_targetDuration.text.trim()) ?? 0;
+    if (seconds * 1000 != widget.script.targetDurationMs) return true;
+
+    final version = _modelVersion.isEmpty ? null : _modelVersion;
+    return version != widget.script.modelVersion;
+  }
+
+  @override
+  void dispose() {
+    _episodeNo.dispose();
+    _targetDuration.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final numberInput = const InputDecoration(border: OutlineInputBorder());
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.live_tv_outlined,
+              size: 16,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 6),
+            Text('分集参数', style: theme.textTheme.labelMedium),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _episodeNo,
+                keyboardType: TextInputType.number,
+                decoration: numberInput.copyWith(labelText: '集序号（可空）'),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _targetDuration,
+                keyboardType: TextInputType.number,
+                decoration: numberInput.copyWith(labelText: '目标总时长（秒）'),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          initialValue: _modelVersion,
+          decoration: numberInput.copyWith(
+            labelText: '目标模型版本',
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+          ),
+          items: const [
+            DropdownMenuItem(value: '', child: Text('按视频模型能力')),
+            DropdownMenuItem(
+              value: '2.0',
+              child: Text('Seedance 2.0（单段 15s · 单批 6 段）'),
+            ),
+            DropdownMenuItem(
+              value: '2.5',
+              child: Text('Seedance 2.5（单段 30s · 单批 3 段）'),
+            ),
+          ],
+          onChanged: (v) => setState(() => _modelVersion = v ?? ''),
+        ),
+        if (_dirty) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '目标总时长影响时长预算校验；0 表示由内容自然节奏决定',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+              FilledButton(onPressed: _save, child: const Text('保存参数')),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _save() async {
+    final episodeText = _episodeNo.text.trim();
+    final seconds = int.tryParse(_targetDuration.text.trim()) ?? 0;
+    await widget.scriptDao.updateRow(
+      widget.script.copyWith(
+        episodeNo: Value(
+          episodeText.isEmpty ? null : int.tryParse(episodeText),
+        ),
+        targetDurationMs: seconds > 0 ? seconds * 1000 : 0,
+        modelVersion: Value(_modelVersion.isEmpty ? null : _modelVersion),
+      ),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('已保存分集参数')));
   }
 }
 

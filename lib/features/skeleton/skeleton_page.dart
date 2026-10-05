@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../agent/active_llm.dart';
+import '../../agent/active_video.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
 import '../script/script_providers.dart';
 import 'skeleton_models.dart';
 import 'skeleton_providers.dart';
+import 'skeleton_service.dart';
 
 /// 剧本骨架：节拍/分段/时间轴/出镜状态 + E## 映射校验。
 class SkeletonPage extends ConsumerStatefulWidget {
@@ -103,19 +105,31 @@ class _SkeletonPageState extends ConsumerState<SkeletonPage> {
     final beats =
         ref.read(beatsByScriptProvider(widget.scriptId)).value ?? const [];
     final llm = await ref.read(activeLlmProvider.future);
+    // 视频模型能力决定单段时长上限；未配置时按剧本 modelVersion 回落。
+    final video = await ref.read(activeVideoProvider.future);
     if (!mounted) return;
     if (llm == null) {
       _toast('请先在「设置」配置可用的 LLM 供应商');
       return;
     }
     final svc = ref.read(skeletonServiceProvider);
+    final budget = SkeletonService.budgetFor(script, videoModel: video?.model);
     if (!await ConfirmSheet.confirm(
       context,
       objectName: '骨架提取',
       gate: '骨架重新提取（覆盖场次、节拍与分段结构）',
       quantity: '${scenes.length} 场',
-      promptPreview: svc.buildExtractionPrompt(script: script, scenes: scenes),
-      params: ['供应商：${llm.provider.label}', '模型：${llm.modelId}'],
+      promptPreview: svc.buildExtractionPrompt(
+        script: script,
+        scenes: scenes,
+        videoModel: video?.model,
+      ),
+      params: [
+        '供应商：${llm.provider.label}',
+        '模型：${llm.modelId}',
+        '单段上限 ${budget.maxSegmentMs ~/ 1000}s / '
+            '合段预算 ${budget.mergeBudgetMs ~/ 1000}s',
+      ],
       note:
           '将覆盖现有 ${beats.length} 个节拍与 ${shots.length} 个分段，'
           '已绑定的下游参考关系可能失效。',
@@ -131,6 +145,7 @@ class _SkeletonPageState extends ConsumerState<SkeletonPage> {
         script: script,
         scenes: scenes,
         llm: llm,
+        videoModel: video?.model,
       );
       if (mounted) {
         _toast(

@@ -130,9 +130,9 @@ void main() {
     });
   });
 
-  group('schema v8 结构', () {
+  group('schema v9 结构', () {
     test('剧本表已删除 aspect_ratio 与 language 死字段', () async {
-      expect(db.schemaVersion, 8);
+      expect(db.schemaVersion, 9);
 
       final rows = await db.customSelect('PRAGMA table_info(scripts)').get();
       final columns = rows.map((row) => row.data['name'] as String).toSet();
@@ -151,6 +151,16 @@ void main() {
           'status',
           'content',
         ]),
+      );
+    });
+
+    test('剧本表新增 M16 集元数据三列', () async {
+      final rows = await db.customSelect('PRAGMA table_info(scripts)').get();
+      final columns = rows.map((row) => row.data['name'] as String).toSet();
+
+      expect(
+        columns,
+        containsAll(['episode_no', 'target_duration_ms', 'model_version']),
       );
     });
   });

@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../agent/active_video.dart';
 import '../../core/network/providers.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
+import 'segment_budget.dart';
 import 'shot_agents.dart';
 import 'shot_compose_service.dart';
 import 'shot_models.dart';
@@ -78,6 +80,17 @@ final shotTransitionIssuesProvider =
     FutureProvider.family<List<ShotTransitionIssue>, int>(
       (ref, scriptId) =>
           ref.watch(shotServiceProvider).listTransitionIssues(scriptId),
+    );
+
+/// 某剧本的时长与容量校验结果（M16）；视频模型能力跟随当前选中配置。
+final shotBudgetIssuesProvider =
+    FutureProvider.family<List<SegmentBudgetIssue>, int>(
+      (ref, scriptId) => ref
+          .watch(shotServiceProvider)
+          .listBudgetIssues(
+            scriptId,
+            videoModel: ref.watch(activeVideoProvider).value?.model,
+          ),
     );
 
 /// 某镜头的视频任务列表（最新在前）。
