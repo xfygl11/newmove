@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newmove/data/app_database.dart';
+import 'package:newmove/data/daos/prompt_override_dao.dart';
 
 /// 级联删除回归测试。
 ///
@@ -168,6 +169,27 @@ void main() {
       await db.cascadeDao.deleteProjectCascade(chain.project);
 
       await expectAllEmpty();
+    });
+
+    test('级联删除项目清项目级提示词覆盖，保留全局级', () async {
+      final chain = await seedFullChain();
+      await db.promptOverrideDao.upsert(
+        scope: PromptOverrideScopes.project,
+        key: 'novel/writing.md',
+        text: '项目覆盖',
+        projectId: chain.project,
+      );
+      await db.promptOverrideDao.upsert(
+        scope: PromptOverrideScopes.global,
+        key: 'novel/writing.md',
+        text: '全局覆盖',
+      );
+
+      await db.cascadeDao.deleteProjectCascade(chain.project);
+
+      final rows = await db.select(db.promptOverrides).get();
+      expect(rows, hasLength(1));
+      expect(rows.single.scope, PromptOverrideScopes.global);
     });
 
     test('级联删除章节同时清理版本快照', () async {

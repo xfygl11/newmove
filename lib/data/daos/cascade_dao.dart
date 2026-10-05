@@ -13,6 +13,9 @@ part 'cascade_dao.g.dart';
 ///   → VideoTasks → Beats → Scenes → Shots → Assets → AssetRevisions
 ///   → ScriptRevisions → Scripts → TruthFiles → Chapters → NovelBooks → Projects
 ///
+/// PromptOverrides 与 GenerationAttempts 同层：两者只按 projectId 归属项目、
+/// 互不引用，谁先删都可以。
+///
 /// 业务层不得自行拼 `deleteByX` + 多次 `insert`，一律调用本 DAO 的复合方法；
 /// 复合方法内部开启事务，中间任一步失败整段回滚，不留中间态。
 @DriftAccessor(
@@ -34,6 +37,7 @@ part 'cascade_dao.g.dart';
     ShotRevisions,
     AssetRevisions,
     GenerationAttempts,
+    PromptOverrides,
   ],
 )
 class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
@@ -51,6 +55,11 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
       // 生成尝试台账按项目归属清理（subjectId 可能指向已删除对象）。
       await (delete(
         generationAttempts,
+      )..where((t) => t.projectId.equals(projectId))).go();
+      // 项目级提示词覆盖随项目清理；scope='global' 的行 projectId 为 null，
+      // 谓词天然排除，不重复删除。
+      await (delete(
+        promptOverrides,
       )..where((t) => t.projectId.equals(projectId))).go();
       await (delete(projects)..where((t) => t.id.equals(projectId))).go();
     });
