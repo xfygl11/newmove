@@ -181,8 +181,8 @@ void main() {
         ShotsCompanion.insert(
           scriptId: s.id,
           globalSeq: 'G01',
-          durationMs: Value(12000),
-          beatRefs: Value('["E1","E2"]'),
+          durationMs: const Value(12000),
+          beatRefs: const Value('["E1","E2"]'),
           globalTimeRange: '00:00-00:12',
         ),
       );
@@ -217,8 +217,8 @@ void main() {
           ShotsCompanion.insert(
             scriptId: s.id,
             globalSeq: 'G0$i',
-            batch: Value(1),
-            durationMs: Value(20000),
+            batch: const Value(1),
+            durationMs: const Value(20000),
             globalTimeRange: '00:00-00:20',
           ),
         );
@@ -245,8 +245,8 @@ void main() {
         ShotsCompanion.insert(
           scriptId: s.id,
           globalSeq: 'G01',
-          durationMs: Value(25000),
-          beatRefs: Value('["E1"]'),
+          durationMs: const Value(25000),
+          beatRefs: const Value('["E1"]'),
           globalTimeRange: '00:00-00:25',
         ),
       );
@@ -254,7 +254,7 @@ void main() {
         ShotsCompanion.insert(
           scriptId: s.id,
           globalSeq: 'G02',
-          durationMs: Value(25000),
+          durationMs: const Value(25000),
           globalTimeRange: '00:25-00:50',
         ),
       );

@@ -490,7 +490,7 @@ void main() {
       final scene = (await db.sceneDao.listByScript(scriptId)).first;
       await service.updateScene(
         scene.id,
-        ScenesCompanion(action: Value('小明转身离开')),
+        const ScenesCompanion(action: Value('小明转身离开')),
       );
 
       expect((await db.assetDao.find(assetId))!.isStale, 1);

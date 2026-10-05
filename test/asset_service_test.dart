@@ -151,16 +151,16 @@ void main() {
       NovelBooksCompanion.insert(
         projectId: projectId,
         title: '测试书',
-        premise: Value('少年在末世觉醒'),
-        world: Value('废土'),
-        styleGuide: Value('冷峻'),
+        premise: const Value('少年在末世觉醒'),
+        world: const Value('废土'),
+        styleGuide: const Value('冷峻'),
       ),
     );
     scriptId = await db.scriptDao.insert(
       ScriptsCompanion.insert(
         bookId: bookId,
         title: '剧本A',
-        status: Value('定稿'),
+        status: const Value('定稿'),
       ),
     );
   });
@@ -249,7 +249,7 @@ void main() {
           location: '荒原',
           time: '黄昏',
           characters: Value(jsonEncode(['阿青'])),
-          summary: Value('阿青出场'),
+          summary: const Value('阿青出场'),
         ),
       );
       await db.beatDao.insert(
@@ -257,23 +257,23 @@ void main() {
           sceneId: sceneId,
           seq: 1,
           type: '动作',
-          who: Value('阿青'),
+          who: const Value('阿青'),
           content: '拔剑',
-          object: Value(null),
+          object: const Value(null),
           sourceRef: 'E01',
-          estDurationMs: Value(3000),
-          tags: Value('[]'),
+          estDurationMs: const Value(3000),
+          tags: const Value('[]'),
         ),
       );
       await db.shotDao.insert(
         ShotsCompanion.insert(
           scriptId: scriptId,
           globalSeq: 'G01',
-          batch: Value(1),
-          durationMs: Value(3000),
+          batch: const Value(1),
+          durationMs: const Value(3000),
           globalTimeRange: '00:00-00:03',
           beatRefs: Value(jsonEncode(['E01'])),
-          assetStates: Value('{}'),
+          assetStates: const Value('{}'),
         ),
       );
 

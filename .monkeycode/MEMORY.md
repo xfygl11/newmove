@@ -73,7 +73,8 @@ Entries discovered by the Agent during task execution should follow this format:
   - 跑核心测试（约 35 秒）：`/opt/flutter/bin/flutter test test/novel_service_test.dart test/backup_service_test.dart test/daos_test.dart test/truth_file_store_test.dart test/revision_and_attempt_test.dart`
   - 全量 `/opt/flutter/bin/flutter test` 约 10 分钟（加 `--concurrency=1`）、峰值约 1.9 GiB，用 background terminal 跑
   - 单文件快速迭代（约 1–2 分钟）：`/opt/flutter/bin/flutter test test/gates_test.dart --no-pub --concurrency=1`
-   - 当前基线：M14 + M15 + M18-B + M19 全量落地（含 T21.6 校验留痕、T21.11 提示词三级覆盖与五个 Agent 接入 resolver、T21.12/T21.13 结构化字段含镜头级服装覆盖、T21.14 下游失效、T21.15 章节维护提醒），schema v12，全量 371 例全通过，`/opt/flutter/bin/flutter analyze` 零问题（`flutter` 需用绝对路径 `/opt/flutter/bin/flutter`）
+   - 当前基线：M14 + M15 + M18-B + M19 全量落地（含 T21.6 校验留痕、T21.11 提示词三级覆盖与五个 Agent 接入 resolver、T21.12/T21.13 结构化字段含镜头级服装覆盖、T21.14 下游失效、T21.15 章节维护提醒），schema v12，全量 379 例全通过，`/opt/flutter/bin/flutter analyze` 零问题（`flutter` 需用绝对路径 `/opt/flutter/bin/flutter`）
+   - M20 技术债轮已落地：T20.22（`StatusKinds` 完备性守卫测试 + 补登章节「审校中」与伏笔五个标签 + 新增 `contains`/`all` 只读接口）、T20.24（`SkillLoader` 集成测试，正向遍历 `allSlots` + 反向守卫 `assets/skills` 无孤立文件）、T20.29（启用 `prefer_const_constructors` 等三条 lint，`dart fix` 自动修 105 处 + 7 处 `unnecessary_const`）、T20.30（docs/02 §3.1/§3.2 回填 19 表拓扑与缺失字段，docs/05 新增 §13 实现状态对照，AGENTS.md「15 处」改 16）；早期里程碑 T0–T8 勾选补齐（T7.4 / T8.2 附落地修正），T16.9.4 勾选（`Scripts.aspectRatio`/`language` schema v8 已删，`version` 并非死字段）
   - **`flutter analyze` 与 `flutter test` 不要放在两个后台终端里并发跑**：本环境内存紧张，并发时会把 analyze 顶到 OOM（exit code -1 + `killed_by_timeout`，且输出 0 字节）。串行跑，先 analyze（约 25 秒）再 test
   - 单文件 test 加 `| tail -N` 会等到进程结束才输出，运行期间日志一直是 0 字节；要观察进度就别加 tail
 

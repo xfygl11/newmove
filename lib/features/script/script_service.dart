@@ -187,7 +187,7 @@ class ScriptService {
             ScriptsCompanion.insert(
               bookId: bookId,
               title: resolvedTitle,
-              version: Value(1),
+              version: const Value(1),
               fidelityMode: Value(fidelityMode),
               content: Value(content),
             ),

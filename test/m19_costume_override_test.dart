@@ -306,7 +306,7 @@ void main() {
       costumeOverrides: costumeOverrides,
     );
 
-    ShotFrame frame() => ShotFrame(
+    ShotFrame frame() => const ShotFrame(
       id: 1,
       shotId: 1,
       seq: 1,
@@ -335,7 +335,7 @@ void main() {
       );
     }
 
-    Asset character() => Asset(
+    Asset character() => const Asset(
       id: 1,
       scriptId: 1,
       type: '角色',
@@ -348,7 +348,7 @@ void main() {
     );
 
     AssetRef ref() =>
-        AssetRef(id: 1, shotId: 1, assetId: 1, role: '角色参考', order: 0);
+        const AssetRef(id: 1, shotId: 1, assetId: 1, role: '角色参考', order: 0);
 
     test('有覆盖时出现 Costume overrides 段并按资产名与套名列出', () {
       final prompt = build(

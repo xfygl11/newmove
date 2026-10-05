@@ -59,9 +59,9 @@ class _SkeletonPageState extends ConsumerState<SkeletonPage> {
             return const Center(child: Text('剧本不存在'));
           }
           if (script.status != '定稿') {
-            return Center(
+            return const Center(
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(24),
                 child: Text('剧本尚未定稿。定稿后才能提取骨架。', textAlign: TextAlign.center),
               ),
             );

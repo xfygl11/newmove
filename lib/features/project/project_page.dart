@@ -257,8 +257,8 @@ class _ProjectCard extends ConsumerWidget {
             onTap: () => Navigator.of(ctx).pop('export'),
           ),
           ListTile(
-            leading: Icon(Icons.delete_outline, color: Colors.red),
-            title: Text('删除项目', style: TextStyle(color: Colors.red)),
+            leading: const Icon(Icons.delete_outline, color: Colors.red),
+            title: const Text('删除项目', style: TextStyle(color: Colors.red)),
             onTap: () => Navigator.of(ctx).pop('delete'),
           ),
           const SizedBox(height: 48),

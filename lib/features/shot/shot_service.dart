@@ -505,7 +505,7 @@ class ShotService {
 
     await shotDao.updateById(
       shotId,
-      ShotsCompanion(status: const Value(ShotStatuses.generating)),
+      const ShotsCompanion(status: Value(ShotStatuses.generating)),
     );
 
     try {
@@ -542,7 +542,7 @@ class ShotService {
       // 失败回滚到「待分镜图」，保留提示词便于重试。
       await shotDao.updateById(
         shotId,
-        ShotsCompanion(status: const Value(ShotStatuses.awaitingImage)),
+        const ShotsCompanion(status: Value(ShotStatuses.awaitingImage)),
       );
       rethrow;
     } catch (e) {
@@ -554,7 +554,7 @@ class ShotService {
       // 失败回滚到「待分镜图」，保留提示词便于重试。
       await shotDao.updateById(
         shotId,
-        ShotsCompanion(status: const Value(ShotStatuses.awaitingImage)),
+        const ShotsCompanion(status: Value(ShotStatuses.awaitingImage)),
       );
       rethrow;
     }
@@ -734,7 +734,7 @@ class ShotService {
     if (url != null && url.isNotEmpty) {
       return imageAdapter.downloadUrl(url);
     }
-    throw ImageGenerationException('供应商未返回图片数据');
+    throw const ImageGenerationException('供应商未返回图片数据');
   }
 
   // ---- 衔接校验（T6.5 / A7） ----
@@ -991,9 +991,9 @@ class ShotService {
       // 提交失败回滚镜头状态。
       await shotDao.updateById(
         shotId,
-        ShotsCompanion(
-          status: const Value(ShotStatuses.confirmed),
-          outputType: const Value('image'),
+        const ShotsCompanion(
+          status: Value(ShotStatuses.confirmed),
+          outputType: Value('image'),
         ),
       );
       rethrow;
@@ -1157,7 +1157,7 @@ class ShotService {
     );
     await shotDao.updateById(
       task.shotId,
-      ShotsCompanion(status: const Value(ShotStatuses.confirmed)),
+      const ShotsCompanion(status: Value(ShotStatuses.confirmed)),
     );
     return (await videoTaskDao.find(task.id))!;
   }
@@ -1174,7 +1174,7 @@ class ShotService {
   Future<void> confirmVideo(int shotId) async {
     await shotDao.updateById(
       shotId,
-      ShotsCompanion(status: const Value(ShotStatuses.videoDone)),
+      const ShotsCompanion(status: Value(ShotStatuses.videoDone)),
     );
   }
 
@@ -1213,9 +1213,9 @@ class ShotService {
     );
     await shotDao.updateById(
       task.shotId,
-      ShotsCompanion(
-        status: const Value(ShotStatuses.confirmed),
-        outputType: const Value('image'),
+      const ShotsCompanion(
+        status: Value(ShotStatuses.confirmed),
+        outputType: Value('image'),
       ),
     );
     return (await videoTaskDao.find(task.id))!;
@@ -1337,7 +1337,7 @@ class ShotService {
   Future<void> confirmShot(int shotId) async {
     await shotDao.updateById(
       shotId,
-      ShotsCompanion(status: const Value(ShotStatuses.confirmed)),
+      const ShotsCompanion(status: Value(ShotStatuses.confirmed)),
     );
   }
 
@@ -1345,7 +1345,7 @@ class ShotService {
   Future<void> rejectShot(int shotId) async {
     await shotDao.updateById(
       shotId,
-      ShotsCompanion(status: const Value(ShotStatuses.awaitingImage)),
+      const ShotsCompanion(status: Value(ShotStatuses.awaitingImage)),
     );
   }
 

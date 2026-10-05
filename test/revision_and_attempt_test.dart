@@ -185,7 +185,7 @@ void main() {
         GenerationAttemptsCompanion.insert(
           subjectType: 'shot_image',
           subjectId: Value(shotId),
-          subjectLabel: Value('G01'),
+          subjectLabel: const Value('G01'),
           prompt: before,
           params: const Value('{"model":"m1"}'),
           status: const Value(AttemptStatuses.running),
@@ -212,7 +212,7 @@ void main() {
       final id = await db.generationAttemptDao.insert(
         GenerationAttemptsCompanion.insert(
           subjectType: 'script_adapt',
-          subjectLabel: Value('待创建剧本'),
+          subjectLabel: const Value('待创建剧本'),
           prompt: '改编',
         ),
       );
@@ -456,7 +456,7 @@ void main() {
             type: '角色',
             name: '变体',
             stableId: 'hero_v1',
-            variantOf: Value(9999),
+            variantOf: const Value(9999),
           ),
         ),
         throwsA(isA<ArgumentError>()),

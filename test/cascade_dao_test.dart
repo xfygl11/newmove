@@ -36,7 +36,7 @@ void main() {
       ChapterRevisionsCompanion.insert(
         chapterId: chapterId,
         revision: 1,
-        content: Value('旧正文'),
+        content: const Value('旧正文'),
       ),
     );
     await db.truthFileDao.upsert(

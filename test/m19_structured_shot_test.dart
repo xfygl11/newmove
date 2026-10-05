@@ -185,7 +185,7 @@ void main() {
     });
 
     test('有参数时提示词含 Camera spec 行，无参数时不出现该行', () {
-      ShotFrame frame() => ShotFrame(
+      ShotFrame frame() => const ShotFrame(
             id: 1,
             shotId: 1,
             seq: 1,

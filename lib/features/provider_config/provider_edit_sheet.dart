@@ -87,7 +87,7 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
     _readme = TextEditingController(text: existing?.readme ?? '');
     _models = existing != null
         ? ProviderModelCodec.decode(existing.models)
-        : [ProviderModel(id: '', label: '')];
+        : [const ProviderModel(id: '', label: '')];
   }
 
   @override

@@ -23,13 +23,13 @@ class AgnesPresets {
     required String apiKey,
   }) async {
     final specs = [
-      _Spec(
+      const _Spec(
         id: 'agnes-llm',
         group: 'llm',
         label: 'Agnes LLM',
         protocol: Protocols.openaiChat,
         models: [
-          const ProviderModel(
+          ProviderModel(
             id: 'agnes-2.5-flash',
             label: 'Agnes 2.5 Flash',
             contextWindow: 512000,
@@ -38,13 +38,13 @@ class AgnesPresets {
         ],
         readme: 'Agnes AI 文本/视觉语言模型（OpenAI 兼容）',
       ),
-      _Spec(
+      const _Spec(
         id: 'agnes-image',
         group: 'image',
         label: 'Agnes 图片',
         protocol: Protocols.openaiImages,
         models: [
-          const ProviderModel(
+          ProviderModel(
             id: 'agnes-image-2.5-flash',
             label: 'Agnes Image 2.5 Flash',
             imageSizes: ['1K', '2K', '3K', '4K'],
@@ -62,7 +62,7 @@ class AgnesPresets {
         ],
         readme: 'Agnes AI 图片生成/编辑（OpenAI Images 协议）',
       ),
-      _Spec(
+      const _Spec(
         id: 'agnes-video',
         group: 'video',
         label: 'Agnes 视频',

@@ -156,7 +156,7 @@ class _UpdateCheckTile extends ConsumerWidget {
         return ListTile(
           leading: const Icon(Icons.update),
           title: const Text('检查更新'),
-          subtitle: Text('点击检查 GitHub 最新 release'),
+          subtitle: const Text('点击检查 GitHub 最新 release'),
           onTap: () => _check(ref),
         );
     }

@@ -303,7 +303,7 @@ class _ChapterTile extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            leading: Icon(Icons.delete_outline, color: Colors.red),
+            leading: const Icon(Icons.delete_outline, color: Colors.red),
             title: Text(
               '删除第 ${chapter.seq} 章「${chapter.title}」',
               style: const TextStyle(color: Colors.red),

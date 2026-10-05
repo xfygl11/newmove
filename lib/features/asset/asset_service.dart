@@ -328,7 +328,7 @@ class AssetService {
 
     await assetDao.updateById(
       assetId,
-      AssetsCompanion(status: const Value(AssetStatuses.generating)),
+      const AssetsCompanion(status: Value(AssetStatuses.generating)),
     );
 
     try {
@@ -359,7 +359,7 @@ class AssetService {
       );
       await assetDao.updateById(
         assetId,
-        AssetsCompanion(status: const Value(AssetStatuses.pending)),
+        const AssetsCompanion(status: Value(AssetStatuses.pending)),
       );
       rethrow;
     }
@@ -368,14 +368,14 @@ class AssetService {
   Future<void> adopt(int assetId) async {
     await assetDao.updateById(
       assetId,
-      AssetsCompanion(status: const Value(AssetStatuses.accepted)),
+      const AssetsCompanion(status: Value(AssetStatuses.accepted)),
     );
   }
 
   Future<void> discard(int assetId) async {
     await assetDao.updateById(
       assetId,
-      AssetsCompanion(status: const Value(AssetStatuses.discarded)),
+      const AssetsCompanion(status: Value(AssetStatuses.discarded)),
     );
   }
 
@@ -498,7 +498,7 @@ class AssetService {
     if (bytes != null && bytes.isNotEmpty) return bytes;
     final url = result.url;
     if (url != null && url.isNotEmpty) return imageAdapter.downloadUrl(url);
-    throw ImageGenerationException('供应商未返回图片数据');
+    throw const ImageGenerationException('供应商未返回图片数据');
   }
 
   String _normalizeType(String type) {

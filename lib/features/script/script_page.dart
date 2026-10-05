@@ -44,7 +44,7 @@ class _ScriptList extends ConsumerWidget {
 
     return Column(
       children: [
-        ListTile(title: Text(book.title), subtitle: Text('选择原文片段，AI 改编为分场剧本')),
+        ListTile(title: Text(book.title), subtitle: const Text('选择原文片段，AI 改编为分场剧本')),
         Expanded(
           child: scriptsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),

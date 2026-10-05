@@ -33,14 +33,27 @@ class StatusKinds {
     'cancelled': StatusKind(Colors.orange, Icons.cancel_outlined, false),
     // 章节 / 伏笔
     '草稿': StatusKind(Colors.grey, Icons.edit_note, false),
+    '审校中': StatusKind(Colors.blue, Icons.looks_one, false),
     '定稿': StatusKind(Colors.green, Icons.fact_check, false),
     '已回收': StatusKind(Colors.grey, Icons.archive_outlined, false),
+    // 伏笔状态（HookStates.label 的展示标签）
+    '未闭合': StatusKind(Colors.grey, Icons.radio_button_unchecked, false),
+    '推进中': StatusKind(Colors.blue, Icons.autorenew, true),
+    '搁置': StatusKind(Colors.orange, Icons.hourglass_bottom, false),
+    '已废弃': StatusKind(Colors.red, Icons.delete_outline, false),
   };
 
   static const fallback = StatusKind(Colors.grey, Icons.schedule, false);
 
   /// 取状态元数据；未收录的状态回落 [fallback] 而不是报错。
   static StatusKind of(String status) => _kinds[status] ?? fallback;
+
+  /// 该状态是否已收录（区分「已登记」与「落 fallback」，见
+  /// `test/status_kinds_test.dart` 的完备性守卫）。
+  static bool contains(String status) => _kinds.containsKey(status);
+
+  /// 全部已登记状态，供完备性守卫断言。
+  static Iterable<String> get all => _kinds.keys;
 }
 
 /// 单个状态的展示元数据。

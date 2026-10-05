@@ -82,7 +82,7 @@ class _TaskPageState extends ConsumerState<TaskPage>
     if (video == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('请先在「设置」配置可用的视频供应商')));
+            .showSnackBar(const SnackBar(content: Text('请先在「设置」配置可用的视频供应商')));
       }
       return;
     }

@@ -33,10 +33,10 @@ void main() {
       NovelBooksCompanion.insert(
         projectId: projectId,
         title: '测试书',
-        premise: Value('少年在末世觉醒治愈能力'),
-        world: Value('病毒爆发后的废土'),
-        styleGuide: Value('冷峻克制'),
-        outline: Value('## 大纲\n第 1 章：觉醒'),
+        premise: const Value('少年在末世觉醒治愈能力'),
+        world: const Value('病毒爆发后的废土'),
+        styleGuide: const Value('冷峻克制'),
+        outline: const Value('## 大纲\n第 1 章：觉醒'),
       ),
     );
   });

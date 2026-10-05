@@ -209,7 +209,7 @@ class _SceneEditPageState extends ConsumerState<SceneEditPage> {
                     label: const Text('加对白'),
                     onPressed: () => setState(() {
                       _dialogue.add(
-                        DialogueLine(speaker: '', type: '对白', text: ''),
+                        const DialogueLine(speaker: '', type: '对白', text: ''),
                       );
                     }),
                   ),

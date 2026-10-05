@@ -320,16 +320,16 @@ void main() {
       NovelBooksCompanion.insert(
         projectId: projectId,
         title: '测试书',
-        premise: Value('少年在末世觉醒'),
-        world: Value('废土'),
-        styleGuide: Value('冷峻'),
+        premise: const Value('少年在末世觉醒'),
+        world: const Value('废土'),
+        styleGuide: const Value('冷峻'),
       ),
     );
     scriptId = await db.scriptDao.insert(
       ScriptsCompanion.insert(
         bookId: bookId,
         title: '剧本A',
-        status: Value('定稿'),
+        status: const Value('定稿'),
       ),
     );
 
@@ -340,7 +340,7 @@ void main() {
         type: '角色',
         name: '阿青',
         stableId: 'char_qing',
-        imagePath: Value('/tmp/newmove_test_qing.png'),
+        imagePath: const Value('/tmp/newmove_test_qing.png'),
         status: const Value('已采用'),
       ),
     );
@@ -362,22 +362,22 @@ void main() {
       ShotsCompanion.insert(
         scriptId: scriptId,
         globalSeq: 'G01',
-        batch: Value(1),
-        durationMs: Value(9000),
+        batch: const Value(1),
+        durationMs: const Value(9000),
         globalTimeRange: '00:00-00:09',
         beatRefs: Value(jsonEncode(['E01'])),
-        assetStates: Value('{}'),
+        assetStates: const Value('{}'),
       ),
     );
     await db.shotDao.insert(
       ShotsCompanion.insert(
         scriptId: scriptId,
         globalSeq: 'G02',
-        batch: Value(1),
-        durationMs: Value(6000),
+        batch: const Value(1),
+        durationMs: const Value(6000),
         globalTimeRange: '00:09-00:15',
         beatRefs: Value(jsonEncode(['E02'])),
-        assetStates: Value('{}'),
+        assetStates: const Value('{}'),
       ),
     );
 
@@ -912,7 +912,7 @@ void main() {
           .firstWhere((s) => s.globalSeq == 'G02');
       await db.shotDao.updateById(
         g02.id,
-        ShotsCompanion(shotType: const Value('特写')),
+        const ShotsCompanion(shotType: Value('特写')),
       );
 
       final issues = await service.listTransitionIssues(scriptId);
@@ -930,8 +930,8 @@ void main() {
           .id;
       await db.assetDao.updateById(
         qingId,
-        AssetsCompanion(
-          costumeSets: const Value(
+        const AssetsCompanion(
+          costumeSets: Value(
             '[{"name":"校服","description":"蓝白运动外套配深蓝长裤"},'
             '{"name":"斗篷","description":"深灰长斗篷"}]',
           ),
@@ -977,7 +977,7 @@ void main() {
           shotId: costumeShotId,
           assetId: qingId,
           role: '角色参考',
-          order: Value(0),
+          order: const Value(0),
         ),
       );
       await service.updateCostumeOverrides(
@@ -1008,7 +1008,7 @@ void main() {
           shotId: costumeShotId,
           assetId: qingId,
           role: '角色参考',
-          order: Value(0),
+          order: const Value(0),
         ),
       );
       await service.updateCostumeOverrides(

@@ -29,7 +29,7 @@ void main() {
     );
     return true;
   };
-  runApp(ProviderScope(child: _AppBootstrap(child: const NewmoveApp())));
+  runApp(const ProviderScope(child: _AppBootstrap(child: NewmoveApp())));
 }
 
 /// 启动时初始化通用设置（shared_preferences 异步读取后注入 store）。

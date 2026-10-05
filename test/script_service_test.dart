@@ -87,9 +87,9 @@ void main() {
       NovelBooksCompanion.insert(
         projectId: projectId,
         title: '测试书',
-        premise: Value('少年在末世觉醒'),
-        world: Value('废土'),
-        styleGuide: Value('冷峻'),
+        premise: const Value('少年在末世觉醒'),
+        world: const Value('废土'),
+        styleGuide: const Value('冷峻'),
       ),
     );
   });
@@ -158,7 +158,7 @@ void main() {
 
       await db.sceneDao.updateById(
         list.first.id,
-        ScenesCompanion(location: Value('A2')),
+        const ScenesCompanion(location: Value('A2')),
       );
       final updated = (await db.sceneDao.find(list.first.id))!;
       expect(updated.location, 'A2');
@@ -172,14 +172,14 @@ void main() {
         ScriptRevisionsCompanion.insert(
           scriptId: scriptId,
           version: 1,
-          content: Value('v1'),
+          content: const Value('v1'),
         ),
       );
       await db.scriptRevisionDao.insert(
         ScriptRevisionsCompanion.insert(
           scriptId: scriptId,
           version: 2,
-          content: Value('v2'),
+          content: const Value('v2'),
         ),
       );
 

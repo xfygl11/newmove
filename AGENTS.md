@@ -68,8 +68,8 @@ AI 写小说 → 小说改写动漫剧本 → 提取剧本骨架 → 生成动�
 
 ### 结构
 
-- 遵循 Flutter 官方风格，用 `dart format` 格式化，每行不超过 100 字符。
-- 优先使用 `const` 构造；Widget 拆分小而聚焦。
+- 遵循 Flutter 官方风格，用 `dart format` 格式化，**代码行**不超过 100 字符（注释行除外——`dart format` 不折叠中文注释，硬性 100 字符会与工具结构性冲突）。
+- 优先使用 `const` 构造；Widget 拆分小而聚焦。`analysis_options.yaml` 已启用 `prefer_const_constructors` / `prefer_const_literals_to_create_immutables` / `use_key_in_widget_constructors` 三条 lint，`flutter analyze` 会拦下漏写 `const` 与 Widget 构造函数缺 `key`；Dart 无行长 lint，行宽只靠 `dart format` 与上一条约定。
 - 状态管理用 Riverpod：Provider 放 `providers/`，异步用 `FutureProvider`/`AsyncNotifier`。
 - 数据层用 Drift，实体定义放 `data/tables/`，DAO 放 `data/daos/`。
 
@@ -194,7 +194,7 @@ lib/
 - **多表写必须事务化**：全库当前仅 `backup_service.dart:337` 一处 `transaction`，五个 service 的多表写全部裸写，中间态（JSON 解码抛错、磁盘满、进程被杀）永久落库且无回滚。DAO 层提供「按父 id 重建」复合方法并内置事务，业务层不直接拼 `deleteByX` + 多次 `insert`。
 - **删除顺序最下游先行**：`VideoTasks → AssetRefs → ShotFrames → Shots → Beats → Scenes`。`skeleton_service.dart:69-70` 先删 Beats 再删 Shots 违反此序，任一镜头有下游数据时删除抛冲突而 Beats 已不可恢复。
 - **写顺序先删后改**：`script_service.dart:110-118` 先 `updateRow` 写新正文再删场次，失败后正文新版 + 场次旧版错位。凡「父行更新 + 子表重建」一律先完成删除插入、成功后再更新父行版本。
-- **删除入口必须级联**：`project_dao.dart:40` 裸 delete 且 `tables.dart` 15 处 `references()` 全无 `onDelete`（Drift 默认 `NO ACTION`），删除任何创建过书籍的项目必然抛 `FOREIGN KEY constraint failed`。统一走 `deleteProjectCascade`，表定义显式 `KeyAction.cascade` + 迁移。
+- **删除入口必须级联**：`project_dao.dart:40` 裸 delete 且 `tables.dart` 16 处 `references()` 全无 `onDelete`（Drift 默认 `NO ACTION`），删除任何创建过书籍的项目必然抛 `FOREIGN KEY constraint failed`。统一走 `deleteProjectCascade`，表定义显式 `KeyAction.cascade` + 迁移。
 - **LLM 上下文必须预算内构造**：现状全量拼接、`model_presets.dart` 的 `maxToken` 零使用方。统一走 `ContextBudget`；TruthFile 标 `protection: protected | compressible`（用户意图/角色锁/规则永不压缩），裁剪按「伏笔只留 open、摘要只留近 N 章、角色只留本章出场」执行，被裁条目写入台账供查证。
 - **确认与执行分离**：统一 `ConfirmSheet`（对象/数量/完整提示词/参数/参考文件与用途顺序/执行次数/费用，费用不可查时明确「未知」）；授权后提交前重读数据比对，节点/提示词/模式/引用/数量任一变化则差异高亮重新授权。生成前保存提示词、参数、引用与授权快照，后续编辑不回写这次尝试。阶段门纪律：确认简报 ≠ 确认剧本 ≠ 确认资产 ≠ 验收生成结果，允许小样 ≠ 允许批量生产。
 - **取消需透传 Dio**：`GenerationCancelToken` 包装为 `dio.CancellationToken` 并透传适配器，每个 await 之后检查，不只判 for 循环顶部。
@@ -285,7 +285,14 @@ lib/
     `VideoTaskStatuses`（含 `inProgress` / `terminal` 列表）是唯一来源，
     `tables.dart` 列默认值、DAO 查询、service 写入、UI 判断、`StatusKinds` 五处
     必须同源——data 层不能反向 import features，所以这类跨层共享的状态表一律
-    放 core。新增状态词表照此办理，禁止在业务代码里写字面量。
+     放 core。新增状态词表照此办理，禁止在业务代码里写字面量。
+   - **状态表必须完备且有守卫**：`StatusKinds` 除了 `of` 还要用
+     `contains` / `all`——`of` 对未登记值静默回落 `fallback`，测试无法区分
+     「已登记」与「落 fallback」，这正是「8 个状态只识别 2 个」被掩盖的直接原因。
+     `test/status_kinds_test.dart` 断言所有状态常量类的值全部命中 `StatusKinds`，
+     并锁 `inProgress ∪ terminal` 恰好覆盖全集且两集合不重叠。新增状态字面量必须
+     同步登记，否则该测试红。章节与伏笔状态虽各走自己的颜色映射、不经
+     `StatusBadge`，也一律登记进同一张表，避免再长出一套字面量分叉。
   - **外部 JSON 解析必须容错且保留「未知」语义**：`jsonIntOrNull` 把不可解析
     收敛为 `null` 而不是 0（0 表示「明确没有」，两者含义相反）；列表型能力字段
     过滤后为空同样视为 `null`，空列表会让 UI 把「能力未知」当成「明确没有」。
