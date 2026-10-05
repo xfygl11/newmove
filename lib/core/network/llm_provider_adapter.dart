@@ -102,11 +102,18 @@ class LlmProviderAdapter {
     double temperature, {
     required bool stream,
   }) {
+    // 跳过空内容消息：DashScope 等供应商对空 content 返回
+    // InvalidParameter「Unexpected item type in content.」，不可读。
+    final kept = messages
+        .where((m) => m.content.trim().isNotEmpty)
+        .map((m) => {'role': m.role.name, 'content': m.content.trim()})
+        .toList();
+    if (kept.isEmpty) {
+      throw StateError('提示词为空，无法发起 LLM 请求');
+    }
     return {
-      'model': model,
-      'messages': [
-        for (final m in messages) {'role': m.role.name, 'content': m.content},
-      ],
+      'model': model.trim(),
+      'messages': kept,
       'temperature': temperature,
       'stream': stream,
     };

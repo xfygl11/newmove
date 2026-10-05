@@ -344,26 +344,30 @@ class _AgnesPresetRow extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('添加 Agnes AI 预设'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '将创建 3 个供应商条目：\n'
-              '  · Agnes LLM（agnes-2.5-flash）\n'
-              '  · Agnes 图片（agnes-image-2.5-flash）\n'
-              '  · Agnes 视频（agnes-video-2.5 + flash）\n\n'
-              'Base URL：https://apihub.agnes-ai.cn/v1',
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: keyController,
-              decoration: const InputDecoration(
-                labelText: 'API Key（存系统 Keystore，不进 DB）',
-                border: OutlineInputBorder(),
+        // 内容可滚动：3.47 的 Dialog 会把键盘 inset 加到外边距上，
+        // 可用高度变小后非滚动内容会直接溢出（底部斜纹水印）。
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '将创建 3 个供应商条目：\n'
+                '  · Agnes LLM（agnes-2.5-flash）\n'
+                '  · Agnes 图片（agnes-image-2.5-flash）\n'
+                '  · Agnes 视频（agnes-video-2.5 + flash）\n\n'
+                'Base URL：https://apihub.agnes-ai.cn/v1',
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: keyController,
+                decoration: const InputDecoration(
+                  labelText: 'API Key（存系统 Keystore，不进 DB）',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
