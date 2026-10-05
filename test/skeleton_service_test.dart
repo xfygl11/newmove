@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newmove/agent/active_llm.dart';
+import 'package:newmove/agent/prompt_resolver.dart';
 import 'package:newmove/core/network/llm_provider_adapter.dart';
 import 'package:newmove/data/app_database.dart';
 import 'package:newmove/features/provider_config/provider_models.dart';
@@ -93,7 +94,10 @@ void main() {
       beatDao: db.beatDao,
       shotDao: db.shotDao,
       cascadeDao: db.cascadeDao,
-      agents: SkeletonAgents(adapter: _FakeAdapter(_cannedJson)),
+      agents: SkeletonAgents(
+        adapter: _FakeAdapter(_cannedJson),
+        resolver: PromptResolver(db.promptOverrideDao),
+      ),
       attemptDao: db.generationAttemptDao,
     );
 

@@ -11,7 +11,10 @@ import 'shot_models.dart';
 import 'shot_service.dart';
 
 final shotAgentsProvider = Provider<ShotAgents>(
-  (ref) => ShotAgents(adapter: ref.watch(llmProviderAdapterProvider)),
+  (ref) => ShotAgents(
+    adapter: ref.watch(llmProviderAdapterProvider),
+    resolver: ref.watch(promptResolverProvider),
+  ),
 );
 
 final shotServiceProvider = Provider<ShotService>((ref) {

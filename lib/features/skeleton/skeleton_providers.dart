@@ -8,7 +8,10 @@ import 'skeleton_models.dart';
 import 'skeleton_service.dart';
 
 final skeletonAgentsProvider = Provider<SkeletonAgents>(
-  (ref) => SkeletonAgents(adapter: ref.watch(llmProviderAdapterProvider)),
+  (ref) => SkeletonAgents(
+    adapter: ref.watch(llmProviderAdapterProvider),
+    resolver: ref.watch(promptResolverProvider),
+  ),
 );
 
 final skeletonServiceProvider = Provider<SkeletonService>(

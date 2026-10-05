@@ -173,7 +173,7 @@ class ScriptService {
       bookId: bookId,
     );
     try {
-      final result = await agents.adapt(prompt: prompt, llm: llm);
+      final result = await agents.adapt(prompt: prompt, llm: llm, bookId: bookId);
 
       final book = await novelDao.findBook(bookId);
       final resolvedTitle = title?.isNotEmpty == true

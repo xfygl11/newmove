@@ -395,8 +395,17 @@ lib/
       `lib/agent/prompt_resolver.dart` 的 `PromptResolver.resolve` 统一解析，
       `allSlots` 常量与 `assets/skills/` 目录一一对应（12 个）。
       覆盖列为空串时视为未覆盖、继续回落。
-       表不加 unique key：`projectId` 在 `scope='global'` 时为 null，SQLite 里
-       NULL 互不相等会让 unique 约束形同虚设，所以 DAO 走显式查再插/改的 upsert。
+        表不加 unique key：`projectId` 在 `scope='global'` 时为 null，SQLite 里
+        NULL 互不相等会让 unique 约束形同虚设，所以 DAO 走显式查再插/改的 upsert。
+     - **Agent 提示词一律经 `PromptResolver`，项目归属统一走 `bookId`**：五个 Agent
+       类（`ShotAgents` / `AssetAgents` / `SkeletonAgents` / `NovelAgents` /
+       `ScriptAgents`）禁止直接 `SkillLoader.load`，必须经构造器注入的
+       `PromptResolver`（`required this.resolver`，不留可选短路）。项目归属统一由
+       `resolveByBook(relativePath, {bookId})` → `PromptOverrideDao.projectOfBook`
+       解析，调用点不自拼 `bookId → projectId`。中转键用 `bookId` 而不是
+       `scriptId`：五个 service 的调用点都直接持有 `bookId`，而
+       `adaptChapters` 首次改编时剧本尚未落库、没有可用 `scriptId`；走 `bookId`
+       全链路可用且省一次查询。`bookId` 为空时跳过项目级，只走全局与内置。
     - **结构化字段是段级不是帧级，且必须显式写回**：`Shots` 表的九个摄影字段
       （`composition` / `lens` / `cameraPosition` / `eyeline` / `focus` / `stability`
       / `blocking` / `dialogueStartRatio` / `dialogueEndRatio`）落在

@@ -49,6 +49,19 @@ class PromptResolver {
     return SkillLoader.load(relativePath);
   }
 
+  /// 按作品解析：bookId → 项目 → 项目级覆盖。
+  ///
+  /// 项目归属统一从作品表解析，调用点不自拼 bookId → projectId。
+  /// [bookId] 为空（如剧本尚未落库的首次改编）时跳过项目级，只走全局与内置。
+  Future<String> resolveByBook(String relativePath, {int? bookId}) {
+    if (bookId == null) {
+      return resolve(relativePath);
+    }
+    return dao.projectOfBook(bookId).then(
+      (projectId) => resolve(relativePath, projectId: projectId),
+    );
+  }
+
   /// 当前插槽是否已被覆盖（用于设置页展示「已自定义」标记）。
   Future<PromptOverride?> findOverride(String relativePath, {int? projectId}) {
     if (projectId != null) {

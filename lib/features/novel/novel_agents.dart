@@ -1,14 +1,15 @@
 import '../../agent/active_llm.dart';
-import '../../agent/skill_loader.dart';
+import '../../agent/prompt_resolver.dart';
 import '../../core/json_values.dart';
 import '../../core/network/llm_provider_adapter.dart';
 import 'novel_models.dart';
 
 /// AI 写小说各阶段 Agent：组合 skill 提示词 + LLM 调用 + 结构化解析。
 class NovelAgents {
-  NovelAgents({required this.adapter});
+  NovelAgents({required this.adapter, required this.resolver});
 
   final LlmProviderAdapter adapter;
+  final PromptResolver resolver;
 
   static const _planning = 'novel/planning.md';
   static const _chapterPlanning = 'novel/chapter_planning.md';
@@ -22,9 +23,10 @@ class NovelAgents {
     required String idea,
     required String genre,
     required ActiveLlm llm,
+    required int bookId,
     String workType = '长篇',
   }) async {
-    final system = await SkillLoader.load(_planning);
+    final system = await resolver.resolveByBook(_planning, bookId: bookId);
     final typeNote = workType != '长篇' ? '\n【作品类型】$workType' : '';
     final reply = await adapter.chat(
       baseUrl: llm.baseUrl,
@@ -48,8 +50,9 @@ class NovelAgents {
   Future<Map<String, dynamic>> planChapter({
     required String prompt,
     required ActiveLlm llm,
+    required int bookId,
   }) async {
-    final system = await SkillLoader.load(_chapterPlanning);
+    final system = await resolver.resolveByBook(_chapterPlanning, bookId: bookId);
     final reply = await adapter.chat(
       baseUrl: llm.baseUrl,
       apiKey: llm.apiKey,
@@ -68,8 +71,9 @@ class NovelAgents {
   Stream<String> writeChapter({
     required String prompt,
     required ActiveLlm llm,
+    required int bookId,
   }) async* {
-    final system = await SkillLoader.load(_writing);
+    final system = await resolver.resolveByBook(_writing, bookId: bookId);
     yield* adapter.chatStream(
       baseUrl: llm.baseUrl,
       apiKey: llm.apiKey,
@@ -87,8 +91,9 @@ class NovelAgents {
   Future<List<ReviewIssue>> review({
     required String prompt,
     required ActiveLlm llm,
+    required int bookId,
   }) async {
-    final system = await SkillLoader.load(_review);
+    final system = await resolver.resolveByBook(_review, bookId: bookId);
     final reply = await adapter.chat(
       baseUrl: llm.baseUrl,
       apiKey: llm.apiKey,
@@ -109,8 +114,9 @@ class NovelAgents {
   Future<String> revise({
     required String prompt,
     required ActiveLlm llm,
+    required int bookId,
   }) async {
-    final system = await SkillLoader.load(_writing);
+    final system = await resolver.resolveByBook(_writing, bookId: bookId);
     final reply = await adapter.chat(
       baseUrl: llm.baseUrl,
       apiKey: llm.apiKey,
@@ -132,8 +138,9 @@ class NovelAgents {
   Future<SettleDelta> settle({
     required String prompt,
     required ActiveLlm llm,
+    required int bookId,
   }) async {
-    final system = await SkillLoader.load(_settling);
+    final system = await resolver.resolveByBook(_settling, bookId: bookId);
     final reply = await adapter.chat(
       baseUrl: llm.baseUrl,
       apiKey: llm.apiKey,

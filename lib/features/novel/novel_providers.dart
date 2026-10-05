@@ -7,7 +7,10 @@ import 'novel_agents.dart';
 import 'novel_service.dart';
 
 final novelAgentsProvider = Provider<NovelAgents>(
-  (ref) => NovelAgents(adapter: ref.watch(llmProviderAdapterProvider)),
+  (ref) => NovelAgents(
+    adapter: ref.watch(llmProviderAdapterProvider),
+    resolver: ref.watch(promptResolverProvider),
+  ),
 );
 
 final novelServiceProvider = Provider<NovelService>(

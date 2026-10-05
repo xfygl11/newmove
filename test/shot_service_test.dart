@@ -9,6 +9,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newmove/agent/active_image.dart';
 import 'package:newmove/agent/active_llm.dart';
+import 'package:newmove/agent/prompt_resolver.dart';
 import 'package:newmove/agent/active_video.dart';
 import 'package:newmove/core/network/image_provider_adapter.dart';
 import 'package:newmove/core/network/llm_provider_adapter.dart';
@@ -296,7 +297,10 @@ void main() {
       shotFrameDao: db.shotFrameDao,
       assetRefDao: db.assetRefDao,
       assetDao: db.assetDao,
-      agents: ShotAgents(adapter: _FakeLlmAdapter(_cannedJson)),
+      agents: ShotAgents(
+        adapter: _FakeLlmAdapter(_cannedJson),
+        resolver: PromptResolver(db.promptOverrideDao),
+      ),
       imageAdapter: fakeImageAdapter,
       fileStore: _FakeFileStore(),
       videoAdapter: fakeVideoAdapter,

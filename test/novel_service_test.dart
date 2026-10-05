@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:newmove/agent/prompt_resolver.dart';
 import 'package:newmove/core/network/llm_provider_adapter.dart';
 import 'package:newmove/data/app_database.dart';
 import 'package:newmove/features/novel/novel_agents.dart';
@@ -19,7 +20,10 @@ void main() {
       novelDao: db.novelDao,
       truthDao: db.truthFileDao,
       revisionDao: db.chapterRevisionDao,
-      agents: NovelAgents(adapter: LlmProviderAdapter()),
+      agents: NovelAgents(
+        adapter: LlmProviderAdapter(),
+        resolver: PromptResolver(db.promptOverrideDao),
+      ),
       attemptDao: db.generationAttemptDao,
     );
     final projectId = await db.projectDao.insertProject(

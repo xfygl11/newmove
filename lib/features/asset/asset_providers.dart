@@ -7,7 +7,10 @@ import 'asset_agents.dart';
 import 'asset_service.dart';
 
 final assetAgentsProvider = Provider<AssetAgents>(
-  (ref) => AssetAgents(adapter: ref.watch(llmProviderAdapterProvider)),
+  (ref) => AssetAgents(
+    adapter: ref.watch(llmProviderAdapterProvider),
+    resolver: ref.watch(promptResolverProvider),
+  ),
 );
 
 final assetServiceProvider = Provider<AssetService>(

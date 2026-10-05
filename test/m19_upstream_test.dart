@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newmove/agent/prompt_resolver.dart';
+import 'package:newmove/agent/skill_loader.dart';
 import 'package:newmove/core/network/llm_provider_adapter.dart';
 import 'package:newmove/data/app_database.dart';
 import 'package:newmove/data/daos/prompt_override_dao.dart';
@@ -240,6 +241,108 @@ void main() {
     });
   });
 
+  group('PromptResolver 覆盖解析', () {
+    late AppDatabase db;
+    late PromptResolver resolver;
+
+    setUp(() {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      db = AppDatabase(NativeDatabase.memory());
+      resolver = PromptResolver(db.promptOverrideDao);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('无覆盖时回落内置 skill 原文', () async {
+      final builtin = await SkillLoader.load('novel/writing.md');
+      expect(await resolver.resolve('novel/writing.md'), builtin);
+    });
+
+    test('全局级覆盖优先于内置原文', () async {
+      await db.promptOverrideDao.upsert(
+        scope: PromptOverrideScopes.global,
+        key: 'novel/writing.md',
+        text: '全局写作规则',
+      );
+      expect(await resolver.resolve('novel/writing.md'), '全局写作规则');
+    });
+
+    test('项目级覆盖优先于全局级', () async {
+      await db.promptOverrideDao.upsert(
+        scope: PromptOverrideScopes.global,
+        key: 'novel/writing.md',
+        text: '全局写作规则',
+      );
+      await db.promptOverrideDao.upsert(
+        scope: PromptOverrideScopes.project,
+        key: 'novel/writing.md',
+        text: '项目写作规则',
+        projectId: 7,
+      );
+      expect(
+        await resolver.resolve('novel/writing.md', projectId: 7),
+        '项目写作规则',
+      );
+    });
+
+    test('空串覆盖视为未覆盖，继续回落下一级', () async {
+      await db.promptOverrideDao.upsert(
+        scope: PromptOverrideScopes.project,
+        key: 'novel/writing.md',
+        text: '   ',
+        projectId: 7,
+      );
+      await db.promptOverrideDao.upsert(
+        scope: PromptOverrideScopes.global,
+        key: 'novel/writing.md',
+        text: '全局写作规则',
+      );
+      expect(
+        await resolver.resolve('novel/writing.md', projectId: 7),
+        '全局写作规则',
+      );
+    });
+
+    test('resolveByBook 按作品解析出项目级覆盖', () async {
+      final projectId = await db.projectDao.insertProject(
+        ProjectsCompanion.insert(name: '测试项目'),
+      );
+      final bookId = await db.novelDao.insertBook(
+        NovelBooksCompanion.insert(projectId: projectId, title: '测试书'),
+      );
+      await db.promptOverrideDao.upsert(
+        scope: PromptOverrideScopes.project,
+        key: 'novel/writing.md',
+        text: '项目写作规则',
+        projectId: projectId,
+      );
+      expect(await resolver.resolveByBook('novel/writing.md', bookId: bookId),
+        '项目写作规则');
+    });
+
+    test('resolveByBook 空 bookId 跳过项目级，只走全局级', () async {
+      await db.promptOverrideDao.upsert(
+        scope: PromptOverrideScopes.global,
+        key: 'novel/writing.md',
+        text: '全局写作规则',
+      );
+      expect(
+        await resolver.resolveByBook('novel/writing.md'),
+        '全局写作规则',
+      );
+    });
+
+    test('resolveByBook 未知作品回落内置原文', () async {
+      final builtin = await SkillLoader.load('novel/writing.md');
+      expect(
+        await resolver.resolveByBook('novel/writing.md', bookId: 99999),
+        builtin,
+      );
+    });
+  });
+
   group('M19 资产 / 镜头失效标记 DAO', () {
     late AppDatabase db;
 
@@ -316,7 +419,10 @@ void main() {
         novelDao: db.novelDao,
         truthDao: db.truthFileDao,
         cascadeDao: db.cascadeDao,
-        agents: ScriptAgents(adapter: _FakeAdapter(_cannedJson)),
+        agents: ScriptAgents(
+          adapter: _FakeAdapter(_cannedJson),
+          resolver: PromptResolver(db.promptOverrideDao),
+        ),
         assetDao: db.assetDao,
         shotDao: db.shotDao,
         attemptDao: db.generationAttemptDao,

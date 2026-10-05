@@ -130,7 +130,7 @@ class SkeletonService {
       bookId: script.bookId,
     );
     try {
-      final result = await agents.extract(prompt: prompt, llm: llm);
+      final result = await agents.extract(prompt: prompt, llm: llm, bookId: script.bookId);
       final sceneIdBySeq = <int, int>{for (final s in scenes) s.seq: s.id};
 
       // 删旧 + 插新整体包在事务内：中途失败整段回滚，不会留下空骨架。

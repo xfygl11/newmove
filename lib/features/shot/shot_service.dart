@@ -338,6 +338,7 @@ class ShotService {
     required ActiveLlm llm,
   }) async {
     final context = await buildDirectionContext(scriptId);
+    final bookId = (await scriptDao.find(scriptId))?.bookId ?? 0;
     final directionAttempt = await _recordAttempt(
       subjectType: AttemptSubjects.shotDirection,
       subjectId: scriptId,
@@ -349,9 +350,9 @@ class ShotService {
         'maxOutputTokens': llm.model.maxOutputTokens,
         'budgetTokens': llm.budgetTokens,
       }),
-      bookId: (await scriptDao.find(scriptId))?.bookId,
+      bookId: bookId,
     );
-    final result = await agents.direct(prompt: context, llm: llm);
+    final result = await agents.direct(prompt: context, llm: llm, bookId: bookId);
     await _finishAttempt(
       id: directionAttempt,
       status: AttemptStatuses.succeeded,

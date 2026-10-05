@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newmove/agent/active_llm.dart';
+import 'package:newmove/agent/prompt_resolver.dart';
 import 'package:newmove/core/network/llm_provider_adapter.dart';
 import 'package:newmove/data/app_database.dart';
 import 'package:newmove/features/novel/truth_file_kinds.dart';
@@ -71,7 +72,10 @@ void main() {
       novelDao: db.novelDao,
       truthDao: db.truthFileDao,
       cascadeDao: db.cascadeDao,
-      agents: ScriptAgents(adapter: _FakeAdapter(_cannedJson)),
+      agents: ScriptAgents(
+        adapter: _FakeAdapter(_cannedJson),
+        resolver: PromptResolver(db.promptOverrideDao),
+      ),
       assetDao: db.assetDao,
       shotDao: db.shotDao,
       attemptDao: db.generationAttemptDao,

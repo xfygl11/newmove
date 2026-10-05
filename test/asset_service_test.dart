@@ -8,6 +8,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newmove/agent/active_image.dart';
 import 'package:newmove/agent/active_llm.dart';
+import 'package:newmove/agent/prompt_resolver.dart';
 import 'package:newmove/core/network/image_provider_adapter.dart';
 import 'package:newmove/core/network/llm_provider_adapter.dart';
 import 'package:newmove/core/network/protocols.dart';
@@ -133,7 +134,10 @@ void main() {
       beatDao: db.beatDao,
       shotDao: db.shotDao,
       scriptDao: db.scriptDao,
-      agents: AssetAgents(adapter: _FakeLlmAdapter(_cannedAssets)),
+      agents: AssetAgents(
+        adapter: _FakeLlmAdapter(_cannedAssets),
+        resolver: PromptResolver(db.promptOverrideDao),
+      ),
       imageAdapter: _FakeImageAdapter(),
       fileStore: _FakeFileStore(),
       revisionDao: db.revisionDao,

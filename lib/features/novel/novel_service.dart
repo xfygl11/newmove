@@ -102,6 +102,7 @@ class NovelService {
         genre: genre,
         llm: llm,
         workType: workType,
+        bookId: bookId,
       );
 
       final book = await novelDao.findBook(bookId);
@@ -164,7 +165,7 @@ class NovelService {
       bookId: bookId,
     );
     try {
-      yield* agents.writeChapter(prompt: prompt, llm: llm);
+      yield* agents.writeChapter(prompt: prompt, llm: llm, bookId: bookId);
       await _finish(attempt, AttemptStatuses.succeeded);
     } catch (e) {
       await _finish(attempt, AttemptStatuses.failed, error: e.toString());
@@ -207,6 +208,7 @@ class NovelService {
       final plan = await agents.planChapter(
         prompt: prompt.toString(),
         llm: llm,
+        bookId: bookId,
       );
       await _finish(attempt, AttemptStatuses.succeeded);
       return plan;
@@ -307,7 +309,7 @@ class NovelService {
       bookId: bookId,
     );
     try {
-      final issues = await agents.review(prompt: prompt, llm: llm);
+      final issues = await agents.review(prompt: prompt, llm: llm, bookId: bookId);
       await _finish(attempt, AttemptStatuses.succeeded);
       // 证据引用一律由本地正文重新裁切，不直接采信 LLM 自报的位置与引文。
       return ReviewIssue.verifyQuotes(issues, content);
@@ -342,7 +344,11 @@ class NovelService {
       bookId: chapter.bookId,
     );
     try {
-      final revised = await agents.revise(prompt: prompt, llm: llm);
+      final revised = await agents.revise(
+        prompt: prompt,
+        llm: llm,
+        bookId: chapter.bookId,
+      );
 
       // 旧内容存入版本快照。
       await revisionDao.insert(
@@ -408,7 +414,11 @@ class NovelService {
       bookId: chapter.bookId,
     );
     try {
-      final delta = await agents.settle(prompt: prompt.toString(), llm: llm);
+      final delta = await agents.settle(
+        prompt: prompt.toString(),
+        llm: llm,
+        bookId: chapter.bookId,
+      );
       await store.applyDelta(delta, chapter.seq);
       await _finish(attempt, AttemptStatuses.succeeded);
     } catch (e) {

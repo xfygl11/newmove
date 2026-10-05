@@ -1,14 +1,15 @@
 import '../../agent/active_llm.dart';
-import '../../agent/skill_loader.dart';
+import '../../agent/prompt_resolver.dart';
 import '../../core/json_values.dart';
 import '../../core/network/llm_provider_adapter.dart';
 import 'asset_models.dart';
 
 /// 骨架→资产清单 AssetDesigner Agent：去重合并、复用/新建/变体判定、Prompt 构造。
 class AssetAgents {
-  AssetAgents({required this.adapter});
+  AssetAgents({required this.adapter, required this.resolver});
 
   final LlmProviderAdapter adapter;
+  final PromptResolver resolver;
 
   static const _assetDesign = 'asset/asset_design.md';
 
@@ -16,8 +17,9 @@ class AssetAgents {
   Future<AssetExtractionResult> extract({
     required String skeletonContext,
     required ActiveLlm llm,
+    required int bookId,
   }) async {
-    final skill = await SkillLoader.load(_assetDesign);
+    final skill = await resolver.resolveByBook(_assetDesign, bookId: bookId);
     final reply = await adapter.chat(
       baseUrl: llm.baseUrl,
       apiKey: llm.apiKey,

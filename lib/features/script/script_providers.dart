@@ -7,7 +7,10 @@ import 'script_agents.dart';
 import 'script_service.dart';
 
 final scriptAgentsProvider = Provider<ScriptAgents>(
-  (ref) => ScriptAgents(adapter: ref.watch(llmProviderAdapterProvider)),
+  (ref) => ScriptAgents(
+    adapter: ref.watch(llmProviderAdapterProvider),
+    resolver: ref.watch(promptResolverProvider),
+  ),
 );
 
 final scriptServiceProvider = Provider<ScriptService>(

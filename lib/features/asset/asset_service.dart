@@ -100,6 +100,7 @@ class AssetService {
     required ActiveLlm llm,
   }) async {
     final context = await buildSkeletonContext(scriptId);
+    final bookId = (await scriptDao.find(scriptId))?.bookId ?? 0;
     final attemptId = await _recorder.start(
       subjectType: AttemptSubjects.assetExtract,
       subjectId: scriptId,
@@ -111,9 +112,13 @@ class AssetService {
         'maxToken': llm.model.maxOutputTokens,
         'budgetTokens': llm.budgetTokens,
       }),
-      bookId: (await scriptDao.find(scriptId))?.bookId,
+      bookId: bookId,
     );
-    final result = await agents.extract(skeletonContext: context, llm: llm);
+    final result = await agents.extract(
+      skeletonContext: context,
+      llm: llm,
+      bookId: bookId,
+    );
 
     try {
       // stableId -> 已存在/本轮新建的资产，用于复用与变体父解析。

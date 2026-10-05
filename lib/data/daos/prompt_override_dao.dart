@@ -19,7 +19,7 @@ abstract final class PromptOverrideScopes {
 /// 内置 skill 是打进 APK 的只读资源，用户改不了提示词。这张表提供
 /// 项目级 > 全局级 > 代码默认 的三级覆盖。写入走 upsert：同一
 /// (scope, projectId, slotKey) 只保留一条，重复保存覆盖旧值。
-@DriftAccessor(tables: [PromptOverrides])
+@DriftAccessor(tables: [PromptOverrides, NovelBooks])
 class PromptOverrideDao extends DatabaseAccessor<AppDatabase>
     with _$PromptOverrideDaoMixin {
   PromptOverrideDao(super.db);
@@ -109,5 +109,15 @@ class PromptOverrideDao extends DatabaseAccessor<AppDatabase>
                 t.projectId.equals(projectId),
           ))
         .go();
+  }
+
+  /// 作品所属项目 id（作品 → 项目）。作品不存在返回 null。
+  ///
+  /// 提示词覆盖的项目归属统一从作品表解析，调用点不自拼 bookId → projectId。
+  Future<int?> projectOfBook(int bookId) async {
+    final book =
+        await (select(novelBooks)..where((t) => t.id.equals(bookId)))
+            .getSingleOrNull();
+    return book?.projectId;
   }
 }
