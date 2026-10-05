@@ -1,7 +1,11 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart'
-    show FlutterQuillLocalizations, QuillEditor;
+    show
+        FlutterQuillLocalizations,
+        QuillController,
+        QuillEditor,
+        QuillSimpleToolbar;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newmove/core/storage/providers.dart';
@@ -23,8 +27,6 @@ Chapter _chapter({String? content}) => Chapter(
 );
 
 /// 与 lib/app.dart 的 MaterialApp 配置对齐的测试外壳。
-/// localizationsDelegates 缺失时 QuillSimpleToolbar 会抛
-/// MissingFlutterQuillLocalizationException，此处一并回归。
 Widget _harness(Chapter chapter) {
   final db = AppDatabase(NativeDatabase.memory());
   addTearDown(db.close);
@@ -39,6 +41,19 @@ Widget _harness(Chapter chapter) {
       home: const ChapterEditorPage(chapterId: 1),
     ),
   );
+}
+
+/// 测试中捕获全部构建/布局异常（binding 默认只留第一条）。
+Future<List<Object>> _capture(Future<void> Function() body) async {
+  final caught = <Object>[];
+  final previous = FlutterError.onError;
+  FlutterError.onError = (details) => caught.add(details.exception);
+  try {
+    await body();
+  } finally {
+    FlutterError.onError = previous;
+  }
+  return caught;
 }
 
 Future<void> _showEditor(WidgetTester tester, {int keyboardInset = 0}) async {
@@ -73,4 +88,36 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  // 反例：lib/app.dart 必须注册 FlutterQuillLocalizations delegate。
+  // 缺失时 QuillSimpleToolbar 的 undo/redo 按钮 tooltip 读取 context.loc 直接中断构建。
+  testWidgets('QuillSimpleToolbar 需要 FlutterQuillLocalizations delegate', (
+    tester,
+  ) async {
+    final controller = QuillController.basic();
+    addTearDown(controller.dispose);
+
+    final errors = await _capture(() async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: QuillSimpleToolbar(controller: controller)),
+        ),
+      );
+      await tester.pump();
+      await tester.pumpWidget(const SizedBox());
+    });
+    tester.takeException();
+
+    expect(
+      errors,
+      contains(
+        predicate(
+          (e) => e.toString().contains(
+            'FlutterQuillLocalizations instance is required',
+          ),
+        ),
+      ),
+    );
+    expect(find.byType(QuillSimpleToolbar), findsNothing);
+  });
 }
