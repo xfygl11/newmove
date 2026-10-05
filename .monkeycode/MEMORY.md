@@ -65,23 +65,17 @@ Entries discovered by the Agent during task execution should follow this format:
   - 以 root 跑会出现 "Woah! You appear to be trying to run flutter as root" 提示，属预期非错误
   - 格式化命令：`/opt/flutter/bin/dart format lib/`
 
-[Git 提交时用 -F 文件避免 zsh 报错]
-- Date: 2026-10-04
-- Context: 提交信息含反引号或 `<` 等字符时
-- Category: Workflow & Collaboration
-- Instructions:
-  - zsh 对 commit message 中的反引号/`<` 会报错
-  - 改为先把提交信息写入文件，再执行 `git commit -F <文件>`
-  - 临时提交信息文件不要随代码提交，用 `git add -A -- . ':!.git_commit_msg.txt'` 排除
-
 [核心测试命令]
-- Date: 2026-10-04
+- Date: 2026-10-05
 - Context: 每次改动后最小验证
 - Category: Testing Methods
 - Instructions:
   - 跑核心测试（约 35 秒）：`/opt/flutter/bin/flutter test test/novel_service_test.dart test/backup_service_test.dart test/daos_test.dart test/truth_file_store_test.dart test/revision_and_attempt_test.dart`
-  - 全量 `/opt/flutter/bin/flutter test` 约 8 分钟（加 `--concurrency=1`）、峰值约 1.5 GiB，用 background terminal 跑
-  - 当前基线：M14 + M15 落地，全量 200 例全通过，`/opt/flutter/bin/flutter analyze` 零问题（`flutter` 需用绝对路径 `/opt/flutter/bin/flutter`）
+  - 全量 `/opt/flutter/bin/flutter test` 约 10 分钟（加 `--concurrency=1`）、峰值约 1.9 GiB，用 background terminal 跑
+  - 单文件快速迭代（约 1–2 分钟）：`/opt/flutter/bin/flutter test test/gates_test.dart --no-pub --concurrency=1`
+  - 当前基线：M14 + M15 + M18-B + M19 落地（含 T21.6 校验留痕），全量 285 例全通过，`/opt/flutter/bin/flutter analyze` 零问题（`flutter` 需用绝对路径 `/opt/flutter/bin/flutter`）
+  - **`flutter analyze` 与 `flutter test` 不要放在两个后台终端里并发跑**：本环境内存紧张，并发时会把 analyze 顶到 OOM（exit code -1 + `killed_by_timeout`，且输出 0 字节）。串行跑，先 analyze（约 25 秒）再 test
+  - 单文件 test 加 `| tail -N` 会等到进程结束才输出，运行期间日志一直是 0 字节；要观察进度就别加 tail
 
 [Flutter 3.47 Dialog / widget test 踩坑记录]
 - Date: 2026-10-05
@@ -101,7 +95,7 @@ Entries discovered by the Agent during task execution should follow this format:
 - Instructions:
   - 跑全量测试前先看 `free -m` 与 `ps -eo pid,ppid,stat,etime,rss,cmd --sort=-rss | grep flutter_tester`；本环境约 8 GiB，opencode 本体长期占约 700 MB
   - `flutter test` 被中断后子进程 `flutter_tester` 会被 init 收养（PPID=1）成孤儿且不会自动退出；按具体 PID 逐个 `kill <pid>` 释放，不要用 pkill 按进程名批量杀
-  - 全量测试加 `--concurrency=1` 把并行套件数压到 1 降低同时段内存占用；后台命令不要用 `| tail -N` 包裹（tail 等 EOF 才输出，运行期间日志一直是 0 字节）
+  - 全量测试加 `--concurrency=1` 把并行套件数压到 1 降低同时段内存占用
 
 [drift 2.35 更新语义与 Companion 限制（踩坑记录）]
 - Date: 2026-10-04
@@ -137,11 +131,12 @@ Entries discovered by the Agent during task execution should follow this format:
 - Instructions:
   - Toonflow 在 `/tmp/opencode/Toonflow-app`（commit `f37b772`，646 文件，官方最新，无子模块，已核实远端/本地文件数一致）
   - InkOS 在 `/tmp/opencode/inkos`（commit `8fc2ae5`，792 文件）
+  - M19 外部对标 5 仓在 `/tmp/opencode/`：`shuohao-skills`（最核心，管线同构，52 道纯函数质量门）、`AIComicBuilder`（55 条迁移 = 领域能力清单，`src/lib/ai/prompts/registry.ts` 是 16 提示词 / 73 插槽）、`goink`（`internal/mcp_tools/rw_tools.go`）、`manga-gen`（`backend/services/gemini.py`）、`NarrativeSteward`（观察项）
   - 做功能对齐、流程比对、深查借鉴机制时直接读这两个目录，无需重新下载
   - `/tmp/opencode` 属临时目录，若目录缺失则按远端仓库重新克隆；两个项目均为只读参考，不要在其内部修改代码
   - 比对结论与「采纳/不采纳」决策记录在 `docs/01` 第 8 节，任务化条目在 `docs/04` 第 8.y 节（M14）
 
-[工作流约定：同步文档 + 按阶段推进]
+[工作流约定：同步文档 + 按阶段推进 + Git 提交]
 - Date: 2026-10-05
 - Context: 用户要求
 - Category: Workflow & Collaboration
@@ -149,3 +144,4 @@ Entries discovered by the Agent during task execution should follow this format:
   - 每次新增/修改功能都要及时同步 `AGENTS.md` 与 `docs/02-系统架构设计.md`、`docs/04-开发计划与任务.md`；`AGENTS.md` 是 AI 协作规范，`docs/` 是详细设计，三者需保持一致
   - 只实现用户当前明确要求的内容，不主动扩展功能、不加占位数据；完成当前要求并验证后停止，等待下一步指令，不擅自扩大范围
   - 文档先于代码：用户给出的方向先完整更新到 `docs/`，再按文档动手实现
+  - zsh 对 commit message 中的反引号/`<` 会报错：先把提交信息写入文件，再 `git commit -F <文件>`；临时提交信息文件不要随代码提交，用 `git add -A -- . ':!.git_commit_msg.txt'` 排除

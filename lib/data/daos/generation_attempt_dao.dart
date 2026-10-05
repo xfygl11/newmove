@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../../core/app_log.dart';
+import '../../core/gate_issue.dart';
 import '../app_database.dart';
 import '../tables/tables.dart';
 
@@ -21,6 +22,9 @@ abstract final class AttemptSubjects {
   static const shotVideo = 'shot_video';
   static const assetExtract = 'asset_extract';
   static const assetImage = 'asset_image';
+  // 本地质量门校验（M19 T21.6）：不消耗算力，但结果要留痕，
+  // 让用户改完提示词能看到自己踩过哪些门。
+  static const validate = 'validate';
 }
 
 /// 台账状态常量。
@@ -260,6 +264,56 @@ class AttemptRecorder {
       );
     } catch (e, st) {
       appLog('attempt_finish', '#$id -> $status', error: e, stackTrace: st);
+    }
+  }
+
+  /// 登记一次本地质量门校验（M19 T21.6）。
+  ///
+  /// 校验本身不消耗算力，但只提示不留痕时，用户改完提示词就看不到自己踩过
+  /// 哪些门。这里复用生成台账的表结构：摘要写 `prompt`，门名与逐条问题写
+  /// `params`，出现 error 级问题时状态记为 `failed`。一次校验就是最终态，
+  /// 不走 `start` / `finish` 两阶段。
+  Future<bool> recordValidation({
+    required String subjectLabel,
+    required List<String> gates,
+    required List<GateIssue> issues,
+    int? projectId,
+  }) async {
+    final errors = issues.where((i) => i.isError).length;
+    try {
+      await dao.insert(
+        GenerationAttemptsCompanion.insert(
+          projectId: Value(projectId),
+          subjectType: AttemptSubjects.validate,
+          subjectLabel: Value(subjectLabel),
+          prompt:
+              '门 ${gates.length} 道 · error $errors · '
+              'warn ${issues.length - errors}',
+          params: Value(
+            jsonEncode({
+              'gates': gates,
+              'errorCount': errors,
+              'warnCount': issues.length - errors,
+              'issues': [
+                for (final i in issues)
+                  {
+                    'code': i.code,
+                    'severity': i.severity.name,
+                    'locator': i.locator,
+                    'message': i.message,
+                  }
+              ],
+            }),
+          ),
+          status: Value(
+            errors > 0 ? AttemptStatuses.failed : AttemptStatuses.succeeded,
+          ),
+        ),
+      );
+      return true;
+    } catch (e, st) {
+      appLog('gate_record', subjectLabel, error: e, stackTrace: st);
+      return false;
     }
   }
 }

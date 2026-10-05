@@ -322,30 +322,58 @@ lib/
   - **缺字段的旧数据照常通过，门明说跳过而不报错**：新增值类型（`variantOf`、
     集时长预算、结构化镜头字段等）时，不存在的字段走「跳过」分支并在结果里标记
     `skipped`，不能报错——否则每一份额量升级前的存量数据一次升级就全红。
-  - **角色提示词雷同门只查描述性字段**：Jaccard 阈值 0.75，双方词数 < 8 返回 0
-    （短语级比较无意义），按 `[^a-z]+` 分词并过滤长度 ≤2 的词。**刻意不查四视图
-    排版模板字段**——三分区排版是大段固定文本，真实角色之间本来就有 63% 重合，
-    误拦的门比没有门更糟。
-  - **时长估算与切段预算是两件事**：`DurationEstimator` 负责「写完剧本就知道这集
-    会超时多少」（台词字符数 ÷ 语速 4.5 + 动作节拍 2.5 秒，标点算时间，容差 ±15%），
-    `SegmentBudget` 负责按目标时长切段与容量校验。两者不合并、不互相调用私有实现。
-  - **空景与画风词的反向校验由门负责，不靠模型自觉**：场景类资产提示词须含
-    `empty scene` / `no people` 且 `negativePrompt` 须禁 `people`；任何资产或分镜
-    提示词出现本项目角色名或作品名即报警（图像模型会把它认识的东西画进去）；
-    出现画风词（`photorealistic` / `anime` / `painterly` 等）即报警，画风由
-    `effectiveArtStyle` 在出图时统一附加。**反向提示词绝不能禁画风词**——出图时
-    选的就可能正是它。`Beats` / `Shots` 正文不查角色名，正文本来就该出现角色名。
-  - **实测提示词规则只进 `assets/skills/`，不进业务代码**：角色参考图与分镜的
-    提示词写法（几何化正面、一致性清单按视图取层、不链式参考、多人同框不用拼接
-    参考图、细节图补年龄、写光的效果不写光源、视频侧不写角色姓名而分镜图侧相反
-    要直呼其名、构图量化字段等）全部落在 skill prompt 里。业务代码只负责拼接、
-    落库、校验，不复述提示词规则。
-  - **体检模式一律只读不改**：`listTransitionIssues` / `listSkeletonIssues` /
-    `listScriptIssues` 三个并列面板都只提示，不自动修数据，不改库。修数据必须走
-    显式用户动作 + `ConfirmSheet`。
-  - **本地校验失败要留痕**：走 `AttemptRecorder` + `GenerationAttempts` 既有表
-    结构，`attemptType` 加 `validate` 一类。生成台账只覆盖算力消耗，本地校验失败
-    当前不留痕——用户改完提示词看不到自己踩了哪些门。
+   - **角色提示词雷同门只查描述性字段**：Jaccard 阈值 0.75，双方词元数 < 6 返回 0
+     （短语级比较无意义）。**CJK 必须逐字切词元**，字母数字连续串算一个词元——
+     中文没有词边界，整段提示词按 `[^a-z]+` 切只会得到五六个长串，词集合没有
+     区分度，门永远不响（实测：5 字段外观锚点按长串切只得 5 个词元，低于阈值）。
+     对比对象是 `appearanceAnchor` 的 JSON 值，**不是全量 prompt**——四视图排版
+     模板是大段固定文本，真实角色之间本来就有 80% 以上重合，查全量 prompt 会全红。
+     量测依据：区分良好的角色约 0.1，仅改年龄与一个手别描述的近克隆约 0.80。
+   - **时长估算与切段预算是两件事**：`DurationGate` 负责「写完剧本就知道这集会
+     超时多少」（对白按字符数 ÷ 语速 4.5 + 非对白节拍回落 2.5 秒，去空白、
+     标点算时间，总量容差 ±15%），`SegmentBudget` 负责按目标时长切段与容量
+     校验。两者不合并、不互相调用私有实现。对白节拍一律按字符折算，**不采信
+     `Beats.estDurationMs`**——那是 LLM 自己填的粗估，长句超时正源于此。
+   - **空景与画风的反向校验由门负责，不靠模型自觉**：场景 / 道具提示词须含
+     空景标记（`empty scene` / `no people` / `无人物` / `无人` 任一），道具另须
+     含手部排除标记（`手部` / `无手` / `hands` / `fingers` 任一）——最常见的
+     道具污染是一只握着道具的手。`Assets` 表**没有 `negativePrompt` 列**，负向
+     约束以中文内联写在 `prompt` 里，所以门只能扫 `prompt` 文本。场景提示词出现
+     本项目角色名即报警（图像模型会把它认识的东西画进去），命中前先看否定语境
+     窗口，「不能出现佐藤」不算报警。**画风门是互斥族校验，不是「出现画风词
+     就报警」**：`effectiveArtStyle` 会把画风写进每个资产的 prompt，正常全批同族；
+     只有跨族（写实 / 动漫 / 三维 三族之一同时出现两个）才报警。`Beats` / `Shots`
+     正文不查角色名，正文本来就该出现角色名。
+   - **实测提示词规则只进 `assets/skills/`，不进业务代码**：角色参考图与分镜的
+     提示词写法（几何化正面、一致性清单按视图取层、不链式参考、多人同框不用拼接
+     参考图、细节图补年龄、写光的效果不写光源、视频侧不写角色姓名而分镜图侧相反
+     要直呼其名、构图量化字段、视角写法、时代与材质等）全部落在 skill prompt 里。
+     业务代码只负责拼接、落库、校验，不复述提示词规则。
+   - **体检模式一律只读不改**：`listTransitionIssues` / 骨架源剧情账本校验 /
+     `GateIssueList` 面板都只提示，不自动修数据，不改库。修数据必须走
+     显式用户动作 + `ConfirmSheet`。
+    - **本地校验失败要留痕，且留痕必须由用户显式触发**：走 `AttemptRecorder` +
+      `GenerationAttempts` 既有表结构，`subjectType = AttemptSubjects.validate`
+      （`data/daos/generation_attempt_dao.dart`），摘要写 `prompt`、门名与逐条
+      问题写 `params`，有 error 级问题时状态记 `failed`。门在 `build()` 里跑，
+      **禁止自动落库**——否则每次重绘写一条，台账被刷爆；只允许经
+      `GateIssueList` 的「记一次」按钮显式触发。写入失败只
+      `appLog('gate_record', …)` 并返回 false，不阻塞。
+    - **M19 校验码登记表**（新增校验码先登记再实现，对齐既有五条 `SegmentBudget`
+     校验码约定）：
+     - `DurationGate`（`lib/features/script/duration_gate.dart`）：
+       `line_too_long`（error，单句台词 > 35 字，一口说不完）、
+       `total_over_budget` / `total_under_budget`（warn，节拍自然时长与
+       `Scripts.targetDurationMs` 偏差 > 15%；目标为 0 时跳过）。
+     - `PromptGate`（`lib/features/asset/prompt_gate.dart`）：
+       `prompt_similar`（warn，两个角色外观锚点 Jaccard >= 0.75）、
+       `scene_not_empty`（error，场景 / 道具提示词无空景标记）、
+       `prop_has_hand`（error，道具提示词无手部排除标记）、
+       `scene_named_character`（warn，场景提示词出现角色名）、
+       `style_conflict`（warn，同批资产跨画风族）。
+     - 统一结果类型 `GateIssue` / `GateSeverity` 在 `lib/core/gate_issue.dart`，
+       `noteLine` 给确认框 `note` 用；与 `SegmentBudgetIssue` 同型但字段语义不同，
+       不合并。
 
 ---
 

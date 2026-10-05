@@ -8,9 +8,11 @@ import '../../app.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/script_dao.dart';
+import '../../widgets/gate_issue_list.dart';
 import '../novel/novel_providers.dart';
 import '../shot/shot_compose_service.dart';
 import '../shot/shot_providers.dart';
+import 'duration_gate.dart';
 import 'script_adapt_sheet.dart';
 import 'script_models.dart';
 import 'script_providers.dart';
@@ -76,6 +78,24 @@ class ScriptDetailPage extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             children: [
               _HeaderCard(projectId: projectId, script: script),
+              const SizedBox(height: 12),
+              scenesAsync.maybeWhen(
+                data: (scenes) {
+                  final issues = DurationGate.longLinesOfScenes(scenes);
+                  return GateIssueList(
+                    title: '台词体检',
+                    issues: issues,
+                    onRecord: () => ref.read(attemptRecorderProvider)
+                        .recordValidation(
+                      subjectLabel: '剧本 ${script.title} 台词体检',
+                      gates: const ['台词门'],
+                      issues: issues,
+                      projectId: projectId,
+                    ),
+                  );
+                },
+                orElse: () => const SizedBox.shrink(),
+              ),
               const SizedBox(height: 16),
               if (proposals.isNotEmpty) ...[
                 Text(

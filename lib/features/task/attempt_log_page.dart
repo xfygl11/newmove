@@ -33,6 +33,7 @@ const Map<String, String> attemptSubjectLabels = {
   AttemptSubjects.shotVideo: '视频',
   AttemptSubjects.assetExtract: '资产提取',
   AttemptSubjects.assetImage: '资产图',
+  AttemptSubjects.validate: '质量门校验',
 };
 
 /// 台账状态筛选项；空串表示全部。

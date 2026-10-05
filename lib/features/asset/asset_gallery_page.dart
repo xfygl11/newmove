@@ -9,9 +9,11 @@ import '../../agent/active_llm.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
+import '../../widgets/gate_issue_list.dart';
 import '../../widgets/status_badge.dart';
 import 'asset_models.dart';
 import 'asset_providers.dart';
+import 'prompt_gate.dart';
 
 /// 资产画廊：角色 / 场景 / 道具分类网格，支持从骨架提取资产清单。
 class AssetGalleryPage extends ConsumerStatefulWidget {
@@ -84,23 +86,50 @@ class _AssetGalleryPageState extends ConsumerState<AssetGalleryPage> {
                 if (visible.isEmpty) {
                   return const Center(child: Text('暂无资产，点右上角从骨架提取'));
                 }
-                return GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.72,
-                  ),
-                  itemCount: visible.length,
-                  itemBuilder: (context, index) {
-                    final asset = visible[index];
-                    return _AssetCard(
-                      projectId: widget.projectId,
-                      scriptId: widget.scriptId,
-                      asset: asset,
-                    );
-                  },
+                final issues = PromptGate.validate(
+                  assets: assets,
+                  characterNames: [
+                    for (final a in assets)
+                      if (a.type == '角色') a.name
+                  ],
+                );
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: GateIssueList(
+                        title: '提示词体检',
+                        issues: issues,
+                        onRecord: () => ref.read(attemptRecorderProvider)
+                            .recordValidation(
+                          subjectLabel: '资产提示词体检（${assets.length} 条）',
+                          gates: const ['提示词门'],
+                          issues: issues,
+                          projectId: widget.projectId,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.72,
+                        ),
+                        itemCount: visible.length,
+                        itemBuilder: (context, index) {
+                          final asset = visible[index];
+                          return _AssetCard(
+                            projectId: widget.projectId,
+                            scriptId: widget.scriptId,
+                            asset: asset,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 );
               },
             ),

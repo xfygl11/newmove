@@ -5,8 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../agent/active_llm.dart';
 import '../../agent/active_video.dart';
+import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
+import '../../widgets/gate_issue_list.dart';
+import '../script/duration_gate.dart';
 import '../script/script_providers.dart';
 import 'skeleton_models.dart';
 import 'skeleton_providers.dart';
@@ -216,6 +219,29 @@ class _SkeletonBody extends ConsumerWidget {
             );
           },
           orElse: () => const SizedBox.shrink(),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: beatsAsync.maybeWhen(
+            data: (beats) {
+              final issues = DurationGate.validate(
+                beats: beats,
+                targetDurationMs: script.targetDurationMs,
+              );
+              return GateIssueList(
+                title: '时长体检',
+                issues: issues,
+                onRecord: () => ref.read(attemptRecorderProvider)
+                    .recordValidation(
+                  subjectLabel: '剧本 ${script.title} 时长体检',
+                  gates: const ['时长门'],
+                  issues: issues,
+                  projectId: projectId,
+                ),
+              );
+            },
+            orElse: () => const SizedBox.shrink(),
+          ),
         ),
         Expanded(
           child: shotsAsync.when(

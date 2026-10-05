@@ -99,6 +99,11 @@ final generationAttemptDaoProvider = Provider<GenerationAttemptDao>(
   (ref) => ref.watch(databaseProvider).generationAttemptDao,
 );
 
+/// 生成尝试与本地质量门校验的统一登记助手。
+final attemptRecorderProvider = Provider<AttemptRecorder>(
+  (ref) => AttemptRecorder(ref.watch(generationAttemptDaoProvider)),
+);
+
 final secureKeyStoreProvider = Provider<SecureKeyStore>(
   (ref) => SecureKeyStore(),
 );

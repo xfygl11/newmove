@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:newmove/core/gate_issue.dart';
 import 'package:newmove/data/app_database.dart';
 import 'package:newmove/data/daos/generation_attempt_dao.dart';
 import 'package:newmove/features/novel/truth_file_kinds.dart';
@@ -249,6 +252,110 @@ void main() {
       expect(
         await db.generationAttemptDao.nextAttemptNo('novel_plan', null),
         1,
+      );
+    });
+  });
+
+  group('AttemptRecorder.recordValidation（M19 T21.6）', () {
+    test('有 error 级问题时状态记 failed，门名与逐条问题落 params', () async {
+      final ok = await AttemptRecorder(db.generationAttemptDao).recordValidation(
+        subjectLabel: '资产提示词体检（2 条）',
+        gates: const ['提示词门'],
+        issues: const [
+          GateIssue(
+            code: 'scene_not_empty',
+            severity: GateSeverity.error,
+            locator: '金銮殿',
+            message: '提示词缺空景标记',
+          ),
+          GateIssue(
+            code: 'prompt_similar',
+            severity: GateSeverity.warn,
+            locator: '苏婉 · 苏婉副本',
+            message: '外观锚点重合 80%',
+          ),
+        ],
+        projectId: projectId,
+      );
+
+      expect(ok, isTrue);
+
+      final row = (
+        await db.generationAttemptDao.list(
+          status: AttemptStatuses.failed,
+          projectId: projectId,
+        )
+      ).single;
+      expect(row.subjectType, AttemptSubjects.validate);
+      expect(row.subjectLabel, '资产提示词体检（2 条）');
+      expect(row.prompt, '门 1 道 · error 1 · warn 1');
+      expect(row.grantLimit, 1);
+      expect(row.resultPath, isNull);
+      expect(row.errorMessage, isNull);
+
+      final map = jsonDecode(row.params) as Map<String, dynamic>;
+      expect(map['gates'], ['提示词门']);
+      expect(map['errorCount'], 1);
+      expect(map['warnCount'], 1);
+      final issues = map['issues'] as List<dynamic>;
+      expect(issues, hasLength(2));
+      expect(issues.first['code'], 'scene_not_empty');
+      expect(issues.first['severity'], 'error');
+      expect(issues.first['locator'], '金銮殿');
+      expect(issues.first['message'], '提示词缺空景标记');
+    });
+
+    test('只有 warn 或完全无问题时状态记 succeeded', () async {
+      final recorder = AttemptRecorder(db.generationAttemptDao);
+      await recorder.recordValidation(
+        subjectLabel: '剧本台词体检',
+        gates: const ['台词门'],
+        issues: const [
+          GateIssue(
+            code: 'line_too_long',
+            severity: GateSeverity.warn,
+            locator: 'S1-3',
+            message: '单句 41 字',
+          ),
+        ],
+        projectId: projectId,
+      );
+      await recorder.recordValidation(
+        subjectLabel: '剧本时长体检',
+        gates: const ['时长门'],
+        issues: const [],
+        projectId: projectId,
+      );
+
+      final rows = await db.generationAttemptDao.list(
+        status: AttemptStatuses.succeeded,
+        projectId: projectId,
+      );
+      final validates = rows
+          .where((r) => r.subjectType == AttemptSubjects.validate)
+          .toList();
+      expect(validates, hasLength(2));
+      expect(
+        validates.map((r) => r.prompt),
+        containsAll(['门 1 道 · error 0 · warn 1', '门 1 道 · error 0 · warn 0']),
+      );
+    });
+
+    test('写入结果可被 deleteByProject 与级联删除一起清掉', () async {
+      final ok = await AttemptRecorder(db.generationAttemptDao).recordValidation(
+        subjectLabel: '剧本时长体检',
+        gates: const ['时长门'],
+        issues: const [],
+        projectId: projectId,
+      );
+      expect(ok, isTrue);
+
+      final all = await db.generationAttemptDao.list(projectId: projectId);
+      expect(all, hasLength(1));
+      await db.cascadeDao.deleteProjectCascade(projectId);
+      expect(
+        await db.generationAttemptDao.list(projectId: projectId),
+        isEmpty,
       );
     });
   });
