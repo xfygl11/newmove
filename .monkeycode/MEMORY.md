@@ -81,7 +81,18 @@ Entries discovered by the Agent during task execution should follow this format:
 - Instructions:
   - 跑核心测试（约 35 秒）：`/opt/flutter/bin/flutter test test/novel_service_test.dart test/backup_service_test.dart test/daos_test.dart test/truth_file_store_test.dart test/revision_and_attempt_test.dart`
   - 全量 `/opt/flutter/bin/flutter test` 约 7 分钟、峰值约 1.5 GiB，用 background terminal + `memory_percent: 60` 跑
-  - 当前基线：M14 全部落地，全量 181 例全通过，`/opt/flutter/bin/flutter analyze` 零问题（`flutter` 需用绝对路径 `/opt/flutter/bin/flutter`）
+  - 当前基线：M14 全部落地，全量 193 例全通过，`/opt/flutter/bin/flutter analyze` 零问题（`flutter` 需用绝对路径 `/opt/flutter/bin/flutter`）
+
+[Flutter 3.47 Dialog / widget test 踩坑记录]
+- Date: 2026-10-05
+- Context: 排查「添加 Agnes AI 预设」对话框 BOTTOM OVERFLOWED BY 8.9 PIXELS 斜纹水印时
+- Category: Troubleshooting & Debugging
+- Instructions:
+  - Flutter 3.47 的 `showDialog` **已无 `resizeToAvoidBottomInset` 参数**，`Dialog` widget 也不含该字段；键盘弹出时 `Dialog.build` 把 `MediaQuery.viewInsetsOf(context)` 直接加到外边距上，再对子树 `removeViewInsets`。弹框内容偏高时正确做法是给 content 包 `SingleChildScrollView`，不要找 inset 开关
+  - 底部斜纹水印是 debug 版 `OverflowError` 的渲染标记，release APK 不会出现；`framework.dart` 的 `_dependents.isEmpty` 断言同样是 debug-only 树一致性告警
+  - widget test 里对话框含 `TextField` 时 **不能 `pumpAndSettle`**（caret 闪烁 timer 永不 settle），改用固定帧 `pump(Duration(milliseconds: 150))` 循环
+  - `tester.scrollUntilVisible` 的 `scrollable` 形参必须命中 `Scrollable` widget，传 `find.byType(ListView)` 会抛 `ListView is not a subtype of Scrollable`
+  - widget test 结束时用 `pumpWidget(SizedBox.shrink())` + `pump(Duration(milliseconds: 1))` 卸载树并 flush drift 流订阅的内部计时器，否则会报 pending timer
 
 [drift 2.35 更新语义与 Companion 限制（踩坑记录）]
 - Date: 2026-10-04
