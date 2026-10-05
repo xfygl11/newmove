@@ -502,6 +502,10 @@ void main() {
       final lastPrompt = _FakeImageAdapter.lastPrompts.last;
       expect(lastPrompt, contains('参考图1（角色·阿青）'));
       expect(lastPrompt, isNot(contains('{{ref1}}')));
+      // 只有 1 张图可上传：{{ref2}}/{{ref3}} 必须被摘掉而不是留成空洞，
+      // 否则模型会引用一个并不存在的参考图。
+      expect(lastPrompt, isNot(contains('{{ref')));
+      expect(lastPrompt, isNot(contains('参考图2')));
     });
     test('generateSelected 批量执行并统计成功/失败', () async {
       await service.directAndSave(scriptId: scriptId, llm: await fakeLlm());
@@ -917,6 +921,22 @@ void main() {
 
       final issues = await service.listTransitionIssues(scriptId);
       expect(issues, isEmpty);
+    });
+
+    test('平视 → 侧面是 90° 旋转，不报缺少区分度', () async {
+      await service.directAndSave(scriptId: scriptId, llm: await fakeLlm());
+      // 把 G02 首帧改成侧面。此前侧面被当成 0°（与平视同值），
+      // 正面转侧面会被误报成「画面缺少区分度」。
+      final g02 = (await db.shotDao.listByScript(scriptId))
+          .firstWhere((s) => s.globalSeq == 'G02');
+      final frame = (await db.shotFrameDao.listByShot(g02.id)).first;
+      await db.shotFrameDao.updateById(
+        frame.id,
+        const ShotFramesCompanion(angle: Value('侧面')),
+      );
+
+      final issues = await service.listTransitionIssues(scriptId);
+      expect(issues, isEmpty, reason: '正面转侧面已有足够区分度');
     });
   });
 

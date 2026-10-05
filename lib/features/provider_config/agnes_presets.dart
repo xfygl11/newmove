@@ -19,7 +19,10 @@ class AgnesPresets {
   /// 返回新创建的 [ProviderConfig] 条目数。
   static Future<int> apply({
     required ProviderDao dao,
-    required void Function(String providerId, String apiKey) keyWriter,
+    // 必须收 Future<void> 并 await：Dart 允许把 Future<void> 隐式当成 void，
+    // 那样写入变成 fire-and-forget，Keystore 失败后条目已建但无 Key，
+    // 后续所有调用静默 401 且用户拿不到任何错误。
+    required Future<void> Function(String providerId, String apiKey) keyWriter,
     required String apiKey,
   }) async {
     final specs = [
@@ -115,7 +118,7 @@ class AgnesPresets {
         ),
       );
       // 写入 API Key（Key 只存安全存储，不进 DB）。
-      keyWriter(id, apiKey);
+      await keyWriter(id, apiKey);
     }
     return specs.length;
   }

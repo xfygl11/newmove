@@ -1,5 +1,7 @@
 import 'dart:developer';
 
+import 'text/text_util.dart';
+
 /// 应用内诊断日志（M18 T20.18）。
 ///
 /// 台账与快照属于「辅助能力不得阻塞主流程」的旁路写入，历史上五处
@@ -10,7 +12,7 @@ import 'dart:developer';
 /// 只输出异常类型与截断后的消息，禁止把提示词、正文、API Key 传入 [message]。
 void appLog(String tag, String message, {Object? error, StackTrace? stackTrace}) {
   log(
-    message.length > 300 ? message.substring(0, 300) : message,
+    TextUtil.clip(message, 300),
     name: 'newmove-$tag',
     error: error,
     stackTrace: stackTrace,

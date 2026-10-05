@@ -29,6 +29,14 @@ class VideoFileStore {
     return file.path;
   }
 
+  /// 预分配下一个视频文件路径，供流式下载先占位再写入。
+  Future<String> newPath(int shotId) async {
+    final dir = await _baseDir();
+    return File(
+      VersionedFileNames.build(dir, prefix: 'shot', id: shotId, ext: 'mp4'),
+    ).path;
+  }
+
   /// 从源文件复制视频（流式复制，不整包载入内存），返回目标绝对路径。
   Future<String> saveFromPath(int shotId, String sourcePath) async {
     final dir = await _baseDir();

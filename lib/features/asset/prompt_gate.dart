@@ -204,18 +204,22 @@ abstract final class PromptGate {
   }
 
   /// 术语是否处在否定语境里：命中时跳过告警，避免「不能出现人物」被误判成画人。
+  ///
+  /// 英文角色名带大写，必须与文本同步转小写再比对，否则 `indexOf` 匹配不上、
+  /// 否定检测被跳过，英文名角色在场景提示词里 100% 误报。
   static bool _inNegation(String text, String term) {
     const negators = [
       '不能出现', '不要出现', '不出现', '避免出现', '避免', '禁止', '不能',
       '不要', '没有', '不含', '排除', '不画', 'no', 'without', 'never', 'not ',
     ];
     final lowered = text.toLowerCase();
-    var index = lowered.indexOf(term);
+    final loweredTerm = term.toLowerCase();
+    var index = lowered.indexOf(loweredTerm);
     while (index >= 0) {
       final start = index > 4 ? index - 4 : 0;
       final window = lowered.substring(start, index);
       if (negators.any(window.contains)) return true;
-      index = lowered.indexOf(term, index + term.length);
+      index = lowered.indexOf(loweredTerm, index + loweredTerm.length);
     }
     return false;
   }

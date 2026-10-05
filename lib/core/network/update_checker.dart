@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../json_values.dart';
 import 'dio_factory.dart';
 
 /// 检查结果：有更新时附下载链接。
@@ -44,7 +45,11 @@ class UpdateChecker {
     if (body is! Map<String, dynamic>) {
       throw StateError('GitHub 返回格式异常');
     }
-    final tag = (body['tag_name'] as String?)?.replaceFirst(RegExp('^v'), '');
+    // 外部 JSON 一律宽容解析：tag_name 类型漂移会让检查更新直接抛 TypeError。
+    final tag = jsonStringOrNull(body['tag_name'])?.replaceFirst(
+      RegExp('^v'),
+      '',
+    );
     if (tag == null || tag.isEmpty) {
       throw StateError('未解析到版本');
     }

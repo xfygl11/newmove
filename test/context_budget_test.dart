@@ -56,7 +56,7 @@ void main() {
     test('章节摘要只留最近 N 章并按章号升序返回', () {
       final rows = [
         for (var i = 1; i <= 20; i++)
-          {'chapterNumber': i, 'summary': '第 $i 章摘要'},
+          {'chapter': i, 'summary': '第 $i 章摘要'},
       ];
       final texts = {
         TruthFileKind.chapterSummaries: jsonEncode({'rows': rows}),
@@ -71,9 +71,55 @@ void main() {
       ) as Map<String, dynamic>;
       expect(decoded['pruned'], 17);
       final numbers = ((decoded['rows']! as List<dynamic>)
-          .map((r) => ((r as Map)['chapterNumber'] as num).toInt())
+          .map((r) => ((r as Map)['chapter'] as num).toInt())
           .toList());
       expect(numbers, [18, 19, 20]);
+    });
+
+    test('章号乱序存储时仍按 chapter 键取最近 N 章', () {
+      // 回归用例：写侧只写 `chapter`，读侧错读成 `chapterNumber` 会让每行章号
+      // 都是 0，排序稳定不变——「最近 N 章」实际取到了最旧的 N 章。
+      // 这里故意打乱行顺序，验证裁剪确实按章号而不是行序。
+      final rows = [
+        for (var i = 20; i >= 1; i--) {'chapter': i, 'summary': '摘要 $i'},
+      ];
+      final texts = {
+        TruthFileKind.chapterSummaries: jsonEncode({'rows': rows}),
+      };
+      final b = const ContextBudget(
+        maxTokens: 4096,
+        headroom: 0,
+        recentSummaryChapters: 3,
+      ).budgetTruthFiles(texts, fixedContext: '');
+      final decoded = jsonDecode(
+        b.texts[TruthFileKind.chapterSummaries]!,
+      ) as Map<String, dynamic>;
+      final numbers = ((decoded['rows']! as List<dynamic>)
+          .map((r) => ((r as Map)['chapter'] as num).toInt())
+          .toList());
+      expect(numbers, equals([18, 19, 20]));
+    });
+
+    test('伏笔状态带空白时仍能归一化保留', () {
+      // 回归用例：LLM 可能给 " open "，不 trim 会把未闭合伏笔裁掉。
+      final texts = {
+        TruthFileKind.hooks: jsonEncode({
+          'hooks': [
+            {'id': 'h1', 'status': ' open '},
+            {'id': 'h2', 'status': 'progressing'},
+            {'id': 'h3', 'status': 'resolved'},
+          ],
+        }),
+      };
+      final b = const ContextBudget(
+        maxTokens: 4096,
+        headroom: 0,
+      ).budgetTruthFiles(texts, fixedContext: '');
+      final decoded =
+          jsonDecode(b.texts[TruthFileKind.hooks]!) as Map<String, dynamic>;
+      final hooks = decoded['hooks']! as List<dynamic>;
+      expect(hooks, hasLength(2));
+      expect(hooks.map((h) => (h as Map)['id']), isNot(contains('h3')));
     });
 
     test('预算充足时不裁剪', () {

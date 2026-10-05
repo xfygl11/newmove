@@ -104,13 +104,18 @@ class ImageVersionPanel extends StatelessWidget {
 }
 
 /// 从快照 JSON 里取图片路径：宽容解析，快照损坏返回 null。
+///
+/// 兼容两种快照键：资产快照写 `imagePath`，镜头快照写 `outputPath`。
+/// 只认 `imagePath` 时镜头历史版本全是 null，点选会撞 `!` 空断言崩溃。
 String? imagePathOfSnapshot(String snapshot) {
   if (snapshot.isEmpty) return null;
   try {
     final decoded = json.decode(snapshot);
     if (decoded is! Map) return null;
-    final p = decoded['imagePath'];
-    if (p is String && p.isNotEmpty) return p;
+    for (final key in const ['imagePath', 'outputPath']) {
+      final p = decoded[key];
+      if (p is String && p.isNotEmpty) return p;
+    }
     return null;
   } on FormatException {
     return null;

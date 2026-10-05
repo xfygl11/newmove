@@ -12,6 +12,7 @@ import '../../agent/active_video.dart';
 import '../../core/app_log.dart';
 import '../../core/gate_issue.dart';
 import '../../core/json_values.dart';
+import '../../core/text/text_util.dart';
 import '../../core/status_constants.dart';
 import '../../core/network/image_provider_adapter.dart';
 import '../../core/network/video_provider_adapter.dart';
@@ -41,6 +42,9 @@ import 'video_prompt.dart';
 
 /// 分镜图的业务编排：上下文构建、导演落库、多参考图生成、衔接校验、视频生成。
 class ShotService {
+  /// 提示词里的参考图占位符：{{ref1}} / {{ref2}} ...
+  static final _refPlaceholderPattern = RegExp(r'\{\{ref\d+\}\}');
+
   ShotService({
     required this.db,
     required this.scriptDao,
@@ -253,22 +257,32 @@ class ShotService {
     final sb = StringBuffer('$subjectType|$subjectId|$grantLimit|');
     sb.write(refs.map((r) => '${r['assetId']}:${r['role']}').join(','));
     sb.write('|');
-    sb.write(prompt.length > 300 ? prompt.substring(0, 300) : prompt);
+    sb.write(TextUtil.clip(prompt, 300));
     return Object.hashAll(sb.toString().codeUnits).toRadixString(16);
   }
 
   /// 组装镜头参考文件台账行，顺序即上传顺序。
+  ///
+  /// 与 `_generateBytes` 的上传清单一致：无图资产不会上传，也不进台账。
+  /// 此前收录全部 refs，台账的「顺序」与真实上传顺序不符。
   Future<List<Map<String, dynamic>>> _refRowsOf(Shot shot) async {
     final refs = await assetRefDao.listByShot(shot.id);
-    return [
-      for (final r in refs)
+    final rows = <Map<String, dynamic>>[];
+    for (final r in refs) {
+      final asset = await assetDao.find(r.assetId);
+      final path = asset?.imagePath;
+      if (asset == null || path == null || path.isEmpty) continue;
+      if (!File(path).existsSync()) continue;
+      rows.add(
         {
           'assetId': r.assetId,
           'role': r.role,
-          'order': r.order,
-          'variantOf': (await assetDao.find(r.assetId))?.variantOf,
+          'order': rows.length,
+          'variantOf': asset.variantOf,
         },
-    ];
+      );
+    }
+    return rows;
   }
 
   // ---- 分镜提示词（T6.2 / T6.3） ----
@@ -282,7 +296,7 @@ class ShotService {
     final assets = await assetDao.listByScript(scriptId);
 
     final beatById = <String, Beat>{for (final b in beats) b.sourceRef: b};
-    final sceneBySeq = <int, Scene>{for (final s in scenes) s.seq: s};
+    final sceneById = <int, Scene>{for (final s in scenes) s.id: s};
 
     final buf = StringBuffer();
     buf.writeln('【画面风格】${effectiveArtStyle(script?.artStyle)}');
@@ -301,36 +315,57 @@ class ShotService {
       ]),
     );
     buf.writeln('【分段与节拍】');
-    buf.writeln(
-      jsonEncode([
-        for (final s in shots)
-          {
-            'globalSeq': s.globalSeq,
-            'batch': s.batch,
-            'durationMs': s.durationMs,
-            'globalTimeRange': s.globalTimeRange,
-            'beatRefs': _decodeList(s.beatRefs),
-            'assetStates': _decodeMap(s.assetStates),
-            'beats': [
-              for (final ref in _decodeList(s.beatRefs))
-                if (beatById[ref] != null)
-                  {
-                    'id': beatById[ref]!.sourceRef,
-                    'type': beatById[ref]!.type,
-                    'who': beatById[ref]!.who,
-                    'content': beatById[ref]!.content,
-                  },
-            ],
-            'scene': () {
-              final scene = sceneBySeq[s.sceneId];
-              if (scene == null) return null;
-              return {'location': scene.location, 'time': scene.time};
-            }(),
-          },
-      ]),
-    );
+    final segmentRows = <Map<String, dynamic>>[];
+    for (final s in shots) {
+      final beatRefs = _decodeList(s.beatRefs);
+      segmentRows.add(
+        {
+          'globalSeq': s.globalSeq,
+          'batch': s.batch,
+          'durationMs': s.durationMs,
+          'globalTimeRange': s.globalTimeRange,
+          'beatRefs': beatRefs,
+          'assetStates': _decodeMap(s.assetStates),
+          'beats': [
+            for (final ref in beatRefs)
+              if (beatById[ref] != null)
+                {
+                  'id': beatById[ref]!.sourceRef,
+                  'type': beatById[ref]!.type,
+                  'who': beatById[ref]!.who,
+                  'content': beatById[ref]!.content,
+                },
+          ],
+          'scene': _sceneOf(s, beatRefs, beatById, sceneById),
+        },
+      );
+    }
+    buf.writeln(jsonEncode(segmentRows));
     buf.writeln('请按规则输出分镜提示词 JSON。');
     return buf.toString();
+  }
+
+  /// 取分段所属场次的 location / time，注入导演上下文。
+  ///
+  /// 场次是段落语境里区分度最高的信息之一。优先用 `Shots.sceneId`；存量数据
+  /// 该列为空时回落到本段首个节拍所属场次，不依赖 `Shots.sceneId` 一定被写入。
+  static Map<String, dynamic>? _sceneOf(
+    Shot shot,
+    List<String> beatRefs,
+    Map<String, Beat> beatById,
+    Map<int, Scene> sceneById,
+  ) {
+    final direct = shot.sceneId != null ? sceneById[shot.sceneId] : null;
+    if (direct != null) {
+      return {'location': direct.location, 'time': direct.time};
+    }
+    for (final ref in beatRefs) {
+      final scene = sceneById[beatById[ref]?.sceneId];
+      if (scene != null) {
+        return {'location': scene.location, 'time': scene.time};
+      }
+    }
+    return null;
   }
 
   /// 从分镜草案中筛出与该剧本现有分段匹配的条目（防 LLM 幻觉编号）。
@@ -484,9 +519,12 @@ class ShotService {
     if (shot.prompt.isEmpty) throw StateError('镜头尚未生成分镜提示词');
 
     // 台账在调用前写入：提示词、参数、参考顺序与调用前状态，之后的编辑不回写。
+    final refUploads = await _collectUploads(shot, cancelToken: cancelToken);
     final prompt = await _resolvePrompt(
       shot,
-      await assetRefDao.listByShot(shotId),
+      refUploads.refs,
+      refUploads.assetsById,
+      refUploads.uploads,
     );
     final attemptId = await _recordAttempt(
       subjectType: AttemptSubjects.shotImage,
@@ -614,15 +652,28 @@ class ShotService {
   }
 
   /// 组装参考图并按需替换 {{ref N}}，调用适配器生成图片字节。
+  ///
+  /// 编号与上传必须基于同一份清单：先算出真正有图可传的资产，再按这份清单
+  /// 给提示词重排紧凑的 1..k 编号。此前用 refs 下标编号、上传时再过滤无图
+  /// 资产，「参考图2」指向的其实是第 1 张上传图，第 1 个编号描述的则是
+  /// 一个从未上传的资产——而「资产待生成」是文档化的正常路径。
   Future<Uint8List> _generateBytes(
     Shot shot,
     ActiveImage image, {
     GenerationCancelToken? cancelToken,
   }) async {
-    final refs = await assetRefDao.listByShot(shot.id);
-    final prompt = await _resolvePrompt(shot, refs);
+    final refUploads = await _collectUploads(shot, cancelToken: cancelToken);
 
-    if (refs.isEmpty) {
+    final prompt = await _resolvePrompt(
+      shot,
+      refUploads.refs,
+      refUploads.assetsById,
+      refUploads.uploads,
+    );
+
+    final uploads = refUploads.uploads;
+
+    if (uploads.isEmpty) {
       final result = await imageAdapter.textToImage(
         baseUrl: image.baseUrl,
         apiKey: image.apiKey,
@@ -636,38 +687,14 @@ class ShotService {
       return _bytesOf(result);
     }
 
-    // 参考图仅取已采用或已生成图（待验收）的资产；无图资产跳过。
-    final paths = <String>[];
-    for (final ref in refs) {
-      cancelToken?.throwIfCancelled();
-      final asset = await assetDao.find(ref.assetId);
-      final path = asset?.imagePath;
-      if (path == null || path.isEmpty || !File(path).existsSync()) continue;
-      paths.add(path);
-    }
-
-    if (paths.isEmpty) {
-      final result = await imageAdapter.textToImage(
-        baseUrl: image.baseUrl,
-        apiKey: image.apiKey,
-        model: image.modelId,
-        prompt: prompt,
-        size: image.imageSize,
-        protocol: image.protocol,
-        cancelToken: cancelToken?.dioToken,
-      );
-      cancelToken?.throwIfCancelled();
-      return _bytesOf(result);
-    }
-
-    if (paths.length == 1) {
+    if (uploads.length == 1) {
       final result = await imageAdapter.imageToImage(
         baseUrl: image.baseUrl,
         apiKey: image.apiKey,
         model: image.modelId,
         prompt: prompt,
         size: image.imageSize,
-        referencePath: paths.single,
+        referencePath: uploads.single.path,
         protocol: image.protocol,
         cancelToken: cancelToken?.dioToken,
       );
@@ -681,7 +708,7 @@ class ShotService {
       model: image.modelId,
       prompt: prompt,
       size: image.imageSize,
-      referencePaths: paths,
+      referencePaths: [for (final u in uploads) u.path],
       protocol: image.protocol,
       cancelToken: cancelToken?.dioToken,
     );
@@ -689,35 +716,71 @@ class ShotService {
     return _bytesOf(result);
   }
 
+  /// 解析镜头的参考图：原始引用行 + 资产索引 + 实际可上传清单。
+  ///
+  /// 资产待生成或图片文件缺失都是正常状态，这些引用不进上传清单，
+  /// 因此提示词编号也不能用 refs 下标（见 [_RefUploads]）。
+  Future<_RefUploads> _collectUploads(
+    Shot shot, {
+    GenerationCancelToken? cancelToken,
+  }) async {
+    final refs = await assetRefDao.listByShot(shot.id);
+    final assetsById = <int, Asset>{};
+    final uploads = <_RefUpload>[];
+    for (final ref in refs) {
+      cancelToken?.throwIfCancelled();
+      final asset = await assetDao.find(ref.assetId);
+      if (asset == null) continue;
+      assetsById[asset.id] = asset;
+      final path = asset.imagePath;
+      if (path == null || path.isEmpty || !File(path).existsSync()) continue;
+      uploads.add(_RefUpload(ref: ref, asset: asset, path: path));
+    }
+    return _RefUploads(refs: refs, assetsById: assetsById, uploads: uploads);
+  }
+
   /// 把提示词中的 {{ref N}} 替换为「参考图 N（资产名）」的语义描述。
+  ///
+  /// 编号基于 [uploads]（真正会上传的图片）紧凑重排 1..k；[refs] 里没图的
+  /// 资产不参与编号，避免提示词指向模型看不到的参考图。
   ///
   /// 末尾追加服装覆盖行：参考图锁定的是角色基础态造型，本镜头换了装时
   /// 只靠自由正文描述，模型对「本镜头穿什么」的注意力低于参考图。
   /// 套名与套描述取自资产 costumeSets，不由模型推断。
-  Future<String> _resolvePrompt(Shot shot, List<AssetRef> refs) async {
+  /// 资产没出图时「覆盖参考图」不成立，只保留造型描述，不写引用标记。
+  Future<String> _resolvePrompt(
+    Shot shot,
+    List<AssetRef> refs,
+    Map<int, Asset> assetsById,
+    List<_RefUpload> uploads,
+  ) async {
     var prompt = shot.prompt;
-    for (var i = 0; i < refs.length; i++) {
-      final asset = await assetDao.find(refs[i].assetId);
-      if (asset == null) continue;
+    for (var i = 0; i < uploads.length; i++) {
+      final asset = uploads[i].asset;
       prompt = prompt.replaceAll(
         '{{ref${i + 1}}}',
         '参考图${i + 1}（${asset.type}·${asset.name}）',
       );
     }
+    // 剩余的标记指向没图可传的资产：摘掉，别让模型引用看不到的参考图。
+    prompt = prompt.replaceAll(_refPlaceholderPattern, '');
 
+    final uploadedStableIds = {for (final u in uploads) u.asset.stableId};
     final byStableId = <String, Asset>{};
     for (final ref in refs) {
-      final asset = await assetDao.find(ref.assetId);
-      if (asset != null) byStableId[asset.stableId] = asset;
+      final asset = assetsById[ref.assetId];
+      if (asset != null) byStableId.putIfAbsent(asset.stableId, () => asset);
     }
     final lines = <String>[];
     for (final override in ShotCostumeOverride.decode(shot.costumeOverrides)) {
       final asset = byStableId[override.stableId];
       if (asset == null) continue;
+      final suffix = uploadedStableIds.contains(asset.stableId)
+          ? '，覆盖参考图的基础态造型'
+          : '';
       lines.add(
         '服装设定：${asset.name} 本镜头穿「${override.name}」'
-        '（${asset.costumeDescriptionOf(override.name)}），'
-        '覆盖参考图的基础态造型',
+        '（${asset.costumeDescriptionOf(override.name)}）$suffix',
       );
     }
     for (final line in lines) {
@@ -801,11 +864,13 @@ class ShotService {
     return 3;
   }
 
-  /// 粗略角度近似值：平视/侧面 0°，俯/仰 45°，背面 180°。
+  /// 粗略角度近似值：平视 0°、侧面 90°、俯/仰 45°、背面 180°。
   int _angleDegrees(String? angle) {
     final text = angle ?? '';
     if (text.contains('背')) return 180;
     if (text.contains('俯') || text.contains('仰')) return 45;
+    // 侧面必须算 90°：否则「侧面→侧面」会被判成 0° 差、误报 A7 缺少区分度。
+    if (text.contains('侧')) return 90;
     return 0;
   }
 
@@ -1073,19 +1138,30 @@ class ShotService {
           .timeout(pollTimeout);
 
       if (snapshot.isSuccess) {
+        if (snapshot.base64 == null && snapshot.url == null) {
+          return await _markVideoFailed(task, '供应商未返回视频数据');
+        }
+
+        // 先落盘再开事务：下载耗时且可能失败，不该占用数据库事务。
+        final String path;
+        if (snapshot.url != null) {
+          // URL 走流式落盘，不整包驻留内存。
+          path = await videoFileStore.newPath(task.shotId);
+          await videoAdapter
+              .downloadToFile(
+                snapshot.url!,
+                path,
+                cancelToken: cancelToken?.dioToken,
+              )
+              .timeout(pollTimeout);
+        } else {
+          path = await videoFileStore.save(
+            task.shotId,
+            base64Decode(snapshot.base64!),
+          );
+        }
+
         return await db.transaction(() async {
-          // 取产物字节并落盘。
-          final Uint8List bytes;
-          if (snapshot.base64 != null) {
-            bytes = base64Decode(snapshot.base64!);
-          } else if (snapshot.url != null) {
-            bytes = await videoAdapter
-                .downloadUrl(snapshot.url!, cancelToken: cancelToken?.dioToken)
-                .timeout(pollTimeout);
-          } else {
-            return _markVideoFailed(task, '供应商未返回视频数据');
-          }
-          final path = await videoFileStore.save(task.shotId, bytes);
           await videoTaskDao.updateById(
             task.id,
             VideoTasksCompanion(
@@ -1142,7 +1218,7 @@ class ShotService {
     final raw = e.response?.data;
     final message = raw is Map ? (raw['error'] ?? raw['message']) : raw;
     final text = message?.toString() ?? e.message ?? e.type.name;
-    return text.length > 300 ? text.substring(0, 300) : text;
+    return TextUtil.clip(text, 300);
   }
 
   /// 标记任务失败并回滚镜头状态到「分镜图已确认」。
@@ -1398,6 +1474,33 @@ class ShotBatchResult {
   final int failed;
   final bool cancelled;
   final int pending;
+}
+
+/// 一次分镜图生成实际会上传的参考图：引用 + 资产 + 已确认存在的本地路径。
+///
+/// 提示词编号、上传顺序、台账顺序都基于同一份此类清单，三者不会错位。
+class _RefUpload {
+  const _RefUpload({required this.ref, required this.asset, required this.path});
+
+  final AssetRef ref;
+  final Asset asset;
+  final String path;
+}
+
+/// 一次镜头的参考图解析结果：原始引用行、资产索引、真正可上传的清单。
+///
+/// 提示词编号只能按 [uploads] 重排，且上传循环只能走同一份 [uploads]——
+/// 两份数据分开算就会出现编号与上传位置错位。
+class _RefUploads {
+  const _RefUploads({
+    required this.refs,
+    required this.assetsById,
+    required this.uploads,
+  });
+
+  final List<AssetRef> refs;
+  final Map<int, Asset> assetsById;
+  final List<_RefUpload> uploads;
 }
 
 /// 批量生成取消令牌。

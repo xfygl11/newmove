@@ -5,6 +5,7 @@ import 'package:archive/archive_io.dart';
 import 'package:drift/drift.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../core/app_log.dart';
 import '../../data/app_database.dart';
 import '../../data/tables/tables.dart';
 
@@ -89,6 +90,7 @@ class BackupService {
   Future<Map<String, dynamic>> _collectAll() async {
     final projects = await db.projectDao.listAll();
     final mediaFiles = <String>{};
+    final docPrefix = '${(await getApplicationDocumentsDirectory()).path}/';
 
     final booksJson = <Map<String, dynamic>>[];
     final chaptersJson = <Map<String, dynamic>>[];
@@ -103,9 +105,25 @@ class BackupService {
     final assetRefsJson = <Map<String, dynamic>>[];
     final videoTasksJson = <Map<String, dynamic>>[];
     final scriptRevisionsJson = <Map<String, dynamic>>[];
+    final shotRevisionsJson = <Map<String, dynamic>>[];
+    final assetRevisionsJson = <Map<String, dynamic>>[];
+    final generationAttemptsJson = <Map<String, dynamic>>[];
+    final promptOverridesJson = <Map<String, dynamic>>[];
+
+    // 全局级提示词覆盖与项目无关，全库备份单独收集一次。
+    for (final o in await db.promptOverrideDao.listGlobal()) {
+      promptOverridesJson.add(o.toJson());
+    }
 
     for (final p in projects) {
-      final books = <NovelBook>[?await db.novelDao.findBookByProject(p.id)];
+      final books = await db.novelDao.listBooksByProject(p.id);
+      // 台账与项目级提示词覆盖按项目收集（全局级覆盖已在上面收过）。
+      for (final t in await db.generationAttemptDao.listByProject(p.id)) {
+        generationAttemptsJson.add(t.toJson());
+      }
+      for (final o in await db.promptOverrideDao.listForProject(p.id)) {
+        promptOverridesJson.add(o.toJson());
+      }
       for (final b in books) {
         booksJson.add(b.toJson());
         for (final c in await db.novelDao.listChapters(b.id)) {
@@ -127,11 +145,16 @@ class BackupService {
           }
           for (final a in await db.assetDao.listByScript(s.id)) {
             assetsJson.add(a.toJson());
-            _collectMedia(mediaFiles, a.imagePath);
+            _collectMedia(mediaFiles, a.imagePath, docPrefix);
+            // 资产版本快照随备份走，否则恢复后历史版本图片全丢。
+            for (final r in await db.revisionDao.listAssets(a.id)) {
+              assetRevisionsJson.add(r.toJson());
+              _collectRevisionMedia(mediaFiles, r.snapshot, docPrefix);
+            }
           }
           for (final sh in await db.shotDao.listByScript(s.id)) {
             shotsJson.add(sh.toJson());
-            _collectMedia(mediaFiles, sh.outputPath);
+            _collectMedia(mediaFiles, sh.outputPath, docPrefix);
             for (final f in await db.shotFrameDao.listByShot(sh.id)) {
               shotFramesJson.add(f.toJson());
             }
@@ -140,7 +163,12 @@ class BackupService {
             }
             for (final v in await db.videoTaskDao.listByShot(sh.id)) {
               videoTasksJson.add(v.toJson());
-              _collectMedia(mediaFiles, v.outputPath);
+              _collectMedia(mediaFiles, v.outputPath, docPrefix);
+            }
+            // 镜头版本快照（含历史分镜图与视频路径）随备份走。
+            for (final r in await db.revisionDao.listShots(sh.id)) {
+              shotRevisionsJson.add(r.toJson());
+              _collectRevisionMedia(mediaFiles, r.snapshot, docPrefix);
             }
           }
           for (final r in await db.scriptRevisionDao.listByScript(s.id)) {
@@ -172,6 +200,10 @@ class BackupService {
       'assetRefs': assetRefsJson,
       'videoTasks': videoTasksJson,
       'scriptRevisions': scriptRevisionsJson,
+      'shotRevisions': shotRevisionsJson,
+      'assetRevisions': assetRevisionsJson,
+      'generationAttempts': generationAttemptsJson,
+      'promptOverrides': promptOverridesJson,
       'providers': providersJson,
       'mediaFiles': mediaFiles.toList(),
     };
@@ -182,10 +214,9 @@ class BackupService {
     final project = await db.projectDao.findById(projectId);
     if (project == null) throw StateError('项目不存在：$projectId');
 
-    // 项目（示例工程）下单书模型：listByProject 未提供，走 watchBookByProject
-    // 的一次性等价查询。
-    final books = <NovelBook>[?await db.novelDao.findBookByProject(projectId)];
+    final books = await db.novelDao.listBooksByProject(projectId);
     final mediaFiles = <String>{};
+    final docPrefix = '${(await getApplicationDocumentsDirectory()).path}/';
 
     // ---- 书 → 章节 / 版本 / 真相文件 ----
     final booksJson = <Map<String, dynamic>>[];
@@ -215,6 +246,22 @@ class BackupService {
     final assetRefsJson = <Map<String, dynamic>>[];
     final videoTasksJson = <Map<String, dynamic>>[];
     final scriptRevisionsJson = <Map<String, dynamic>>[];
+    final shotRevisionsJson = <Map<String, dynamic>>[];
+    final assetRevisionsJson = <Map<String, dynamic>>[];
+    final generationAttemptsJson = <Map<String, dynamic>>[];
+    final promptOverridesJson = <Map<String, dynamic>>[];
+
+    // 台账与提示词覆盖按项目收集；全局级覆盖一并带走，否则用户调过的
+    // Agent 提示词在恢复后无法带回。
+    for (final o in await db.promptOverrideDao.listGlobal()) {
+      promptOverridesJson.add(o.toJson());
+    }
+    for (final o in await db.promptOverrideDao.listForProject(projectId)) {
+      promptOverridesJson.add(o.toJson());
+    }
+    for (final t in await db.generationAttemptDao.listByProject(projectId)) {
+      generationAttemptsJson.add(t.toJson());
+    }
 
     for (final b in books) {
       for (final s in await db.scriptDao.listByBook(b.id)) {
@@ -227,11 +274,16 @@ class BackupService {
         }
         for (final a in await db.assetDao.listByScript(s.id)) {
           assetsJson.add(a.toJson());
-          _collectMedia(mediaFiles, a.imagePath);
+          _collectMedia(mediaFiles, a.imagePath, docPrefix);
+          // 资产版本快照随备份走，否则恢复后历史版本图片全丢。
+          for (final r in await db.revisionDao.listAssets(a.id)) {
+            assetRevisionsJson.add(r.toJson());
+            _collectRevisionMedia(mediaFiles, r.snapshot, docPrefix);
+          }
         }
         for (final sh in await db.shotDao.listByScript(s.id)) {
           shotsJson.add(sh.toJson());
-          _collectMedia(mediaFiles, sh.outputPath);
+          _collectMedia(mediaFiles, sh.outputPath, docPrefix);
           for (final f in await db.shotFrameDao.listByShot(sh.id)) {
             shotFramesJson.add(f.toJson());
           }
@@ -240,7 +292,12 @@ class BackupService {
           }
           for (final v in await db.videoTaskDao.listByShot(sh.id)) {
             videoTasksJson.add(v.toJson());
-            _collectMedia(mediaFiles, v.outputPath);
+            _collectMedia(mediaFiles, v.outputPath, docPrefix);
+          }
+          // 镜头版本快照（含历史分镜图与视频路径）随备份走。
+          for (final r in await db.revisionDao.listShots(sh.id)) {
+            shotRevisionsJson.add(r.toJson());
+            _collectRevisionMedia(mediaFiles, r.snapshot, docPrefix);
           }
         }
         for (final r in await db.scriptRevisionDao.listByScript(s.id)) {
@@ -271,17 +328,52 @@ class BackupService {
       'assetRefs': assetRefsJson,
       'videoTasks': videoTasksJson,
       'scriptRevisions': scriptRevisionsJson,
+      'shotRevisions': shotRevisionsJson,
+      'assetRevisions': assetRevisionsJson,
+      'generationAttempts': generationAttemptsJson,
+      'promptOverrides': promptOverridesJson,
       'providers': providersJson,
       'mediaFiles': mediaFiles.toList(),
     };
   }
 
-  void _collectMedia(Set<String> out, String? path) {
+  /// 取绝对路径在应用文档目录下的相对部分；不在文档目录内返回 null。
+  ///
+  /// 相对路径是备份包内媒体的唯一标识，导出与导入两侧都必须用它对齐。
+  /// 早前写死 `/files/` 分隔符：Android 的应用文档目录是 `app_flutter`，
+  /// 不含 `/files/`，导致媒体清单永远为空、备份包根本不带媒体文件。
+  static String? _relativePath(String path, String docPrefix) {
+    if (!path.startsWith(docPrefix)) return null;
+    return path.substring(docPrefix.length);
+  }
+
+  void _collectMedia(Set<String> out, String? path, String docPrefix) {
     if (path == null || path.isEmpty) return;
-    final i = path.indexOf('/files/');
-    if (i >= 0) {
-      out.add(path.substring(i + '/files/'.length));
+    final rel = _relativePath(path, docPrefix);
+    if (rel != null) out.add(rel);
+  }
+
+  /// 从产物快照 JSON 里取图片 / 视频路径，随备份打包。
+  ///
+  /// 快照里的历史文件在本地不主动清理，只有随备份打包才带得走；
+  /// 不带的话恢复后历史版本全指向不存在的文件。
+  void _collectRevisionMedia(
+    Set<String> out,
+    String snapshot,
+    String docPrefix,
+  ) {
+    if (snapshot.isEmpty) return;
+    Map<String, dynamic> map;
+    try {
+      final decoded = jsonDecode(snapshot);
+      if (decoded is! Map) return;
+      map = decoded.cast<String, dynamic>();
+    } catch (e) {
+      appLog('backup_revision_media', '快照解析失败，媒体未打包', error: e);
+      return;
     }
+    _collectMedia(out, map['imagePath']?.toString(), docPrefix);
+    _collectMedia(out, map['outputPath']?.toString(), docPrefix);
   }
 
   // ---- 冲突检测（P2-11） ----
@@ -292,6 +384,10 @@ class BackupService {
   /// 解压后总量上限。PNG/MP4 几乎不可压缩，中央目录声明的解压总量远大于压缩包时
   /// 是典型的 zip bomb：解压前判断，避免写出几个 GB 后再 OOM。
   static const int maxExtractedBytes = 2 * 1024 * 1024 * 1024;
+
+  /// backup.json 解压后上限。manifest 体积应与内容量成正比；解码时会整包
+  /// UTF-8 驻留内存，比媒体条目更危险（媒体是按需解压）。
+  static const int maxManifestBytes = 50 * 1024 * 1024;
 
   /// 校验备份包大小，超限抛 [StateError]（先校验再读取，避免全量读入内存）。
   static Future<void> _guardImportSize(String zipPath) async {
@@ -316,16 +412,31 @@ class BackupService {
     }
   }
 
-  /// 校验解压后总量（zip bomb 防护），同时顺带验证包可正常解析。
+  /// 校验解压后总量与单条目大小（zip bomb 防护），同时顺带验证包可正常解析。
+  ///
+  /// `backup.json` 同样计入总量并受单条目上限约束——它可被压成炸弹，
+  /// 且解码时整包驻留内存，排除在外等于开了后门。
   Future<void> _guardExtractedSize(Archive archive) async {
     var total = 0;
     for (final f in archive.files) {
-      if (f.name == 'backup.json') continue;
+      if (f.size > maxImportBytes) {
+        throw StateError('备份包内 ${f.name} 超过 500MB 上限，已拒绝导入');
+      }
       total += f.size;
       if (total > maxExtractedBytes) {
         throw StateError('备份包解压后超过 2GB 上限，可能是损坏或异常的包，已拒绝导入');
       }
     }
+  }
+
+  /// 取包内 manifest 并做体积校验，必须先于解码调用。
+  Future<Map<String, dynamic>> _manifestJson(Archive archive) async {
+    final jsonFile = archive.findFile('backup.json');
+    if (jsonFile == null) throw const FormatException('备份包缺少 backup.json');
+    if (jsonFile.size > maxManifestBytes) {
+      throw const FormatException('备份包 manifest 超过 50MB 上限，已拒绝导入');
+    }
+    return _decodeBackupJson(jsonFile.content as List<int>);
   }
 
   /// 解析 zip 中的项目名列表（不写入 DB），用于导入前冲突提示。
@@ -335,23 +446,16 @@ class BackupService {
     await _guardImportSize(zipPath);
     final archive = await _openArchive(zipPath);
     try {
-      final jsonFile = archive.findFile('backup.json');
-      if (jsonFile == null) {
-        throw const FormatException('备份包缺少 backup.json');
-      }
-      final data = _decodeBackupJson(jsonFile.content as List<int>);
-      if (data['scope'] == 'full' && data['projects'] != null) {
+      await _guardExtractedSize(archive);
+      final data = await _manifestJson(archive);
+      if (data['scope'] == 'full') {
         return [
-          for (final p
-              in (data['projects'] as List).cast<Map<String, dynamic>>())
-            p['name'] as String? ?? '',
+          for (final p in _mapList(data['projects']))
+            p['name']?.toString() ?? '',
         ];
       }
-      return [
-        (data['project'] as Map<String, dynamic>? ?? const {})['name']
-                as String? ??
-            '',
-      ];
+      final project = data['project'];
+      return [project is Map ? (project['name']?.toString() ?? '') : ''];
     } finally {
       archive.clearSync();
     }
@@ -389,10 +493,8 @@ class BackupService {
 
   /// 解析包内 backup.json 并完成全部落盘与入库。
   Future<int> _importArchive(Archive archive) async {
-    final jsonFile = archive.findFile('backup.json');
-    if (jsonFile == null) throw const FormatException('备份包缺少 backup.json');
-    final data = _decodeBackupJson(jsonFile.content as List<int>);
     await _guardExtractedSize(archive);
+    final data = await _manifestJson(archive);
 
     // 解压媒体文件到应用文档目录，记录 相对路径 → 新绝对路径。
     final docDir = await getApplicationDocumentsDirectory();
@@ -401,10 +503,6 @@ class BackupService {
       if (f.name == 'backup.json') continue;
       final out = _resolveMediaPath(docDir, f.name);
       await out.parent.create(recursive: true);
-      // 先查声明长度再写：超大条目不整体载入内存。
-      if (f.size > maxImportBytes) {
-        throw StateError('备份包内 ${f.name} 超过 500MB 上限，已拒绝导入');
-      }
       await out.writeAsBytes(f.content as List<int>);
       mediaMap[f.name] = out.path;
     }
@@ -415,14 +513,22 @@ class BackupService {
       final idMap = <String, Map<int, int>>{};
 
       // 通用插入：JSON 行 → snake_case 列 → RawValuesInsertable<T>。
-      Future<int> insertRows<T extends Table, D>(
+      Future<void> insertRows<T extends Table, D>(
         TableInfo<T, D> table,
         String key,
         Map<String, Object?> Function(Map<String, dynamic>) transform,
       ) async {
-        final rows = (data[key] as List? ?? const [])
-            .cast<Map<String, dynamic>>();
-        for (final row in rows) {
+        final raw = data[key];
+        if (raw == null) return; // 旧版本包不含该表，跳过而不是判为损坏。
+        if (raw is! List) {
+          // 用户提供的包，任何脏数据都不该以裸 TypeError 结束。
+          throw FormatException('备份包已损坏：$key 不是数组');
+        }
+        for (final item in raw) {
+          if (item is! Map) continue;
+          final row = <String, dynamic>{
+            for (final e in item.entries) e.key.toString(): e.value,
+          };
           final cols = <String, Expression<Object>>{};
           for (final e in transform(row).entries) {
             cols[_snake(e.key)] = _expr(e.value);
@@ -430,18 +536,33 @@ class BackupService {
           final newId = await db
               .into(table)
               .insert(RawValuesInsertable<D>(cols));
-          (idMap[key] ??= {})[row['id'] as int] = newId;
+          if (row['id'] is int) {
+            (idMap[key] ??= {})[row['id'] as int] = newId;
+          }
         }
-        return rows.length;
       }
 
-      int mapped(String key, dynamic old) => idMap[key]?[old as int] ?? 0;
+      /// 旧 id → 新 id。
+      ///
+      /// 包内行引用了未导出的父行（旧版本 App 导出的包、手工改过的包）时
+      /// 直接抛 [FormatException]，而不是回填 0 撞 `PRAGMA foreign_keys=ON`
+      /// 后整笔回滚——那样用户拿到的是裸 SQLite 报错而不是坏行定位。
+      int? mapped(String key, dynamic old) {
+        if (old == null) return null;
+        if (old is! int) {
+          throw FormatException('备份包已损坏：$key 引用列不是整数');
+        }
+        final id = idMap[key]?[old];
+        if (id == null) {
+          throw FormatException('备份包已损坏：$key 引用的行 $old 不在包内');
+        }
+        return id;
+      }
 
       // 插入项目行，返回第一个新 id（UI 提示用）。
       final int firstNewProjectId;
       if (isFull) {
-        final projectsList = (data['projects'] as List)
-            .cast<Map<String, dynamic>>();
+        final projectsList = _mapList(data['projects']);
         if (projectsList.isEmpty) {
           throw const FormatException('全库备份不包含任何项目');
         }
@@ -458,29 +579,41 @@ class BackupService {
                 .insert(RawValuesInsertable<Project>(cols)),
           );
         }
-        idMap['projects'] = {
-          for (var i = 0; i < projectsList.length; i++)
-            (projectsList[i]['id'] as int): newProjectIds[i],
-        };
+        final projectIds = <int, int>{};
+        for (var i = 0; i < projectsList.length; i++) {
+          final oldId = projectsList[i]['id'];
+          if (oldId is int) {
+            projectIds[oldId] = newProjectIds[i];
+          }
+        }
+        idMap['projects'] = projectIds;
         firstNewProjectId = newProjectIds.first;
 
         // 全库包：books 按原始 projectId 映射到新 projectId。
         await insertRows<NovelBooks, NovelBook>(db.novelBooks, 'books', (r) {
           final remapped = _remap(r, const {});
-          remapped['projectId'] = mapped('projects', r['projectId'] ?? 0) == 0
-              ? newProjectIds.first
-              : mapped('projects', r['projectId'] ?? 0);
+          remapped['projectId'] =
+              mapped('projects', r['projectId']) ?? newProjectIds.first;
           return remapped;
         });
       } else {
+        final proj = data['project'];
+        if (proj is! Map) {
+          throw const FormatException('备份包已损坏：project 不是对象');
+        }
         final projCols = <String, Expression<Object>>{};
-        for (final e in (data['project'] as Map<String, dynamic>).entries) {
+        for (final e in proj.entries) {
           if (e.key == 'id') continue;
-          projCols[_snake(e.key)] = _expr(e.value);
+          projCols[_snake(e.key.toString())] = _expr(e.value);
         }
         firstNewProjectId = await db
             .into(db.projects)
             .insert(RawValuesInsertable<Project>(projCols));
+        // 台账与提示词覆盖按 projectId 映射，单项目包也要有旧→新对照表。
+        final oldProjectId = proj['id'];
+        if (oldProjectId is int) {
+          idMap['projects'] = {oldProjectId: firstNewProjectId};
+        }
 
         await insertRows<NovelBooks, NovelBook>(db.novelBooks, 'books', (r) {
           final remapped = _remap(r, const {});
@@ -565,18 +698,65 @@ class BackupService {
           return remapped;
         },
       );
+      await insertRows<ShotRevisions, ShotRevision>(
+        db.shotRevisions,
+        'shotRevisions',
+        (r) {
+          final remapped = _remap(r, const {});
+          remapped['shotId'] = mapped('shots', r['shotId']);
+          if (r['snapshot'] is String) {
+            remapped['snapshot'] =
+                _remapSnapshot(r['snapshot'] as String, mediaMap);
+          }
+          return remapped;
+        },
+      );
+      await insertRows<AssetRevisions, AssetRevision>(
+        db.assetRevisions,
+        'assetRevisions',
+        (r) {
+          final remapped = _remap(r, const {});
+          remapped['assetId'] = mapped('assets', r['assetId']);
+          if (r['snapshot'] is String) {
+            remapped['snapshot'] =
+                _remapSnapshot(r['snapshot'] as String, mediaMap);
+          }
+          return remapped;
+        },
+      );
+      // 生成台账：projectId 按项目映射；subjectId 保留原值——它指向的是
+      // 历史对象的旧行 id，UI 只用 subjectLabel 展示，不做跨库回查。
+      await insertRows<GenerationAttempts, GenerationAttempt>(
+        db.generationAttempts,
+        'generationAttempts',
+        (r) {
+          final remapped = _remap(r, const {});
+          remapped['projectId'] = mapped('projects', r['projectId']);
+          return remapped;
+        },
+      );
+      // 提示词覆盖：project 级按项目映射；global 级 projectId 保持 null。
+      await insertRows<PromptOverrides, PromptOverride>(
+        db.promptOverrides,
+        'promptOverrides',
+        (r) {
+          final remapped = _remap(r, const {});
+          remapped['projectId'] = mapped('projects', r['projectId']);
+          return remapped;
+        },
+      );
 
       // 供应商配置：同 id 覆盖（保留本地安全存储中的 Key 绑定）。
-      for (final row
-          in (data['providers'] as List? ?? const [])
-              .cast<Map<String, dynamic>>()) {
+      for (final row in _mapList(data['providers'])) {
+        final providerId = row['id'];
+        if (providerId is! String) continue;
         await db
             .into(db.providerConfigs)
             .insert(
               RawValuesInsertable<ProviderConfig>({
                 for (final e in row.entries)
                   if (e.key != 'id') _snake(e.key): _expr(e.value),
-                'id': Variable(row['id'] as String),
+                'id': Variable(providerId),
               }),
               onConflict: DoUpdate(
                 (_) => RawValuesInsertable<ProviderConfig>({
@@ -626,10 +806,64 @@ class BackupService {
     return copy;
   }
 
-  /// 媒体路径重写：包内相对路径命中则换新绝对路径。
+  /// 包内应为对象数组的字段。字段缺失返回空列表（旧版本包不含该表），
+  /// 类型不符抛 [FormatException]，元素非对象跳过——用户提供的包，
+  /// 脏数据不该以裸 TypeError 结束导入。
+  static List<Map<String, dynamic>> _mapList(Object? raw) {
+    if (raw == null) return const [];
+    if (raw is! List) {
+      throw const FormatException('备份包已损坏：字段类型不是数组');
+    }
+    return [
+      for (final item in raw)
+        if (item is Map)
+          {for (final e in item.entries) e.key.toString(): e.value},
+    ];
+  }
+
+  /// 媒体路径重写：把导出机器的绝对路径换成本机绝对路径。
+  ///
+  /// 导出机与本机的文档目录前缀不同（换设备恢复），不能按本机的
+  /// docPrefix 去切相对路径；改用「以已打包媒体的相对路径结尾」匹配，
+  /// 并取最长命中，避免 `a/b.png` 与 `b.png` 撞名时命中错层。
   Object? _media(Object? old, Map<String, String> mediaMap) {
-    if (old is String && mediaMap.containsKey(old)) return mediaMap[old];
-    return old;
+    if (old is! String || old.isEmpty) return old;
+    String? best;
+    for (final rel in mediaMap.keys) {
+      if (best != null && rel.length <= best.length) continue;
+      if (old.endsWith('/$rel') || old == rel) best = rel;
+    }
+    return best == null ? old : mediaMap[best];
+  }
+
+  /// 重写产物快照 JSON 内的文件路径。
+  ///
+  /// 快照文件已随备份打包，但快照里存的是导出机器的绝对路径；不重写的话
+  /// 恢复后每个历史版本都指向不存在的文件，「切换到历史版本」形同虚设。
+  /// 快照解析失败时原样返回，不阻塞导入。
+  String _remapSnapshot(String snapshot, Map<String, String> mediaMap) {
+    Map<String, dynamic>? map;
+    try {
+      final decoded = jsonDecode(snapshot);
+      if (decoded is Map) {
+        map = {for (final e in decoded.entries) e.key.toString(): e.value};
+      }
+    } on Object {
+      return snapshot;
+    }
+    if (map == null) return snapshot;
+    var changed = false;
+    for (final key in const ['imagePath', 'outputPath']) {
+      final old = map[key];
+      if (old is String) {
+        final next = _media(old, mediaMap);
+        if (next != old) {
+          map[key] = next;
+          changed = true;
+        }
+      }
+    }
+    return changed ? jsonEncode(map) : snapshot;
   }
 
   /// JSON 值 → drift 表达式。

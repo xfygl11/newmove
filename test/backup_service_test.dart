@@ -303,6 +303,28 @@ void main() {
     );
   });
 
+
+  /// 把 manifest 写成 zip；entries 为「zip 内相对路径 → 字节」。
+  ///
+  /// [manifest] 为空时用 entries 里自带的 backup.json（用于伪造超体积 manifest）。
+  Future<File> writeZip(
+    String name,
+    Map<String, dynamic>? manifest, {
+    Map<String, List<int>> entries = const {},
+  }) async {
+    final archive = Archive();
+    if (manifest != null) {
+      final jsonBytes = utf8.encode(jsonEncode(manifest));
+      archive.addFile(ArchiveFile('backup.json', jsonBytes.length, jsonBytes));
+    }
+    for (final e in entries.entries) {
+      archive.addFile(ArchiveFile(e.key, e.value.length, e.value));
+    }
+    final f = File('${root.path}/tmp/$name');
+    await f.writeAsBytes(ZipEncoder().encode(archive));
+    return f;
+  }
+
   test('导入损坏 backup.json：抛 FormatException 而非未捕获异常', () async {
     final bad = File('${root.path}/tmp/bad.json.zip');
     final archive = Archive();
@@ -313,6 +335,238 @@ void main() {
     await expectLater(
       service.importProject(bad.path),
       throwsA(isA<FormatException>()),
+    );
+  });
+
+  test('新版本表（版本快照 / 台账 / 提示词覆盖）round-trip 且媒体随包走', () async {
+    final projectId = await db.projectDao.insertProject(
+      ProjectsCompanion.insert(name: '快照项目'),
+    );
+    final bookId = await db.novelDao.insertBook(
+      NovelBooksCompanion.insert(projectId: projectId, title: '书'),
+    );
+    final scriptId = await db.scriptDao.insert(
+      ScriptsCompanion.insert(bookId: bookId, title: '剧'),
+    );
+    final shotId = await db.shotDao.insert(
+      ShotsCompanion.insert(
+        scriptId: scriptId,
+        globalSeq: 'G01',
+        globalTimeRange: '00:00-00:06',
+      ),
+    );
+    await db.shotFrameDao.insert(
+      ShotFramesCompanion.insert(
+        shotId: shotId,
+        seq: 1,
+        timeRange: '00:00-00:06',
+        subject: '阿青',
+        shotSize: '中景',
+        angle: '平视',
+      ),
+    );
+    final docMediaPath = '${root.path}/doc/videos/shot_1.mp4';
+    await writeDocMedia('videos/shot_1.mp4', [4, 5, 6, 7]);
+    await db.revisionDao.saveShot(
+      shotId: shotId,
+      kind: 'video',
+      summary: '旧版视频',
+      snapshot: '{"outputPath":"$docMediaPath","status":"视频完成"}',
+    );
+    await db.generationAttemptDao.insert(
+      GenerationAttemptsCompanion.insert(
+        projectId: Value(projectId),
+        subjectType: 'shot_video',
+        subjectId: Value(shotId),
+        subjectLabel: const Value('G01'),
+        prompt: '生成一段视频',
+        status: const Value('succeeded'),
+      ),
+    );
+    await db.promptOverrideDao.upsert(
+      scope: 'project',
+      key: 'shot/storyboard.md',
+      text: '项目级覆盖提示词',
+      projectId: projectId,
+    );
+
+    final zipPath = await service.exportProject(projectId);
+    final archive = ZipDecoder().decodeBytes(
+      await File(zipPath).readAsBytes());
+    final jsonFile = archive.findFile('backup.json');
+    expect(jsonFile, isNotNull, reason: '导出包应包含 backup.json');
+    final manifest = jsonDecode(utf8.decode(jsonFile!.content as List<int>));
+    expect(manifest['shotRevisions'], hasLength(1), reason: '镜头版本快照必须随包导出');
+    expect(manifest['generationAttempts'], hasLength(1), reason: '生成台账必须随包导出');
+    expect(manifest['promptOverrides'], hasLength(1), reason: '提示词覆盖必须随包导出');
+    final mediaNames = manifest['mediaFiles'] as List<dynamic>;
+    expect(
+      mediaNames,
+      contains('videos/shot_1.mp4'),
+      reason: '快照引用的媒体必须随包打包，不能只打包当前产物',
+    );
+
+    // ---- 模拟另一台机器：文档目录换成新根，导出机的绝对路径不存在 ----
+    final root2 = await Directory.systemTemp.createTemp('newmove_backup_restore');
+    final service2 = BackupService(db: db);
+    addTearDown(() async => await root2.delete(recursive: true));
+    await Directory('${root2.path}/doc').create(recursive: true);
+    await Directory('${root2.path}/tmp').create(recursive: true);
+    PathProviderPlatform.instance = _FakePathProvider(root2.path);
+
+    final importedId = await service2.importProject(zipPath);
+    expect(importedId, isNot(projectId), reason: '导入应为新增项目');
+    final restoredBook = (await db.novelDao.findBookByProject(importedId))!;
+    final script = (await db.scriptDao.listByBook(restoredBook.id)).single;
+    final shot = (await db.shotDao.listByScript(script.id)).single;
+    final revision = (await db.revisionDao.listShots(shot.id)).single;
+    final snapshot = jsonDecode(revision.snapshot) as Map<String, dynamic>;
+    final restored = snapshot['outputPath'] as String;
+    expect(
+      restored,
+      startsWith('${root2.path}/'),
+      reason: '快照路径必须指向恢复后的新目录',
+    );
+    expect(restored, isNot(equals(docMediaPath)));
+    expect(File(restored).existsSync(), isTrue, reason: '快照指向的历史产物必须已解压');
+    expect(File('${root2.path}/doc/videos/shot_1.mp4').existsSync(), isTrue);
+
+    final attempt = (await db.generationAttemptDao.list(projectId: importedId)).single;
+    expect(attempt.projectId, importedId, reason: '台账项目归属应重映射到新项目');
+    expect(attempt.prompt, '生成一段视频');
+
+    final override = (await db.promptOverrideDao.listForProject(importedId)).single;
+    expect(override.body, '项目级覆盖提示词');
+    expect(override.slotKey, 'shot/storyboard.md');
+  });
+
+  test('旧版本包（缺少新版本表键）仍可导入', () async {
+    final projectId = await db.projectDao.insertProject(
+      ProjectsCompanion.insert(name: '旧包'),
+    );
+    final bookId = await db.novelDao.insertBook(
+      NovelBooksCompanion.insert(projectId: projectId, title: '书'),
+    );
+    final scriptId = await db.scriptDao.insert(
+      ScriptsCompanion.insert(bookId: bookId, title: '剧'),
+    );
+    final sceneId = await db.sceneDao.insert(
+      ScenesCompanion.insert(
+        scriptId: scriptId,
+        seq: 1,
+        location: '荒原',
+        time: '黄昏',
+      ),
+    );
+    await db.beatDao.insert(
+      BeatsCompanion.insert(
+        sceneId: sceneId,
+        seq: 1,
+        type: '动作',
+        content: 'x',
+        sourceRef: 'E01',
+      ),
+    );
+    final zipPath = await service.exportProject(projectId);
+
+    final archive = ZipDecoder().decodeBytes(
+      await File(zipPath).readAsBytes());
+    final jsonFile = archive.findFile('backup.json')!;
+    final manifest = jsonDecode(utf8.decode(jsonFile.content as List<int>));
+    for (final key in const [
+      'shotRevisions',
+      'assetRevisions',
+      'generationAttempts',
+      'promptOverrides',
+    ]) {
+      manifest.remove(key);
+    }
+    final oldZip = await writeZip(
+      'old_format.zip',
+      manifest,
+      entries: {
+        for (final f in archive.files)
+          if (f.name != 'backup.json')
+            f.name: List<int>.from(f.content),
+      },
+    );
+
+    final importedId = await service.importProject(oldZip.path);
+    final script = (await db.scriptDao.listByBook(bookId)).single;
+    final scene = (await db.sceneDao.listByScript(script.id)).single;
+    final beat = (await db.beatDao.listByScene(scene.id)).single;
+    expect(beat.content, 'x');
+    expect(importedId, greaterThan(0));
+  });
+
+  test('包内引用了未导出的父行：抛 FormatException 并定位行号', () async {
+    final projectId = await db.projectDao.insertProject(
+      ProjectsCompanion.insert(name: '坏外键'),
+    );
+    final bookId = await db.novelDao.insertBook(
+      NovelBooksCompanion.insert(projectId: projectId, title: '书'),
+    );
+    await db.scriptDao.insert(ScriptsCompanion.insert(bookId: bookId, title: '剧'));
+    await db.sceneDao.insert(
+      ScenesCompanion.insert(
+        scriptId: 1,
+        seq: 1,
+        location: '荒原',
+        time: '黄昏',
+      ),
+    );
+    final zipPath = await service.exportProject(projectId);
+
+    final archive = ZipDecoder().decodeBytes(
+      await File(zipPath).readAsBytes());
+    final jsonFile = archive.findFile('backup.json')!;
+    final manifest = jsonDecode(utf8.decode(jsonFile.content as List<int>));
+    final scenes = manifest['scenes'] as List<dynamic>;
+    (scenes.single as Map<String, dynamic>)['scriptId'] = 999;
+    final bad = await writeZip('dangling_fk.zip', manifest);
+
+    await expectLater(
+      service.importProject(bad.path),
+      throwsA(isA<FormatException>().having((e) => e.message, 'message', contains('不在包内'))),
+    );
+  });
+
+  test('单个条目超过 500MB 上限：即使解压总量未超限也拒绝', () async {
+    // 中央目录声明的单条大小即上限：真实 zip bomb 的常规手法是「小头大声明」。
+    final archive = Archive();
+    archive.addFile(ArchiveFile('backup.json', 19, utf8.encode('{"scope":"project"}')));
+    // 声明的解压大小 600MB，实际内容 0 字节：真实 zip bomb 的常规手法。
+    archive.addFile(
+      ArchiveFile('videos/one.mp4', 600 * 1024 * 1024, Uint8List(0)),
+    );
+    final bomb = File('${root.path}/tmp/one_entry_big.zip');
+    await bomb.writeAsBytes(ZipEncoder().encode(archive));
+    await expectLater(
+      service.importProject(bomb.path),
+      throwsA(isA<StateError>().having((e) => e.message, 'message', contains('500MB'))),
+    );
+    expect(
+      File('${root.path}/doc/videos/one.mp4').existsSync(),
+      isFalse,
+      reason: '校验必须在写出任何文件之前完成',
+    );
+  });
+
+  test('manifest 自身也计入解压上限，不能作为 zip bomb 后门', () async {
+    final archive = Archive();
+    archive.addFile(
+      ArchiveFile('backup.json', 3 * 1024 * 1024 * 1024, Uint8List(0)),
+    );
+    final bomb = File('${root.path}/tmp/manifest_bomb.zip');
+    await bomb.writeAsBytes(ZipEncoder().encode(archive));
+    await expectLater(
+      service.importProject(bomb.path),
+      throwsA(isA<StateError>()),
+    );
+    expect(
+      File('${root.path}/doc/backup.json').existsSync(),
+      isFalse,
+      reason: 'manifest 超额必须在写出任何文件之前被拦下',
     );
   });
 }

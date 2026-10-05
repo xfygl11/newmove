@@ -140,10 +140,20 @@ class ProjectPage extends ConsumerWidget {
     );
     if (picked.isEmpty || picked.single.path == null) return;
 
-    // 冲突检测：包内项目名与本地同名时提示用户确认。
-    final conflicts = await ref
-        .read(backupServiceProvider)
-        .findConflicts(picked.single.path!);
+    // 冲突检测：包内项目名与本地同名时提示用户确认。解析失败的包在这里就
+    // 暴露，不让脏包走到导入阶段才报错。
+    final List<String> conflicts;
+    try {
+      conflicts = await ref
+          .read(backupServiceProvider)
+          .findConflicts(picked.single.path!);
+    } on Object catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('备份包无法解析：$e')));
+      }
+      return;
+    }
     if (conflicts.isNotEmpty && context.mounted) {
       final proceed = await showDialog<bool>(
         context: context,

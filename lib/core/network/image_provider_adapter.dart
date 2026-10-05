@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import '../text/text_util.dart';
 import 'dio_factory.dart';
 import 'protocols.dart';
 
@@ -306,7 +307,7 @@ class ImageProviderAdapter {
 
     if (detail == null) return '$prefix$tail';
     // 供应商消息可能是完整 JSON，裁到 300 字避免刷屏。
-    final text = detail.length > 300 ? detail.substring(0, 300) : detail;
+    final text = TextUtil.clip(detail, 300);
     final head = code == null ? prefix : 'HTTP $code · $prefix';
     return '$head：$text$tail';
   }

@@ -203,8 +203,9 @@ class _ConfirmDialogState extends State<_ConfirmDialog> {
               ),
           ],
         ),
-        content: SizedBox(
-          width: 480,
+        // 480 是宽屏上限而不是固定宽度：小屏强制 480dp 会横向溢出。
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,

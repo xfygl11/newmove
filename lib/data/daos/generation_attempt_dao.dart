@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 
 import '../../core/app_log.dart';
 import '../../core/gate_issue.dart';
+import '../../core/text/text_util.dart';
 import '../app_database.dart';
 import '../tables/tables.dart';
 
@@ -115,6 +116,14 @@ class GenerationAttemptDao extends DatabaseAccessor<AppDatabase>
         .get();
   }
 
+  /// 按项目取全部台账（全库备份用，无条数上限）。
+  Future<List<GenerationAttempt>> listByProject(int projectId) {
+    return (select(generationAttempts)
+          ..where((t) => t.projectId.equals(projectId))
+          ..orderBy([(t) => OrderingTerm.desc(t.id)]))
+        .get();
+  }
+
   /// 生成尝试台账列表（新在前）。台账查看页的数据源。
   ///
   /// [status] / [projectId] 为 null 表示不过滤；状态取值见 [AttemptStatuses]。
@@ -181,7 +190,7 @@ class AttemptRecorder {
     final sb = StringBuffer('$subjectType|${subjectId ?? '-'}|$grantLimit|');
     sb.write(refs.map((r) => '${r['assetId']}:${r['role']}').join(','));
     sb.write('|');
-    sb.write(prompt.length > 300 ? prompt.substring(0, 300) : prompt);
+    sb.write(TextUtil.clip(prompt, 300));
     return Object.hashAll(sb.toString().codeUnits).toRadixString(16);
   }
 

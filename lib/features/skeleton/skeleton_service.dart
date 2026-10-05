@@ -133,10 +133,13 @@ class SkeletonService {
       final result = await agents.extract(prompt: prompt, llm: llm, bookId: script.bookId);
       final sceneIdBySeq = <int, int>{for (final s in scenes) s.seq: s.id};
 
+      var insertedBeats = 0;
       // 删旧 + 插新整体包在事务内：中途失败整段回滚，不会留下空骨架。
       await db.transaction(() async {
         await cascadeDao.deleteSkeletonCascade(script.id);
 
+        // 记录实际落库的节拍及其场次，用于给镜头补 sceneId 与真实节拍数。
+        final sceneIdByBeatRef = <String, int>{};
         for (var i = 0; i < result.beats.length; i++) {
           final b = result.beats[i];
           final sceneId = sceneIdBySeq[b.sceneSeq];
@@ -144,6 +147,7 @@ class SkeletonService {
             // 场景引用无法解析时跳过，避免外键失败；由校验/日志暴露。
             continue;
           }
+          final sourceRef = b.id.isEmpty ? 'E${i + 1}' : b.id;
           await beatDao.insert(
             BeatsCompanion.insert(
               sceneId: sceneId,
@@ -152,11 +156,13 @@ class SkeletonService {
               who: Value(b.who),
               content: b.content,
               object: Value(b.object.isEmpty ? null : b.object),
-              sourceRef: b.id.isEmpty ? 'E${i + 1}' : b.id,
+              sourceRef: sourceRef,
               estDurationMs: Value(b.estDurationMs),
               tags: Value(jsonEncode(b.tags)),
             ),
           );
+          sceneIdByBeatRef[sourceRef] = sceneId;
+          insertedBeats++;
         }
 
         for (final seg in result.segments) {
@@ -171,6 +177,12 @@ class SkeletonService {
                   : seg.globalTimeRange,
               beatRefs: Value(jsonEncode(seg.beatRefs)),
               assetStates: Value(jsonEncode(seg.assets.toJson())),
+              // 场次用于导演上下文注入 location / time；取本段首个节拍所属场次。
+              sceneId: Value(
+                seg.beatRefs.isNotEmpty
+                    ? sceneIdByBeatRef[seg.beatRefs.first]
+                    : null,
+              ),
             ),
           );
         }
@@ -178,7 +190,9 @@ class SkeletonService {
 
       await _finish(attempt, AttemptStatuses.succeeded);
       return SkeletonExtractionSummary(
-        beatCount: result.beats.length,
+        // 报告落库条数而非 LLM 原始条数：场景引用无法解析的节拍被静默跳过，
+        // 报告全量会让用户以为库里有条数不符的数据。
+        beatCount: insertedBeats,
         segmentCount: result.segments.length,
         globalDurationMs: result.globalDurationMs,
       );

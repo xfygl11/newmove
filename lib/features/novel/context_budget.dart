@@ -162,30 +162,35 @@ class ContextBudget {
     final hooks = [for (final h in jsonList(map['hooks'])) jsonMap(h)];
     if (hooks.isEmpty) return json;
     const open = {'open', 'progressing'};
+    // LLM 状态值一律归一化再判：带首尾空格会导致本应保留的伏笔被裁掉。
     final kept = [
       for (final h in hooks)
-        if (open.contains(jsonString(h['status'])) || h['status'] == null) h,
+        if (open.contains(jsonString(h['status']).trim()) ||
+            h['status'] == null)
+          h,
     ];
     if (kept.length == hooks.length) return json;
     return jsonEncode({'hooks': kept, 'pruned': hooks.length - kept.length});
   }
 
   /// 只留最近 [recentSummaryChapters] 章的摘要，返回时按章号升序。
+  ///
+  /// 章号键是 `chapter`（与 settling skill 的 `chapterSummary.chapter` 一致）。
+  /// 早前误读 `chapterNumber`：所有行章号都是 0，排序变成空转，长期只喂第 1~8 章
+  /// 给写作 Agent，后续所有章节的前情上下文被静默裁掉。
   String _pruneSummaries(String json) {
     final map = jsonMap(jsonDecode(json));
     final rows = [for (final r in jsonList(map['rows'])) jsonMap(r)];
     if (rows.length <= recentSummaryChapters) return json;
     final byChapter = [...rows]
-      ..sort(
-        (a, b) =>
-            jsonInt(b['chapterNumber']).compareTo(jsonInt(a['chapterNumber'])),
-      );
+      ..sort((a, b) => _chapterOf(b).compareTo(_chapterOf(a)));
     final kept = [...byChapter.sublist(0, recentSummaryChapters)]
-      ..sort(
-        (a, b) =>
-            jsonInt(a['chapterNumber']).compareTo(jsonInt(b['chapterNumber'])),
-      );
+      ..sort((a, b) => _chapterOf(a).compareTo(_chapterOf(b)));
     return jsonEncode({'rows': kept, 'pruned': rows.length - kept.length});
+  }
+
+  static int _chapterOf(Map<String, dynamic> row) {
+    return jsonInt(row['chapter']);
   }
 }
 

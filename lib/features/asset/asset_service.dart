@@ -476,6 +476,7 @@ class AssetService {
           model: image.modelId,
           prompt: asset.prompt,
           referencePath: reference,
+          size: image.imageSize,
           protocol: image.protocol,
         );
         return _resolveBytes(result);

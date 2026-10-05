@@ -18,6 +18,15 @@ class NovelDao extends DatabaseAccessor<AppDatabase> with _$NovelDaoMixin {
     )..where((t) => t.projectId.equals(projectId))).getSingleOrNull();
   }
 
+  /// 一个项目下的全部书。`NovelBooks.projectId` 无唯一约束，允许一个项目
+  /// 下多本书，全量取用避免只取第一本后静默丢弃其余。
+  Future<List<NovelBook>> listBooksByProject(int projectId) {
+    return (select(novelBooks)
+          ..where((t) => t.projectId.equals(projectId))
+          ..orderBy([(t) => OrderingTerm.asc(t.id)]))
+        .get();
+  }
+
   Stream<NovelBook?> watchBookByProject(int projectId) {
     return (select(
       novelBooks,

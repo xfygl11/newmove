@@ -7,6 +7,7 @@ import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_session.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/return_code.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../core/app_log.dart';
 import '../../data/app_database.dart';
 import 'shot_models.dart';
 
@@ -285,13 +286,13 @@ class ShotComposeService {
     }
   }
 
-  /// 删除文件，不存在或失败均静默（清理属尽力而为）。
+  /// 删除文件，不存在视为成功；失败留痕不阻塞合成结果。
   Future<void> _deleteQuiet(String path) async {
     try {
       final f = File(path);
       if (await f.exists()) await f.delete();
-    } catch (_) {
-      // 忽略清理失败，不影响合成结果。
+    } catch (e) {
+      appLog('compose_cleanup', '清理临时文件失败：$path', error: e);
     }
   }
 }

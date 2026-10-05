@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import '../text/text_util.dart';
 import 'dio_factory.dart';
 import 'protocols.dart';
 
@@ -320,7 +320,7 @@ class VideoProviderAdapter {
       final detail = map.toString();
       throw StateError(
         'Agnes 视频供应商未返回任务 ID: '
-        '${detail.length < 200 ? detail : detail.substring(0, 200)}',
+        '${TextUtil.clip(detail, 200)}',
       );
     }
     return videoId.toString();
@@ -379,14 +379,17 @@ class VideoProviderAdapter {
     return base;
   }
 
-  /// 下载视频为字节。
-  Future<Uint8List> downloadUrl(String url, {CancelToken? cancelToken}) async {
-    final response = await _dio.get<List<int>>(
-      url,
-      options: Options(responseType: ResponseType.bytes),
-      cancelToken: cancelToken,
-    );
-    return Uint8List.fromList(response.data ?? const []);
+  /// 流式下载视频到文件，全程不整包驻留内存。
+  ///
+  /// 整包读法（`_dio.get<List<int>>` + `Uint8List.fromList`）会让 30s 720p
+  /// 视频 50-200MB、4K 可达 500MB+ 的字节连续驻留两份，本机 358MiB 预算下
+  /// 必然 OOM。轮询返回 URL 时一律走本方法。
+  Future<void> downloadToFile(
+    String url,
+    String filePath, {
+    CancelToken? cancelToken,
+  }) async {
+    await _dio.download(url, filePath, cancelToken: cancelToken);
   }
 
   /// 取消令牌已置位时立即抛出，使生成流程按普通失败处理并回滚状态。

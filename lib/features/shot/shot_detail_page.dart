@@ -11,6 +11,7 @@ import '../../core/status_constants.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
 import '../../widgets/image_version_panel.dart';
+import '../../widgets/status_badge.dart';
 import '../asset/asset_models.dart';
 import '../asset/asset_providers.dart';
 import '../provider_config/provider_models.dart';
@@ -1022,6 +1023,7 @@ class _VideoPreview extends ConsumerStatefulWidget {
 class _VideoPreviewState extends ConsumerState<_VideoPreview> {
   VideoPlayerController? _ctrl;
   String? _loadedPath;
+  bool _loadScheduled = false;
 
   @override
   void dispose() {
@@ -1029,16 +1031,29 @@ class _VideoPreviewState extends ConsumerState<_VideoPreview> {
     super.dispose();
   }
 
+  /// 播放器加载统一延到帧后执行：build 期间改 `_ctrl` / 起异步任务会让
+  /// 状态与构建交错，触发 setState 时序报错。
+  void _scheduleLoad(String path) {
+    if (_loadScheduled || _loadedPath == path) return;
+    _loadScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadScheduled = false;
+      if (mounted) _ensure(path);
+    });
+  }
+
   /// 按路径懒加载播放器（路径变化时重建）。
   Future<void> _ensure(String path) async {
     if (_loadedPath == path) return;
-    await _ctrl?.dispose();
+    _ctrl?.dispose();
+    _ctrl = null;
+    _loadedPath = path;
     final ctrl = VideoPlayerController.file(File(path));
     _ctrl = ctrl;
-    _loadedPath = path;
     await ctrl.initialize();
     if (!mounted) {
       await ctrl.dispose();
+      _ctrl = null;
       return;
     }
     setState(() {});
@@ -1053,7 +1068,7 @@ class _VideoPreviewState extends ConsumerState<_VideoPreview> {
 
     // 有产物则初始化播放器。
     if (hasVideo) {
-      _ensure(path);
+      _scheduleLoad(path);
       final ctrl = _ctrl;
       if (ctrl != null && ctrl.value.isInitialized) {
         return ClipRRect(
@@ -1160,16 +1175,14 @@ class _TaskTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 状态图标走 StatusKinds 单一来源，不在页面里另写状态→图标对照表。
+    final kind = StatusKinds.of(task.status);
     final params = VideoGenParams.decode(task.paramsJson);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: Icon(switch (task.status) {
-          VideoTaskStatuses.succeeded => Icons.check_circle_outline,
-          VideoTaskStatuses.failed => Icons.error_outline,
-          _ => Icons.hourglass_top,
-        }),
+        leading: Icon(kind.icon, color: kind.color),
         title: Text(
           '${params.durationSec}s · ${params.ratio} · ${params.resolution}',
         ),

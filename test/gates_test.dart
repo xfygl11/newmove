@@ -390,6 +390,33 @@ void main() {
         isEmpty,
       );
     });
+
+    test('英文角色名按大小写无关匹配报警', () {
+      final issues = PromptGate.namedCharactersInScene(
+        assets: [asset(type: '场景', name: 'a', prompt: 'Alice 独自站在空教室')],
+        characterNames: ['Alice'],
+      );
+      expect(issues.single.code, 'scene_named_character');
+    });
+
+    test('英文角色名的否定语境不报警（大小写不一致也要识别）', () {
+      // 回归用例：只把正文转小写、术语保持原样会让 indexOf 永远匹配不上，
+      // 否定检测直接短路，英文角色名在场景提示词里 100% 误报。
+      for (final prompt in [
+        '教室一角，画面中 no Alice',
+        'A classroom with no Alice inside',
+        'No Alice is present in this scene',
+      ]) {
+        expect(
+          PromptGate.namedCharactersInScene(
+            assets: [asset(type: '场景', name: 'a', prompt: prompt)],
+            characterNames: ['Alice'],
+          ),
+          isEmpty,
+          reason: '提示词「$prompt」被误报',
+        );
+      }
+    });
   });
 
   group('PromptGate 画风互斥门', () {
