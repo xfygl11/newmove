@@ -20,12 +20,11 @@ class StatusKinds {
     '待生成': StatusKind(Colors.grey, Icons.schedule, false),
     '已采用': StatusKind(Colors.green, Icons.check_circle_outline, false),
     '废弃': StatusKind(Colors.red, Icons.delete_outline, false),
-    // 视频任务
-    '排队中': StatusKind(Colors.grey, Icons.hourglass_bottom, false),
+    // 视频任务（键必须与 VideoTaskStatuses 逐字一致，见该类注释）
+    '排队': StatusKind(Colors.grey, Icons.hourglass_bottom, false),
     '成功': StatusKind(Colors.green, Icons.check_circle_outline, false),
     '失败': StatusKind(Colors.red, Icons.error_outline, false),
     '已取消': StatusKind(Colors.orange, Icons.cancel_outlined, false),
-    '视频生成失败': StatusKind(Colors.red, Icons.error_outline, false),
     // 生成尝试台账（M17 T19.4）
     'pending': StatusKind(Colors.grey, Icons.hourglass_bottom, false),
     'running': StatusKind(Colors.blue, Icons.autorenew, true),

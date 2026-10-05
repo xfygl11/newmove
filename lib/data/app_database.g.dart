@@ -7420,7 +7420,7 @@ class $VideoTasksTable extends VideoTasks
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant('排队'),
+    defaultValue: const Constant(VideoTaskStatuses.queued),
   );
   static const VerificationMeta _paramsJsonMeta = const VerificationMeta(
     'paramsJson',

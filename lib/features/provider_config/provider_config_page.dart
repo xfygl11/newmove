@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:newmove/core/network/dio_factory.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -107,58 +108,133 @@ class _GeneralSection extends ConsumerWidget {
   }
 }
 
-/// 检查更新区块：拉取 GitHub 最新 release，有更新时提示跳转下载页。
+/// 检查更新区块。
+///
+/// **默认不自动拉取**：旧实现用 `AsyncNotifier.build` 挂 `ref.watch`，设置页
+/// 一打开就静默向 `api.github.com` 发请求，用户无法关闭。现在改成点击后
+/// 才拉取，离线/无网时给出可读提示而不是静默吞掉。
 class _UpdateCheckTile extends ConsumerWidget {
   const _UpdateCheckTile();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(updateCheckProvider);
-    return ListTile(
-      leading: const Icon(Icons.update),
-      title: const Text('检查更新'),
-      subtitle: state.when(
-        data: (u) =>
-            Text(u.hasUpdate ? '发现新版本 ${u.latestVersion}，点击前往下载' : '已是最新版本'),
-        loading: () => const Text('检查中…'),
-        error: (e, _) => Text('检查失败：$e'),
-      ),
-      enabled: _updateAvailable(state),
-      onTap: () {
-        final url = _releaseUrl(state);
-        if (url == null) return;
-        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      },
-    );
+    final status = ref.watch(updateCheckProvider);
+    switch (status) {
+      case UpdateCheckLoading():
+        return const ListTile(
+          leading: Icon(Icons.update),
+          title: Text('检查更新'),
+          trailing: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        );
+      case UpdateCheckDone(:final check):
+        return ListTile(
+          leading: const Icon(Icons.update),
+          title: const Text('检查更新'),
+          subtitle: check.hasUpdate
+              ? Text('发现新版本 ${check.latestVersion}，点击前往下载')
+              : Text('已是最新版本（${check.latestVersion}）'),
+          enabled: check.hasUpdate,
+          onTap: () {
+            final url = check.releaseUrl;
+            if (url != null && url.isNotEmpty) {
+              launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+            }
+          },
+        );
+      case UpdateCheckUnavailable(:final message):
+        return ListTile(
+          leading: const Icon(Icons.update),
+          title: const Text('检查更新'),
+          subtitle: Text(message),
+          onTap: () => _check(ref),
+        );
+      case UpdateCheckIdle():
+        return ListTile(
+          leading: const Icon(Icons.update),
+          title: const Text('检查更新'),
+          subtitle: Text('点击检查 GitHub 最新 release'),
+          onTap: () => _check(ref),
+        );
+    }
   }
 
-  bool _updateAvailable(AsyncValue<UpdateCheck> state) {
-    if (state is! AsyncData<UpdateCheck>) return false;
-    return state.value.hasUpdate;
-  }
-
-  String? _releaseUrl(AsyncValue<UpdateCheck> state) {
-    if (state is! AsyncData<UpdateCheck>) return null;
-    return state.value.releaseUrl;
+  void _check(WidgetRef ref) {
+    ref.read(updateCheckProvider.notifier).checkNow();
   }
 }
 
+/// 检查更新状态。
+///
+/// 不用 `AsyncValue` 是为了让 build 阶段不产生网络请求——`AsyncNotifier` 的
+/// build 在首次 watch 时必然执行，会把「自动拉取」写死进依赖图。
+sealed class UpdateCheckStatus {
+  const UpdateCheckStatus();
+}
+
+/// 尚未检查（默认态，设置页首次打开时）。
+class UpdateCheckIdle extends UpdateCheckStatus {
+  const UpdateCheckIdle();
+}
+
+/// 检查进行中。
+class UpdateCheckLoading extends UpdateCheckStatus {
+  const UpdateCheckLoading();
+}
+
+/// 检查成功。
+class UpdateCheckDone extends UpdateCheckStatus {
+  const UpdateCheckDone(this.check);
+
+  final UpdateCheck check;
+}
+
+/// 检查失败，附可读原因。
+class UpdateCheckUnavailable extends UpdateCheckStatus {
+  const UpdateCheckUnavailable({required this.message});
+
+  final String message;
+}
+
 final updateCheckProvider =
-    AsyncNotifierProvider<UpdateCheckNotifier, UpdateCheck>(
+    NotifierProvider<UpdateCheckNotifier, UpdateCheckStatus>(
       UpdateCheckNotifier.new,
     );
 
-class UpdateCheckNotifier extends AsyncNotifier<UpdateCheck> {
+class UpdateCheckNotifier extends Notifier<UpdateCheckStatus> {
   @override
-  Future<UpdateCheck> build() async {
-    final checker = UpdateChecker(dio: Dio());
+  UpdateCheckStatus build() => const UpdateCheckIdle();
+
+  /// 手动触发检查。离线/无网返回 [UpdateCheckUnavailable]，
+  /// 不再静默返回占位版本号冒充「已是最新」。
+  Future<void> checkNow() async {
+    state = const UpdateCheckLoading();
+    final checker = UpdateChecker(dio: createDio());
     try {
-      return await checker.checkLatest();
-    } catch (_) {
-      // 离线/无网时静默返回占位，避免界面报错。
-      return const UpdateCheck(latestVersion: '0.0.0', hasUpdate: false);
+      state = UpdateCheckDone(await checker.checkLatest());
+    } on DioException catch (e) {
+      state = UpdateCheckUnavailable(message: '网络不可用：${_briefDioError(e)}');
+    } on StateError catch (e) {
+      state = UpdateCheckUnavailable(message: e.message);
+    } on Object catch (e) {
+      state = UpdateCheckUnavailable(message: '检查失败：$e');
     }
   }
+}
+
+String _briefDioError(DioException e) {
+  return switch (e.type) {
+    DioExceptionType.connectionTimeout ||
+    DioExceptionType.sendTimeout => '请求超时',
+    DioExceptionType.receiveTimeout => '响应超时',
+    DioExceptionType.connectionError => '无法连接 GitHub',
+    DioExceptionType.badResponse =>
+      'GitHub 返回 ${e.response?.statusCode ?? '未知'}',
+    _ => '网络错误',
+  };
 }
 
 /// 数据备份区块：导出当前项目 / 从 zip 恢复。

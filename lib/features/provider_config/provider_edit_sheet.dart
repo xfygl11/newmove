@@ -10,6 +10,26 @@ import 'model_fetcher.dart';
 import 'provider_models.dart';
 
 /// 打开供应商编辑 Sheet。[group] 仅新建时传入；[existing] 编辑时传入。
+/// Base URL 校验：必须 https，或显式允许本机回环（本地调试用）。
+///
+/// 此前只判非空，`http://` / `file://` 都能通过，API Key 以 Bearer 明文
+/// 随请求发出，局域网内任何一跳都能截走。
+String? validateBaseUrl(String? value) {
+  final text = value?.trim() ?? '';
+  if (text.isEmpty) return '请填写 Base URL';
+  final uri = Uri.tryParse(text);
+  if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+    return 'Base URL 格式不正确，应形如 https://api.example.com/v1';
+  }
+  if (uri.scheme == 'https') return null;
+  final loopback =
+      uri.host == 'localhost' ||
+      uri.host == '127.0.0.1' ||
+      uri.host == '[::1]' ||
+      uri.host == '::1';
+  return loopback ? null : '必须使用 https，明文 http 会在链路上泄露 API Key';
+}
+
 Future<void> showProviderEditSheet(
   BuildContext context, {
   ProviderGroup? group,
@@ -338,8 +358,7 @@ class _ProviderEditSheetState extends ConsumerState<ProviderEditSheet> {
                   labelText: 'Base URL',
                   hintText: 'https://api.deepseek.com',
                 ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? '请填写 Base URL' : null,
+                validator: validateBaseUrl,
               ),
               const SizedBox(height: 8),
               TextFormField(

@@ -20,6 +20,26 @@ class AssetDao extends DatabaseAccessor<AppDatabase> with _$AssetDaoMixin {
         .get();
   }
 
+  /// 回收卡死的资产状态，返回受影响的资产 id。
+  ///
+  /// 状态词表由调用方传入——DAO 只存字符串，不绑定业务语义。
+  /// 资产出图是同步调用（`AssetService.generate` 内 `await` 到底），
+  /// `generating` 只在那一次调用的生命周期内存在；库里出现该状态即意味着
+  /// 进程在生成中途被杀，供应商侧可能早已结束而本地状态永不落回。
+  Future<List<int>> flipStatus({
+    required String fromStatus,
+    required String toStatus,
+  }) async {
+    final query = select(assets);
+    query.where((t) => t.status.equals(fromStatus));
+    final ids = [for (final row in await query.get()) row.id];
+    if (ids.isEmpty) return ids;
+    await (update(assets)..where((t) => t.status.equals(fromStatus))).write(
+      AssetsCompanion(status: Value(toStatus)),
+    );
+    return ids;
+  }
+
   Stream<List<Asset>> watchByScript(int scriptId) {
     return (select(assets)
           ..where((t) => t.scriptId.equals(scriptId))

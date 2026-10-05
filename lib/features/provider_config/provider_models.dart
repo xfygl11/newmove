@@ -188,18 +188,21 @@ class ProviderModel {
       durationResolutions: _durationResolutions(json['durationResolutions']),
       audio: json['audio'],
       videoModes: _stringList(json['videoModes']),
-      maxImageRefs: (json['maxImageRefs'] as num?)?.toInt(),
-      contextWindow: (json['contextWindow'] as num?)?.toInt(),
-      maxOutputTokens: (json['maxOutputTokens'] as num?)?.toInt(),
+      maxImageRefs: jsonIntOrNull(json['maxImageRefs']),
+      contextWindow: jsonIntOrNull(json['contextWindow']),
+      maxOutputTokens: jsonIntOrNull(json['maxOutputTokens']),
     );
   }
 
+  /// 容忍脏数据：非 List 或过滤后为空一律视为「未知」（null），
+  /// 而不是空列表——空列表会让 UI 把「能力未知」当成「明确没有」。
   static List<String>? _stringList(Object? raw) {
     if (raw is! List) return null;
-    return [
+    final out = [
       for (final item in raw)
         if (item is String) item,
     ];
+    return out.isEmpty ? null : out;
   }
 
   static List<({List<int> duration, List<String> resolution})>?
@@ -231,17 +234,27 @@ class ProviderModelCodec {
     return jsonEncode([for (final m in models) m.toJson()]);
   }
 
+  /// 逐条容错：单条脏数据只丢自己，不把整组模型一起清空。
+  ///
+  /// 旧写法把整段包在一个 try 里，`fromJson` 一抛 TypeError 整条 `on TypeError`
+  /// 分支返回空列表——用户明明配置好了供应商，下拉却显示「请配置供应商」。
   static List<ProviderModel> decode(String raw) {
+    List<dynamic> decoded;
     try {
-      final list = jsonDecode(raw) as List<dynamic>;
-      return [
-        for (final item in list)
-          if (item is Map<String, dynamic>) ProviderModel.fromJson(item),
-      ];
+      final value = jsonDecode(raw);
+      decoded = value is List ? value : const <dynamic>[];
     } on FormatException {
       return const [];
-    } on TypeError {
-      return const [];
     }
+    final out = <ProviderModel>[];
+    for (final item in decoded) {
+      if (item is! Map) continue;
+      try {
+        out.add(ProviderModel.fromJson(item.cast<String, dynamic>()));
+      } on Object {
+        // 单条损坏，跳过。
+      }
+    }
+    return out;
   }
 }

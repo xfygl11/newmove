@@ -1,3 +1,4 @@
+import 'package:newmove/core/network/dio_factory.dart';
 import 'package:dio/dio.dart';
 
 import '../../core/network/protocols.dart';
@@ -17,7 +18,7 @@ typedef FetchedModel = ({String id, String label});
 /// - 响应 `{ data: [...] }`，label 取 `display_name || displayName ||
 ///   name || id`。
 class ModelFetcher {
-  ModelFetcher({Dio? dio}) : _dio = dio ?? Dio();
+  ModelFetcher({Dio? dio}) : _dio = dio ?? createDio();
 
   final Dio _dio;
 

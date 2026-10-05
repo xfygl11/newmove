@@ -11,6 +11,7 @@ import '../../agent/active_llm.dart';
 import '../../agent/active_video.dart';
 import '../../core/app_log.dart';
 import '../../core/json_values.dart';
+import '../../core/status_constants.dart';
 import '../../core/network/image_provider_adapter.dart';
 import '../../core/network/video_provider_adapter.dart';
 import '../../core/storage/shot_file_store.dart';
@@ -163,7 +164,12 @@ class ShotService {
         summary: summary,
       );
     } catch (e, st) {
-      appLog('shot_snapshot', 'shot=$shotId kind=$kind', error: e, stackTrace: st);
+      appLog(
+        'shot_snapshot',
+        'shot=$shotId kind=$kind',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -192,7 +198,9 @@ class ShotService {
           params: Value(params),
           refs: Value(jsonEncode(refs)),
           before: Value(jsonEncode(before)),
-          attemptNo: Value(await attemptDao.nextAttemptNo(subjectType, subjectId)),
+          attemptNo: Value(
+            await attemptDao.nextAttemptNo(subjectType, subjectId),
+          ),
           grantLimit: Value(grantLimit),
           grantFingerprint: Value(
             _fingerprint(subjectType, subjectId, prompt, refs, grantLimit),
@@ -785,6 +793,7 @@ class ShotService {
     required int shotId,
     required ActiveVideo video,
     required VideoGenParams params,
+    GenerationCancelToken? cancelToken,
   }) async {
     final shot = await shotDao.find(shotId);
     if (shot == null) throw StateError('镜头不存在：$shotId');
@@ -885,13 +894,14 @@ class ShotService {
         maxImageRefs: maxRefs,
         generateAudio: params.generateAudio,
         protocol: video.protocol,
+        cancelToken: cancelToken?.dioToken,
       );
       final id = await videoTaskDao.insert(
         VideoTasksCompanion.insert(
           shotId: shotId,
           taskId: taskId,
           providerId: video.provider.id,
-          status: const Value('生成中'),
+          status: const Value(VideoTaskStatuses.generating),
           paramsJson: Value(actualParams.encode()),
         ),
       );
@@ -920,22 +930,32 @@ class ShotService {
   /// 去重锁下沉到本方法：同一任务的并发轮询共享同一个 Future，任务中心与镜头
   /// 详情页同时触发时不会重复下载覆盖产物。
   /// 单次请求超时见 [pollTimeout]，整个任务（含下载）上限见 [pollAllTimeout]。
+  /// 进行中的视频轮询取消令牌：按 taskId 索引，[cancelVideoTask] 用它中断在途请求。
+  final Map<int, GenerationCancelToken> _videoCancelTokens = {};
+
   Future<VideoTask> pollVideoTask(int videoTaskId) {
+    final token = GenerationCancelToken();
+    _videoCancelTokens[videoTaskId] = token;
     final existing = _pollingTasks[videoTaskId];
     if (existing != null) return existing;
-    final future = _pollVideoTaskOnce(videoTaskId)
+    final future = _pollVideoTaskOnce(videoTaskId, cancelToken: token)
         .timeout(pollAllTimeout)
         .whenComplete(() {
           _pollingTasks.remove(videoTaskId);
+          _videoCancelTokens.remove(videoTaskId);
+          token.cancel();
         });
     _pollingTasks[videoTaskId] = future;
     return future;
   }
 
-  Future<VideoTask> _pollVideoTaskOnce(int videoTaskId) async {
+  Future<VideoTask> _pollVideoTaskOnce(
+    int videoTaskId, {
+    GenerationCancelToken? cancelToken,
+  }) async {
     final task = await videoTaskDao.find(videoTaskId);
     if (task == null) throw StateError('视频任务不存在：$videoTaskId');
-    if (task.status == '成功' || task.status == '失败' || task.status == '已取消') {
+    if (VideoTaskStatuses.terminal.contains(task.status)) {
       return task;
     }
 
@@ -973,6 +993,7 @@ class ShotService {
             taskId: task.taskId,
             model: modelId,
             protocol: provider.protocol,
+            cancelToken: cancelToken?.dioToken,
           )
           .timeout(pollTimeout);
 
@@ -984,7 +1005,7 @@ class ShotService {
             bytes = base64Decode(snapshot.base64!);
           } else if (snapshot.url != null) {
             bytes = await videoAdapter
-                .downloadUrl(snapshot.url!)
+                .downloadUrl(snapshot.url!, cancelToken: cancelToken?.dioToken)
                 .timeout(pollTimeout);
           } else {
             return _markVideoFailed(task, '供应商未返回视频数据');
@@ -993,7 +1014,7 @@ class ShotService {
           await videoTaskDao.updateById(
             task.id,
             VideoTasksCompanion(
-              status: const Value('成功'),
+              status: const Value(VideoTaskStatuses.succeeded),
               outputPath: Value(path),
               updatedAt: Value(DateTime.now()),
             ),
@@ -1017,7 +1038,7 @@ class ShotService {
       await videoTaskDao.updateById(
         task.id,
         VideoTasksCompanion(
-          status: const Value('生成中'),
+          status: const Value(VideoTaskStatuses.generating),
           updatedAt: Value(DateTime.now()),
         ),
       );
@@ -1052,7 +1073,7 @@ class ShotService {
     await videoTaskDao.updateById(
       task.id,
       VideoTasksCompanion(
-        status: const Value('失败'),
+        status: const Value(VideoTaskStatuses.failed),
         error: Value(error),
         updatedAt: Value(DateTime.now()),
       ),
@@ -1101,11 +1122,14 @@ class ShotService {
   Future<VideoTask> cancelVideoTask(int videoTaskId) async {
     final task = await videoTaskDao.find(videoTaskId);
     if (task == null) throw StateError('视频任务不存在：$videoTaskId');
-    if (task.status != '排队' && task.status != '生成中') return task;
+    if (!VideoTaskStatuses.inProgress.contains(task.status)) return task;
+    // 中断在途轮询请求：此前只改库不改网络，Dio 请求会一直等到 5 分钟
+    // receiveTimeout，用户点「取消」看不到任何响应。
+    _videoCancelTokens.remove(videoTaskId)?.cancel();
     await videoTaskDao.updateById(
       task.id,
       VideoTasksCompanion(
-        status: const Value('已取消'),
+        status: const Value(VideoTaskStatuses.cancelled),
         error: const Value('已取消：本地停止追踪，远端任务可能仍在运行'),
         updatedAt: Value(DateTime.now()),
       ),

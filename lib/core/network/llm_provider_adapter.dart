@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
+import 'dio_factory.dart';
 import 'sse_parser.dart';
 
 /// 消息角色。
@@ -11,7 +12,7 @@ enum ChatRole { system, user, assistant }
 ///
 /// 不感知业务语义，仅做协议适配；供应商配置由调用方传入。
 class LlmProviderAdapter {
-  LlmProviderAdapter({Dio? dio}) : _dio = dio ?? Dio();
+  LlmProviderAdapter({Dio? dio}) : _dio = dio ?? createDio();
 
   final Dio _dio;
 

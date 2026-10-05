@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import 'dio_factory.dart';
 import 'protocols.dart';
 
 /// 图片生成结果：优先本地字节，其次远程 URL。
@@ -34,7 +35,7 @@ class ImageGenerationException implements Exception {
 /// 协议：`openai-images`（同步返回 b64/URL）。异步任务协议在 M6 视频阶段实现。
 class ImageProviderAdapter {
   ImageProviderAdapter({Dio? dio, int maxRetries = 2})
-    : _dio = dio ?? Dio(),
+    : _dio = dio ?? createDio(),
       _maxRetries = maxRetries < 0 ? 0 : maxRetries;
 
   final Dio _dio;

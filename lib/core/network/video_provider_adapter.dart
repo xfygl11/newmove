@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import 'dio_factory.dart';
 import 'protocols.dart';
 
 /// 视频生成任务的三态快照（提交后 → 轮询中 → 终态）。
@@ -39,7 +40,7 @@ class VideoTaskSnapshot {
 /// 不感知业务语义；供应商配置由调用方传入。轮询由调用方驱动，
 /// 便于 App 前台恢复轮询、后台暂停。
 class VideoProviderAdapter {
-  VideoProviderAdapter({Dio? dio}) : _dio = dio ?? Dio();
+  VideoProviderAdapter({Dio? dio}) : _dio = dio ?? createDio();
 
   final Dio _dio;
 
@@ -75,7 +76,9 @@ class VideoProviderAdapter {
     int maxImageRefs = 9,
     bool generateAudio = false,
     String protocol = Protocols.asyncTask,
+    CancelToken? cancelToken,
   }) async {
+    _throwIfCancelled(cancelToken);
     Protocols.require('video', protocol);
     if (protocol == Protocols.openaiVideos) {
       return _submitOpenAiVideos(
@@ -89,6 +92,7 @@ class VideoProviderAdapter {
         referencePaths: referencePaths,
         firstFramePath: firstFramePath,
         maxImageRefs: maxImageRefs,
+        cancelToken: cancelToken,
       );
     }
     return _submitAsyncTask(
@@ -103,6 +107,7 @@ class VideoProviderAdapter {
       firstFramePath: firstFramePath,
       maxImageRefs: maxImageRefs,
       generateAudio: generateAudio,
+      cancelToken: cancelToken,
     );
   }
 
@@ -115,7 +120,9 @@ class VideoProviderAdapter {
     required String taskId,
     String model = '',
     String protocol = Protocols.asyncTask,
+    CancelToken? cancelToken,
   }) async {
+    _throwIfCancelled(cancelToken);
     Protocols.require('video', protocol);
     if (protocol == Protocols.openaiVideos) {
       return _pollOpenAiVideos(
@@ -123,9 +130,15 @@ class VideoProviderAdapter {
         apiKey: apiKey,
         taskId: taskId,
         model: model,
+        cancelToken: cancelToken,
       );
     }
-    return _pollAsyncTask(baseUrl: baseUrl, apiKey: apiKey, taskId: taskId);
+    return _pollAsyncTask(
+      baseUrl: baseUrl,
+      apiKey: apiKey,
+      taskId: taskId,
+      cancelToken: cancelToken,
+    );
   }
 
   // ---- async-task 协议（现有行为，保持向后兼容） ----
@@ -142,6 +155,7 @@ class VideoProviderAdapter {
     String? firstFramePath,
     required int maxImageRefs,
     required bool generateAudio,
+    CancelToken? cancelToken,
   }) async {
     final references = <Map<String, dynamic>>[];
     var budget = maxImageRefs < 1 ? 1 : maxImageRefs;
@@ -182,6 +196,7 @@ class VideoProviderAdapter {
       generateEndpoint(baseUrl),
       data: body,
       options: _options(apiKey),
+      cancelToken: cancelToken,
     );
 
     final data = response.data?['data'];
@@ -195,11 +210,13 @@ class VideoProviderAdapter {
     required String baseUrl,
     required String apiKey,
     required String taskId,
+    CancelToken? cancelToken,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       statusEndpoint(baseUrl),
       data: {'taskICode': taskId},
       options: _options(apiKey),
+      cancelToken: cancelToken,
     );
 
     final map = response.data ?? const {};
@@ -260,6 +277,7 @@ class VideoProviderAdapter {
     required List<String> referencePaths,
     String? firstFramePath,
     required int maxImageRefs,
+    CancelToken? cancelToken,
   }) async {
     final images = <dynamic>[];
     if (firstFramePath != null) {
@@ -292,6 +310,7 @@ class VideoProviderAdapter {
       endpoint,
       data: body,
       options: _options(apiKey),
+      cancelToken: cancelToken,
     );
 
     final map = response.data ?? const {};
@@ -312,6 +331,7 @@ class VideoProviderAdapter {
     required String apiKey,
     required String taskId,
     required String model,
+    CancelToken? cancelToken,
   }) async {
     // 轮询端点在 host 根路径（非 /v1 子路径），故 strip /v1。
     final pollUrl =
@@ -321,6 +341,7 @@ class VideoProviderAdapter {
     final response = await _dio.get<Map<String, dynamic>>(
       pollUrl,
       options: _options(apiKey),
+      cancelToken: cancelToken,
     );
 
     final map = response.data ?? const {};
@@ -359,12 +380,20 @@ class VideoProviderAdapter {
   }
 
   /// 下载视频为字节。
-  Future<Uint8List> downloadUrl(String url) async {
+  Future<Uint8List> downloadUrl(String url, {CancelToken? cancelToken}) async {
     final response = await _dio.get<List<int>>(
       url,
       options: Options(responseType: ResponseType.bytes),
+      cancelToken: cancelToken,
     );
     return Uint8List.fromList(response.data ?? const []);
+  }
+
+  /// 取消令牌已置位时立即抛出，使生成流程按普通失败处理并回滚状态。
+  static void _throwIfCancelled(CancelToken? token) {
+    if (token != null && token.isCancelled) {
+      throw StateError('已取消');
+    }
   }
 
   Options _options(String apiKey) {

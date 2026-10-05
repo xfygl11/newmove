@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import 'dio_factory.dart';
+
 /// 检查结果：有更新时附下载链接。
 class UpdateCheck {
   const UpdateCheck({
@@ -18,7 +20,7 @@ class UpdateCheck {
 
 /// GitHub Releases 版本检查（借鉴 Toonflow 桌面 updateServer，安卓走 GH Releases）。
 class UpdateChecker {
-  UpdateChecker({Dio? dio}) : _dio = dio ?? Dio();
+  UpdateChecker({Dio? dio}) : _dio = dio ?? createDio();
 
   final Dio _dio;
 

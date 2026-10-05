@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../agent/active_llm.dart';
+import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
 import '../../widgets/status_badge.dart';
@@ -29,6 +31,20 @@ class AssetGalleryPage extends ConsumerStatefulWidget {
 class _AssetGalleryPageState extends ConsumerState<AssetGalleryPage> {
   String _filter = '全部';
   bool _extracting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 页面进入即回收卡死的「生成中」：出图是同步调用，进程被杀就会永久停留。
+    unawaited(
+      ref
+          .read(assetDaoProvider)
+          .flipStatus(
+            fromStatus: AssetStatuses.generating,
+            toStatus: AssetStatuses.pending,
+          ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

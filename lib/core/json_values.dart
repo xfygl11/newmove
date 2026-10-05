@@ -26,6 +26,19 @@ int jsonInt(Object? value, [int fallback = 0]) {
   return fallback;
 }
 
+/// 取整数，保留「未知」语义：null / 无法解析一律返回 null。
+///
+/// 与 [jsonInt] 的区别是它不把未知折叠成 0——「未知」和「0」在能力字段里
+/// 含义相反（0 表示明确的无）。禁止用 `as num?` 强转代替：LLM 或手工编辑的
+/// JSON 常把数字写成字符串，强转抛 TypeError 会让整条记录解析失败。
+int? jsonIntOrNull(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  final text = value?.toString().trim();
+  if (text == null || text.isEmpty) return null;
+  return int.tryParse(text);
+}
+
 /// 取布尔：支持 bool、`"true"/"false"/"yes"/"1"` 等字符串；其余用 [fallback]。
 bool jsonBool(Object? value, [bool fallback = false]) {
   if (value is bool) return value;

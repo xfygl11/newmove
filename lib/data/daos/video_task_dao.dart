@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart';
 
+import '../../core/status_constants.dart';
+
 import '../app_database.dart';
 import '../tables/tables.dart';
 
@@ -30,7 +32,7 @@ class VideoTaskDao extends DatabaseAccessor<AppDatabase>
   /// 全部未完成任务（排队/生成中），任务中心与前台恢复轮询用。
   Stream<List<VideoTask>> watchActive() {
     return (select(videoTasks)
-          ..where((t) => t.status.isIn(['排队', '生成中']))
+          ..where((t) => t.status.isIn(VideoTaskStatuses.inProgress))
           ..orderBy([(t) => OrderingTerm.desc(t.id)]))
         .watch();
   }
@@ -38,7 +40,7 @@ class VideoTaskDao extends DatabaseAccessor<AppDatabase>
   /// 一次性查询未完成任务（定时轮询用）。
   Future<List<VideoTask>> listActive() {
     return (select(videoTasks)
-          ..where((t) => t.status.isIn(['排队', '生成中']))
+          ..where((t) => t.status.isIn(VideoTaskStatuses.inProgress))
           ..orderBy([(t) => OrderingTerm.desc(t.id)]))
         .get();
   }

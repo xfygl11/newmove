@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../agent/active_video.dart';
 import '../../core/settings/app_settings.dart';
+import '../../core/status_constants.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
 import '../../widgets/status_badge.dart';
@@ -87,7 +88,7 @@ class _TaskPageState extends ConsumerState<TaskPage>
     }
     final failed = [
       for (final t in tasks)
-        if (t.status == '失败') t,
+        if (t.status == VideoTaskStatuses.failed) t,
     ];
     var ok = 0;
     var fail = 0;
@@ -249,7 +250,7 @@ class _VideoTaskTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final params = VideoGenParams.decode(task.paramsJson);
-    final failed = task.status == '失败';
+    final failed = task.status == VideoTaskStatuses.failed;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -382,7 +383,9 @@ class _RetryFailedVideoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final failedCount = tasks.where((t) => t.status == '失败').length;
+    final failedCount = tasks
+        .where((t) => t.status == VideoTaskStatuses.failed)
+        .length;
     if (failedCount == 0) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),

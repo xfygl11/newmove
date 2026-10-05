@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../agent/active_image.dart';
 import '../../agent/active_video.dart';
+import '../../core/status_constants.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
 import '../../widgets/image_version_panel.dart';
@@ -447,7 +448,7 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
           onRetry: activeTask == null ? null : () => _retry(activeTask.id),
           onCancel:
               (activeTask != null &&
-                  (activeTask.status == '排队' || activeTask.status == '生成中'))
+                  VideoTaskStatuses.inProgress.contains(activeTask.status))
               ? () => _cancel(activeTask.id)
               : null,
         ),
@@ -906,7 +907,7 @@ class _ActionRow extends StatelessWidget {
             }),
           ),
         ),
-        if (task != null && task.status == '失败') ...[
+        if (task != null && task.status == VideoTaskStatuses.failed) ...[
           const SizedBox(width: 12),
           OutlinedButton.icon(
             onPressed: submitting ? null : onRetry,
@@ -945,7 +946,7 @@ class _HistoryVersions extends StatelessWidget {
   Widget build(BuildContext context) {
     final versions = [
       for (final t in tasks)
-        if (t.outputPath != null && t.status == '成功') t,
+        if (t.outputPath != null && t.status == VideoTaskStatuses.succeeded) t,
     ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return Card(
@@ -1158,8 +1159,8 @@ class _TaskTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: Icon(switch (task.status) {
-          '成功' => Icons.check_circle_outline,
-          '失败' => Icons.error_outline,
+          VideoTaskStatuses.succeeded => Icons.check_circle_outline,
+          VideoTaskStatuses.failed => Icons.error_outline,
           _ => Icons.hourglass_top,
         }),
         title: Text(

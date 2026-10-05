@@ -34,7 +34,7 @@ class BackupService {
     final outFile = File(
       '${(await getTemporaryDirectory()).path}/newmove_backup_$safeName.zip',
     );
-    await outFile.writeAsBytes(ZipEncoder().encode(archive));
+    await _writeArchive(archive, outFile);
     return outFile.path;
   }
 
@@ -45,8 +45,21 @@ class BackupService {
     final outFile = File(
       '${(await getTemporaryDirectory()).path}/newmove_full_backup_${DateTime.now().millisecondsSinceEpoch ~/ 1000}.zip',
     );
-    await outFile.writeAsBytes(ZipEncoder().encode(archive));
+    await _writeArchive(archive, outFile);
     return outFile.path;
+  }
+
+  /// 流式写出 zip。
+  ///
+  /// 替代旧的 `writeAsBytes(ZipEncoder().encode(archive))`——那次写法把整个
+  /// 压缩包编码进内存再一次性落盘，媒体越多占用越高。改为按条目顺序写入输出流。
+  Future<void> _writeArchive(Archive archive, File outFile) async {
+    final encoder = ZipFileEncoder();
+    encoder.create(outFile.path);
+    for (final f in archive.files) {
+      encoder.addArchiveFile(f);
+    }
+    await encoder.close();
   }
 
   Future<Archive> _buildArchive(
@@ -62,6 +75,10 @@ class BackupService {
     for (final rel in (data['mediaFiles'] as List<String>)) {
       final f = File('${docDir.path}/$rel');
       if (!await f.exists()) continue;
+      // 先查长度再读：单文件超上限直接中止，避免整份媒体载入内存。
+      if (f.lengthSync() > maxImportBytes) {
+        throw StateError('媒体文件 $rel 超过 500MB 上限，无法导出');
+      }
       final bytes = await f.readAsBytes();
       archive.addFile(ArchiveFile(rel, bytes.length, bytes));
     }

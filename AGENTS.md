@@ -259,6 +259,54 @@ lib/
     manifest merger 拿不到 debug 变体，联网权限会整段丢失。改 manifest 后必须
     确认 release 产物也能联网。
 
+### 网络、状态与校验约定（M18-B，严重级）
+
+  - **Dio 只从 `createDio()` 造**：`lib/core/network/dio_factory.dart` 是唯一基线，
+    `defaultConnectTimeout = Duration(seconds: 15)`。Dio 的 `connectTimeout` 默认
+    为 0（禁用），`sendTimeout` / `receiveTimeout` 从 TCP+TLS 握手完成之后才计时，
+    弱网半连接下请求会无限期挂起而 per-request 超时不生效。新增网络调用点一律
+    `createDio()`，禁止再写裸 `Dio()`——那样迟早会漏掉新的调用点。per-request 的
+    `sendTimeout` / `receiveTimeout` 可以继续覆盖，但不得覆盖 `connectTimeout`。
+  - **视频任务取消要真正中断请求**：`ShotService` 按 `taskId` 持有
+    `GenerationCancelToken`（`_videoCancelTokens`），`submitVideo` / `pollVideoTask`
+    全程透传 dio `CancelToken`，`VideoProviderAdapter` 每个 `await` 后走静态
+    `_throwIfCancelled`。`cancelVideoTask` 必须**先** `cancel()` **再**写库状态——
+    顺序反了的话 Dio 请求会一直挂着直到 5 分钟 `receiveTimeout`。
+    `GenerationCancelToken` 留在 features 层（`shot_service.dart`），适配器只收
+    dio 的 `CancelToken`，由 service 传 `cancelToken?.dioToken` 桥接，
+    core/network 不得反向 import features。
+  - **卡死状态按「状态本身是否瞬态」判断，不按 updatedAt 超时**：资产出图是
+    同步调用（`AssetService.generate` 内 `await` 到底），`生成中` 只存在于一调用
+    生命周期内，所以库里出现的每一条都意味着进程中途被杀，一律改回 `待生成`
+    （`AssetDao.flipStatus`，资产页 `initState` 触发）。视频任务相反——生成是
+    供应商侧异步任务，中途有真实进度，仍按 `updatedAt` 超时判僵尸。
+    DAO 不绑定状态词表，状态值由调用方传入。
+  - **状态常量放 core，不放 features**：`lib/core/status_constants.dart` 的
+    `VideoTaskStatuses`（含 `inProgress` / `terminal` 列表）是唯一来源，
+    `tables.dart` 列默认值、DAO 查询、service 写入、UI 判断、`StatusKinds` 五处
+    必须同源——data 层不能反向 import features，所以这类跨层共享的状态表一律
+    放 core。新增状态词表照此办理，禁止在业务代码里写字面量。
+  - **外部 JSON 解析必须容错且保留「未知」语义**：`jsonIntOrNull` 把不可解析
+    收敛为 `null` 而不是 0（0 表示「明确没有」，两者含义相反）；列表型能力字段
+    过滤后为空同样视为 `null`，空列表会让 UI 把「能力未知」当成「明确没有」。
+    `ProviderModelCodec.decode` 逐条 try/catch，单条损坏只丢自己——整组包在
+    一个 try 里，一次 `TypeError` 会让三个 `ActiveX` provider 全部失效，
+    用户看到「请配置供应商」而它是配置好的、开着 Key 的。
+  - **Base URL 必须 https**：`validateBaseUrl`（`provider_edit_sheet.dart`）要求
+    https，本机回环（localhost / 127.0.0.1 / ::1）放行以支持本地调试。
+    明文 http 会让 Bearer API Key 在链路上被截走。新增接受 URL 的输入框复用此函数。
+  - **检查更新必须手动触发**：`provider_config_page.dart` 用 `Notifier` + sealed
+    `UpdateCheckStatus`（Idle / Loading / Done / Unavailable），build 阶段不发
+    网络请求，用户点「检查更新」才拉取。禁止改回 `AsyncNotifier` + `ref.watch`——
+    那会把自动拉取写死进依赖图。离线/无网给可读原因，不返回占位版本号冒充
+    「已是最新」。
+  - **T20.10（FK 级联）已决策推迟**：drift 2.35.1 没有 `migrateTables`，
+    16 处 `references()` 补 `KeyAction.cascade` 需手写 15 张表的表重建 SQL，
+    且本环境无模拟器，`if (from < 11)` 迁移分支不会被任何测试覆盖。
+    当前所有删除路径都已走 `CascadeDao`，表定义层缺兜底不构成缺陷，
+    而生产存量数据迁错不可恢复。前置条件：升级带 `migrateTables` 的 drift，
+    且具备模拟器或存量样本库后再做。禁止在验证条件不满足时提交表重建迁移。
+
 ---
 
 ## 5. 数据与状态约定

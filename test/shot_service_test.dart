@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -180,6 +181,11 @@ class _FakeVideoAdapter extends VideoProviderAdapter {
   String? lastFirstFramePath;
   List<String> lastRefPaths = [];
   int? lastMaxRefs;
+  CancelToken? lastSubmitCancelToken;
+  CancelToken? lastPollCancelToken;
+
+  /// 非空时轮询阻塞在此，用于测试「在途请求可被取消」。
+  Completer<void>? pollGate;
 
   @override
   Future<String> submit({
@@ -195,7 +201,9 @@ class _FakeVideoAdapter extends VideoProviderAdapter {
     int maxImageRefs = 9,
     bool generateAudio = false,
     String protocol = 'async-task',
+    CancelToken? cancelToken,
   }) async {
+    lastSubmitCancelToken = cancelToken;
     if (submitError != null) throw submitError!;
     submitCount++;
     lastSubmitPrompts.add(prompt);
@@ -212,7 +220,10 @@ class _FakeVideoAdapter extends VideoProviderAdapter {
     required String taskId,
     String model = '',
     String protocol = 'async-task',
+    CancelToken? cancelToken,
   }) async {
+    lastPollCancelToken = cancelToken;
+    if (pollGate != null) await pollGate!.future;
     switch (nextStatus) {
       case 'success':
         // 返回最小 mp4 字节编 base64 data URI。
@@ -253,6 +264,13 @@ class _FakeVideoFileStore extends VideoFileStore {
     final target = File('${dir.path}/shot_$shotId.mp4');
     await File(sourcePath).copy(target.path);
     return target.path;
+  }
+}
+
+/// 排空事件循环：让在途异步调用推进到下一个 await。
+Future<void> _flushEvents() async {
+  for (var i = 0; i < 50; i++) {
+    await Future<void>.delayed(Duration.zero);
   }
 }
 
@@ -762,6 +780,47 @@ void main() {
       final updated = (await db.shotDao.find(shot.id))!;
       expect(updated.status, ShotStatuses.confirmed);
       expect(updated.outputType, 'image');
+    });
+
+    test('取消任务会中断在途请求：提交与轮询均持有可用令牌', () async {
+      final shot = await prepareConfirmedShot();
+      final video = await fakeVideo();
+
+      final token = GenerationCancelToken();
+      final task = await service.submitVideo(
+        shotId: shot.id,
+        video: video,
+        params: const VideoGenParams(
+          modelId: 'vid',
+          durationSec: 5,
+          ratio: '16:9',
+          resolution: '480p',
+          generateAudio: false,
+          referenceCount: 0,
+        ),
+        cancelToken: token,
+      );
+      // 提交时的令牌透传给 Dio，而非在适配器外被丢弃。
+      expect(fakeVideoAdapter.lastSubmitCancelToken, token.dioToken);
+      expect(fakeVideoAdapter.lastSubmitCancelToken!.isCancelled, isFalse);
+
+      token.cancel();
+      expect(fakeVideoAdapter.lastSubmitCancelToken!.isCancelled, isTrue);
+
+      // 轮询自带令牌；取消任务后该令牌必须已置位（这才是「点取消有响应」）。
+      final gate = Completer<void>();
+      fakeVideoAdapter.pollGate = gate;
+      final inFlight = service.pollVideoTask(task.id);
+      await _flushEvents();
+      expect(fakeVideoAdapter.lastPollCancelToken, isNotNull);
+      expect(fakeVideoAdapter.lastPollCancelToken!.isCancelled, isFalse);
+
+      await service.cancelVideoTask(task.id);
+      expect(fakeVideoAdapter.lastPollCancelToken!.isCancelled, isTrue);
+
+      gate.complete();
+      await inFlight;
+      fakeVideoAdapter.pollGate = null;
     });
 
     test('已取消任务不再轮询，镜头保持确认态', () async {

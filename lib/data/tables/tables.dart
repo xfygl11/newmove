@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart';
 
+import '../../core/status_constants.dart';
+
 /// 项目：一部作品的顶层容器。
 @DataClassName('Project')
 class Projects extends Table {
@@ -226,7 +228,8 @@ class VideoTasks extends Table {
   // 供应商配置 id（恢复轮询时定位供应商与 Key）。
   TextColumn get providerId => text()();
   // 状态：排队 / 生成中 / 成功 / 失败。
-  TextColumn get status => text().withDefault(const Constant('排队'))();
+  TextColumn get status =>
+      text().withDefault(const Constant(VideoTaskStatuses.queued))();
   // 提交时的参数快照（模型/时长/画幅/分辨率/参考数），重试与详情展示用。
   TextColumn get paramsJson => text().withDefault(const Constant('{}'))();
   TextColumn get error => text().nullable()();
