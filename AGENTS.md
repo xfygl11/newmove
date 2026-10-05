@@ -395,8 +395,34 @@ lib/
       `lib/agent/prompt_resolver.dart` 的 `PromptResolver.resolve` 统一解析，
       `allSlots` 常量与 `assets/skills/` 目录一一对应（12 个）。
       覆盖列为空串时视为未覆盖、继续回落。
-      表不加 unique key：`projectId` 在 `scope='global'` 时为 null，SQLite 里
-      NULL 互不相等会让 unique 约束形同虚设，所以 DAO 走显式查再插/改的 upsert。
+       表不加 unique key：`projectId` 在 `scope='global'` 时为 null，SQLite 里
+       NULL 互不相等会让 unique 约束形同虚设，所以 DAO 走显式查再插/改的 upsert。
+    - **结构化字段是段级不是帧级，且必须显式写回**：`Shots` 表的九个摄影字段
+      （`composition` / `lens` / `cameraPosition` / `eyeline` / `focus` / `stability`
+      / `blocking` / `dialogueStartRatio` / `dialogueEndRatio`）落在
+      `ShotDraft`（段级）而不是 `ShotFrameDraft`（帧级）——构图、焦距、机位、
+      视线、焦点、稳定性都是段级摄影参数，帧只是段内时间切片。段级 `blocking`
+      写人物在该段时长内的移动轨迹，帧级 `blocking` 写首帧站位，两个字段同名但
+      语义不同，skill 里显式要求不重复。重导时九个字段一律**显式写回**（空也写
+      null），否则重新导演后上一轮的构图会残留。
+    - **闭集词表字段与占位词一律解析为 null，不写「未知」进库**：`bodyType` 走
+      `BodyTypes.all` 闭集（瘦长 / 匀称 / 结实 / 魁梧 / 丰腴 / 娇小），不在词表
+      内的词返回 null；镜头摄影字段的占位词（无 / 未指定 / 同上 / - / N/A）同样
+      返回 null。库里的 null 表示「未指定」，UI 整行跳过——写「未知」进库会让 UI
+      渲染出「体型：未知」这种对用户没有信息的行。数值字段同理：`heightCm` 夹在
+      80-230、对白占比夹在 0-100，越界与不可解析一律视为未指定。空数组同样返回
+      null：`costumeSets` 全空时不能存 `[]`，否则 UI 会显示「0 套服装」。
+    - **章节维护提醒是确认框不是只读列表，且相似度复用 `PromptGate.jaccard`**：
+      `ChapterMaintainGate`（`lib/features/novel/chapter_maintain_gate.dart`）在 AI
+      写作完成后触发（不是「正文一落盘」——手动编辑也走 `_save`，那是用户自己的
+      文字，提示核对没有意义），阈值 500 字，四项目清单对应 TruthFile 四类状态
+      （角色状态 / 场景状态 / 伏笔进展 / 道具状态）。清单是**可勾选**的，勾完显示
+      「已全部核对」，未勾完显示「稍后再核对」——两种情况都能关闭，只提示不阻塞。
+      相似度比较对象是「新写内容」与「续写前的既有正文」；词元数不足时返回
+      **null 而不是 0**——0 会被误判为「完全无关」而错误触发全量重写建议；首次
+      写作无既有正文时跳过相似度检查、只做清单提示。阈值 0.35 与 `PromptGate`
+      的 0.75（查雷同）是同一量尺上的反向用法。
+
 
 
 ---

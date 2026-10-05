@@ -10,6 +10,7 @@ import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
 import '../../widgets/image_version_panel.dart';
 import '../../widgets/status_badge.dart';
+import 'asset_models.dart';
 import 'asset_providers.dart';
 import 'asset_service.dart';
 
@@ -273,6 +274,12 @@ class _DetailBody extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(_formatAnchor(asset.appearanceAnchor)),
                 const Divider(height: 24),
+                if (_bodyParams(asset).isNotEmpty) ...[
+                  Text('身体参数', style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 4),
+                  Text(_bodyParams(asset)),
+                  const Divider(height: 24),
+                ],
                 Text('生成提示词', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 4),
                 Text(asset.prompt),
@@ -337,6 +344,43 @@ class _DetailBody extends ConsumerWidget {
       // 忽略，回退原文。
     }
     return json;
+  }
+
+  /// M19 T21.13 角色身体参数明细：身高 / 体型 / 服装套逐套展开。
+  /// 非角色或字段全缺省时返回空串，整块不渲染。
+  String _bodyParams(Asset asset) {
+    if (asset.type != AssetTypes.character) return '';
+    final lines = <String>[
+      if (asset.heightCm != null) '身高：${asset.heightCm} cm',
+      if (asset.bodyType != null) '体型：${asset.bodyType}',
+    ];
+    final sets = <Map>[];
+    final rawSets = asset.costumeSets;
+    if (rawSets != null && rawSets.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawSets);
+        if (decoded is List) {
+          sets.addAll(decoded.whereType<Map>());
+        }
+      } on FormatException {
+        // 忽略，视为未指定。
+      }
+    }
+    if (sets.isNotEmpty) {
+      lines.add('服装套：');
+      for (var i = 0; i < sets.length; i++) {
+        final name = setString(sets[i], 'name');
+        final desc = setString(sets[i], 'description');
+        lines.add('  ${i + 1}. ${name.isNotEmpty ? name : '未命名'}'
+            '${desc.isEmpty ? '' : '——$desc'}');
+      }
+    }
+    return lines.join('\n');
+  }
+
+  static String setString(Map set, String key) {
+    final v = set[key];
+    return v == null ? '' : v.toString().trim();
   }
 }
 

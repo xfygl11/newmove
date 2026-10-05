@@ -140,6 +140,11 @@ class AssetService {
             name: d.name,
             stableId: d.stableId,
             appearanceAnchor: Value(jsonEncode(d.appearanceAnchor)),
+            heightCm: Value(d.heightCm),
+            bodyType: Value(d.bodyType),
+            costumeSets: Value(
+              d.costumeSets == null ? null : jsonEncode(d.costumeSets),
+            ),
             boardLayout: Value(_normalizeBoardLayout(d.type, d.boardLayout)),
             prompt: Value(d.prompt),
             status: const Value(AssetStatuses.pending),
@@ -166,6 +171,11 @@ class AssetService {
             stableId: d.stableId,
             variantOf: Value(parent?.id),
             appearanceAnchor: Value(jsonEncode(d.appearanceAnchor)),
+            heightCm: Value(d.heightCm),
+            bodyType: Value(d.bodyType),
+            costumeSets: Value(
+              d.costumeSets == null ? null : jsonEncode(d.costumeSets),
+            ),
             boardLayout: Value(_normalizeBoardLayout(d.type, d.boardLayout)),
             prompt: Value(d.prompt),
             status: const Value(AssetStatuses.pending),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -212,6 +213,32 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
+/// M19 T21.13 角色身体参数摘要：身高 / 体型 / 服装套数，字段全缺省时返回空串。
+extension AssetBodySummary on Asset {
+  String get bodySummary {
+    if (type != AssetTypes.character) return '';
+    final parts = <String>[
+      if (heightCm != null) '$heightCm cm',
+      ?bodyType,
+    ];
+    final setCount = costumeSetCount;
+    if (setCount > 1) parts.add('$setCount 套服装');
+    return parts.join(' · ');
+  }
+
+  int get costumeSetCount {
+    final raw = costumeSets;
+    if (raw == null || raw.isEmpty) return 0;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) return decoded.length;
+    } on FormatException {
+      // 落库内容异常时视为未指定。
+    }
+    return 0;
+  }
+}
+
 class _AssetCard extends StatelessWidget {
   const _AssetCard({
     required this.projectId,
@@ -258,6 +285,15 @@ class _AssetCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
+                  if (asset.bodySummary.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      asset.bodySummary,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                   const SizedBox(height: 4),
                   Row(
                     children: [

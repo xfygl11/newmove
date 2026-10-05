@@ -12,6 +12,7 @@ import '../../core/storage/providers.dart';
 import '../../core/text/chapter_import.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
+import 'chapter_maintain_gate.dart';
 import 'chapter_word_gate.dart';
 import 'novel_models.dart';
 import 'novel_providers.dart';
@@ -387,6 +388,22 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
         _appendText(chunk);
       }
       await _save(chapter);
+
+      // 章节维护提醒：AI 写出的长正文可能静默改动人物/场景/伏笔/道具状态，
+      // 定稿前必须人工核对一遍（M19 T21.15）。
+      if (!mounted) return;
+      final full = _plainText;
+      final added = full.length > existing.length
+          ? full.substring(existing.length)
+          : full;
+      final issue = ChapterMaintainGate.issue(
+        wordCount: _lastWordCount,
+        aiGenerated: true,
+        similarity: existing.trim().isEmpty
+            ? null
+            : ChapterMaintainGate.similarity(existing, added),
+      );
+      if (issue != null) await _showMaintainSheet(issue);
     } catch (e) {
       _toast('写作失败：$e');
     } finally {
@@ -478,6 +495,83 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// M19 T21.15 四项目维护清单：逐项勾选，全部勾完才能关闭。
+  /// 只提示不阻塞——用户未勾完也能关闭，但会有明确的未完成提示。
+  Future<void> _showMaintainSheet(ChapterMaintainIssue issue) async {
+    final checked = <int>{};
+
+    void toggle(int i) => setState(() {
+          if (!checked.add(i)) checked.remove(i);
+        });
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '章节维护清单（${issue.wordCount} 字）',
+                    style: Theme.of(ctx).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'AI 写出的正文可能已改动人物与状态信息，定稿前逐项核对。',
+                    style: Theme.of(ctx).textTheme.bodySmall,
+                  ),
+                  if (issue.rewriteSuggested) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '新写内容与既有正文差异过大，建议全量重写而非在原文上修补。',
+                      style: Theme.of(ctx).textTheme.bodySmall,
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  for (var i = 0; i < maintainChecklist.length; i++)
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Checkbox(
+                        value: checked.contains(i),
+                        onChanged: (_) => toggle(i),
+                      ),
+                      title: Text(maintainChecklist[i]),
+                      shape: RoundedRectangleBorder(
+                        side: BorderSide(
+                          color: Theme.of(ctx).dividerColor,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.tonal(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: Text(
+                        checked.length == maintainChecklist.length
+                            ? '已全部核对'
+                            : '稍后再核对',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _save(Chapter chapter) async {

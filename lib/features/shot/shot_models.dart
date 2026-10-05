@@ -122,6 +122,15 @@ class ShotDraft {
     required this.prompt,
     required this.frames,
     required this.refs,
+    this.composition,
+    this.lens,
+    this.cameraPosition,
+    this.eyeline,
+    this.focus,
+    this.stability,
+    this.blocking,
+    this.dialogueStartRatio,
+    this.dialogueEndRatio,
   });
 
   final String globalSeq;
@@ -132,11 +141,37 @@ class ShotDraft {
   final List<ShotFrameDraft> frames;
   final List<ShotRefDraft> refs;
 
+  /// 段级摄影参数（M19 T21.12）：构图 / 焦距 / 机位 / 视线 / 焦点 / 稳定性。
+  final String? composition;
+  final String? lens;
+  final String? cameraPosition;
+  final String? eyeline;
+  final String? focus;
+  final String? stability;
+
+  /// 段级走位：人物在本段时长内的移动轨迹，与帧级首帧站位是两个东西。
+  final String? blocking;
+
+  /// 对白起止占段时长比例（百分比 0-100）；null 表示本段无对白。
+  final int? dialogueStartRatio;
+  final int? dialogueEndRatio;
+
   factory ShotDraft.fromJson(Map<String, dynamic> json) {
+    final start = _ratio(json['dialogueStartRatio']);
+    final end = _ratio(json['dialogueEndRatio']);
     return ShotDraft(
       globalSeq: jsonString(json['globalSeq']).trim(),
       shotType: normalizeShotType(jsonString(json['shotType'])),
       prompt: jsonString(json['prompt']).trim(),
+      composition: _text(json['composition']),
+      lens: _text(json['lens']),
+      cameraPosition: _text(json['cameraPosition']),
+      eyeline: _text(json['eyeline']),
+      focus: _text(json['focus']),
+      stability: _text(json['stability']),
+      blocking: _text(json['blocking']),
+      dialogueStartRatio: start,
+      dialogueEndRatio: end,
       frames: [
         for (final f in jsonList(json['frames']))
           ShotFrameDraft.fromJson(jsonMap(f)),
@@ -158,6 +193,26 @@ class ShotDraft {
     if (text.contains('远')) return '远景';
     return '中景';
   }
+
+  /// 结构化字段容错：空串与占位词（无 / 未指定 / 同上 / - / N/A）一律视为未指定。
+  static String? _text(Object? value) {
+    final text = jsonString(value).trim();
+    if (text.isEmpty) return null;
+    if (_placeholders.contains(text)) return null;
+    return text;
+  }
+
+  /// 对白占比容错：解析为整数并夹到 0-100，越界与不可解析视为未指定。
+  static int? _ratio(Object? value) {
+    if (value == null) return null;
+    final n = value is num
+        ? value
+        : double.tryParse(jsonString(value).trim()) ?? -1;
+    if (n < 0 || n > 100) return null;
+    return n.round();
+  }
+
+  static const _placeholders = {'无', '未指定', '同上', '-', 'N/A', 'n/a'};
 }
 
 /// ShotDirector 一次输出的完整结果。

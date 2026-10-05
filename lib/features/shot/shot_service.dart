@@ -385,6 +385,16 @@ class ShotService {
             shotType: Value(ShotDraft.normalizeShotType(draft.shotType)),
             prompt: Value(draft.prompt),
             status: Value(nextStatus),
+            // M19 T21.12 段级摄影参数：空字段也显式写回，重导可清掉旧值。
+            composition: Value(draft.composition),
+            lens: Value(draft.lens),
+            cameraPosition: Value(draft.cameraPosition),
+            eyeline: Value(draft.eyeline),
+            focus: Value(draft.focus),
+            stability: Value(draft.stability),
+            blocking: Value(draft.blocking),
+            dialogueStartRatio: Value(draft.dialogueStartRatio),
+            dialogueEndRatio: Value(draft.dialogueEndRatio),
           ),
         );
 

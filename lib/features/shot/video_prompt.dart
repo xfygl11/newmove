@@ -116,6 +116,11 @@ class VideoPromptBuilder {
 
     buf.writeln('Target duration: ${targetSec}s');
 
+    // Camera spec：段级结构化摄影参数（M19 T21.12）。
+    // 提示词里出现结构化字段后，不再靠自由正文描述构图，模型可直接按项执行。
+    final spec = shot.cinemaSpec;
+    if (spec.isNotEmpty) buf.writeln('Camera spec: $spec');
+
     // Timeline：A9.2.1「时间块 + 连续自然语言」——每帧一个时间块，
     // 把主体/景别/角度/运镜/站位/表演/对白组织成一段成片式画面描述，
     // 不拆「镜头N | 主体 | 表演」之类的子标题（docs/03 §6.3 差距①）。
@@ -201,5 +206,21 @@ class VideoPromptBuilder {
     }
 
     return '${fmt(1, 2)}-${fmt(3, 4)}';
+  }
+}
+
+/// M19 T21.12 段级摄影参数拼成一行可执行描述；全缺省时返回空串。
+extension ShotCinemaSpec on Shot {
+  String get cinemaSpec {
+    final items = <String>[
+      if (composition != null) '构图：$composition',
+      if (lens != null) '焦距：$lens',
+      if (cameraPosition != null) '机位：$cameraPosition',
+      if (eyeline != null) '视线：$eyeline',
+      if (focus != null) '焦点：$focus',
+      if (stability != null) '稳定性：$stability',
+      if (blocking != null) '走位：$blocking',
+    ];
+    return items.join('，');
   }
 }

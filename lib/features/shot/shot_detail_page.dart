@@ -1262,6 +1262,7 @@ class _PromptSection extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
+            ...shot.cinemaParamsOf(context),
             if (editing)
               TextField(
                 controller: controller,
@@ -1308,6 +1309,42 @@ class _RefTile extends StatelessWidget {
       title: Text('{{ref$order}} ${asset?.name ?? '未知资产'}'),
       subtitle: Text(role),
     );
+  }
+}
+
+/// M19 T21.12 段级摄影参数只读展示：字段缺省时整行跳过，全缺省不占位。
+extension ShotCinemaParams on Shot {
+  List<Widget> cinemaParamsOf(BuildContext context) {
+    final all = [
+      ('构图', composition),
+      ('焦距景深', lens),
+      ('机位', cameraPosition),
+      ('视线', eyeline),
+      ('焦点', focus),
+      ('稳定性', stability),
+      ('走位', blocking),
+      (
+        '对白占比',
+        (dialogueStartRatio != null || dialogueEndRatio != null)
+            ? '${dialogueStartRatio ?? '-'}%–${dialogueEndRatio ?? '-'}%'
+            : null,
+      ),
+    ];
+    final entries = all.where((e) => e.$2 != null && e.$2!.isNotEmpty);
+
+    if (entries.isEmpty) return const [];
+
+    return [
+      const SizedBox(height: 4),
+      for (final entry in entries)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 2),
+          child: Text(
+            '${entry.$1}：${entry.$2}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+    ];
   }
 }
 
