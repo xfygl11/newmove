@@ -115,6 +115,8 @@ Entries discovered by the Agent during task execution should follow this format:
   - 带默认值的列在 `Companion.insert` 里参数类型是 `Value<String>`（要包 `Value(...)`），无默认值的必填列直接收 `String`；nullable 且非必填（如 `subjectLabel`）传 `String?` 时必须用 `Value.absent()` 分支，否则报 `String? → String` 不匹配
   - **2.35.1 的 `get()` 不接受 `limit` 参数**：`query.get(limit: n)` 直接报 `undefined_named_parameter`；限制条数要先 `query.limit(n)`（来自 `LimitContainerMixin`）再 `query.get()`
   - 条件 where 链要写成 `final q = select(t); if (x != null) q.where(...); q.orderBy(...); q.limit(n); return q.get();`——`where` / `orderBy` 都返回新 statement，链式调用会丢掉后面的子句；`const IsNull(false)` 这类写法不合法
+  - **改 `tables.dart` / DAO 后必须重跑 `dart run build_runner build`，且提交前要 `git diff` 核对生成的 `app_database.g.dart` 与源文件一致**：build_runner 是增量 + 缓存的，若先前在带 `KeyAction.cascade` 的版本上生成过、随后又 revert 了源文件，`.g.dart` 会残留 16 处 `ON DELETE CASCADE`（本次 M18-B 实际踩到），会把 v11 迁移推给不存在的表重建。核对方式：源文件 `grep -c KeyAction.cascade` 为 0 时，`.g.dart` 里 `ON DELETE CASCADE` 也必须为 0
+  - 生成的 `.g.dart` 是 `part of` 源文件，**不继承源文件的 import**：列默认值要引用自定义常量（如 `Constant(VideoTaskStatuses.queued)`）时，必须在**真正 import 该文件的库文件**（`app_database.dart`）里加 import，否则 `.g.dart` 报 `invalid_constant` + `undefined_identifier`。同理 `tables.dart` 自己的 import 只对它自己生效
 
 [纯 Dart 语义与依赖 API 的本地验证方法]
 - Date: 2026-10-05
