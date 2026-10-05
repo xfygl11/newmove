@@ -12,16 +12,22 @@ import '../../data/daos/asset_dao.dart';
 import '../../data/daos/beat_dao.dart';
 import '../../data/daos/generation_attempt_dao.dart';
 import '../../data/daos/revision_dao.dart';
+import '../../data/daos/script_dao.dart';
 import '../../data/daos/shot_dao.dart';
+import '../script/script_models.dart';
 import 'asset_agents.dart';
 import 'asset_models.dart';
 
 /// 资产图片的业务编排：清单提取落库、生成、验收、变体。
 class AssetService {
+  /// 变体提示词追加语句：提示词与确认框共用，保证展示即执行。
+  static const String variantPromptSuffix = '保持与基础图同一角色身份，仅做指定变化。';
+
   AssetService({
     required this.assetDao,
     required this.beatDao,
     required this.shotDao,
+    required this.scriptDao,
     required this.agents,
     required this.imageAdapter,
     required this.fileStore,
@@ -32,6 +38,7 @@ class AssetService {
   final AssetDao assetDao;
   final BeatDao beatDao;
   final ShotDao shotDao;
+  final ScriptDao scriptDao;
   final AssetAgents agents;
   final ImageProviderAdapter imageAdapter;
   final AssetFileStore fileStore;
@@ -51,9 +58,13 @@ class AssetService {
   // ---- 清单提取（T5.2） ----
 
   Future<String> buildSkeletonContext(int scriptId) async {
+    final script = await scriptDao.find(scriptId);
     final beats = await beatDao.listByScript(scriptId);
     final shots = await shotDao.listByScript(scriptId);
     final buf = StringBuffer();
+    // 风格必须出现在这里：资产 prompt 的「已确认风格」占位符全靠它填，
+    // 缺失时 LLM 只能自由发挥，跨资产画风会飘。
+    buf.writeln('【画面风格】${effectiveArtStyle(script?.artStyle)}');
     buf.writeln('【原子节拍】');
     buf.writeln(
       jsonEncode([
@@ -366,7 +377,7 @@ class AssetService {
         variantOf: Value(base.id),
         appearanceAnchor: Value(base.appearanceAnchor),
         boardLayout: Value(base.boardLayout),
-        prompt: Value('${base.prompt}\n保持与基础图同一角色身份，仅做指定变化。'),
+        prompt: Value('${base.prompt}\n$variantPromptSuffix'),
         status: const Value(AssetStatuses.pending),
       ),
     );
@@ -399,6 +410,7 @@ class AssetService {
       apiKey: image.apiKey,
       model: image.modelId,
       prompt: asset.prompt,
+      size: image.imageSize,
       protocol: image.protocol,
     );
     return _resolveBytes(result);
@@ -409,7 +421,7 @@ class AssetService {
     if (bytes != null && bytes.isNotEmpty) return bytes;
     final url = result.url;
     if (url != null && url.isNotEmpty) return imageAdapter.downloadUrl(url);
-    throw StateError('图片供应商未返回图片数据');
+    throw ImageGenerationException('供应商未返回图片数据');
   }
 
   String _normalizeType(String type) {

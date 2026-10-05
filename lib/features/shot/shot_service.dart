@@ -27,6 +27,7 @@ import '../../data/daos/shot_frame_dao.dart';
 import '../../data/daos/video_task_dao.dart';
 import '../../data/daos/provider_dao.dart';
 import '../provider_config/provider_models.dart';
+import '../script/script_models.dart';
 import 'shot_agents.dart';
 import 'shot_models.dart';
 import 'video_prompt.dart';
@@ -264,7 +265,7 @@ class ShotService {
     final sceneBySeq = <int, Scene>{for (final s in scenes) s.seq: s};
 
     final buf = StringBuffer();
-    buf.writeln('【画面风格】${script?.artStyle ?? '日式 2D 动画，干净线稿，柔和上色'}');
+    buf.writeln('【画面风格】${effectiveArtStyle(script?.artStyle)}');
     buf.writeln('【可用资产清单（仅可绑定这些 stableId）】');
     buf.writeln(
       jsonEncode([
@@ -575,6 +576,7 @@ class ShotService {
         apiKey: image.apiKey,
         model: image.modelId,
         prompt: prompt,
+        size: image.imageSize,
         protocol: image.protocol,
         cancelToken: cancelToken?.dioToken,
       );
@@ -598,6 +600,7 @@ class ShotService {
         apiKey: image.apiKey,
         model: image.modelId,
         prompt: prompt,
+        size: image.imageSize,
         protocol: image.protocol,
         cancelToken: cancelToken?.dioToken,
       );
@@ -611,6 +614,7 @@ class ShotService {
         apiKey: image.apiKey,
         model: image.modelId,
         prompt: prompt,
+        size: image.imageSize,
         referencePath: paths.single,
         protocol: image.protocol,
         cancelToken: cancelToken?.dioToken,
@@ -624,6 +628,7 @@ class ShotService {
       apiKey: image.apiKey,
       model: image.modelId,
       prompt: prompt,
+      size: image.imageSize,
       referencePaths: paths,
       protocol: image.protocol,
       cancelToken: cancelToken?.dioToken,
@@ -654,7 +659,7 @@ class ShotService {
     if (url != null && url.isNotEmpty) {
       return imageAdapter.downloadUrl(url);
     }
-    throw StateError('供应商未返回图片数据');
+    throw ImageGenerationException('供应商未返回图片数据');
   }
 
   // ---- 衔接校验（T6.5 / A7） ----
@@ -789,7 +794,9 @@ class ShotService {
     );
 
     // 构造 A9 视频提示词（时长取参数面板选择值）。
+    // 画风随剧本走：未设置时用统一默认值，避免跨段视觉漂移。
     final frames = await shotFrameDao.listByShot(shotId);
+    final script = await scriptDao.find(shot.scriptId);
     final prompt = const VideoPromptBuilder().build(
       shot: shot,
       frames: frames,
@@ -797,6 +804,7 @@ class ShotService {
       assetById: {
         for (final a in await assetDao.listByScript(shot.scriptId)) a.id: a,
       },
+      artStyle: effectiveArtStyle(script?.artStyle),
       durationSec: params.durationSec,
     );
 

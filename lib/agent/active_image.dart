@@ -20,6 +20,17 @@ class ActiveImage {
   String get baseUrl => provider.baseUrl;
   String get modelId => model.id;
   String get protocol => provider.protocol;
+
+  /// 本次生成实际发送的 `size`。
+  ///
+  /// 供应商声明了可选尺寸时按其声明取第一项（例如 Agnes 声明 `1K/2K/3K/4K`，
+  /// 若继续发 `1024x1024` 就落在它声明的取值域之外）；未声明时回落到
+  /// OpenAI 标准值。
+  String get imageSize {
+    final sizes = model.imageSizes;
+    if (sizes != null && sizes.isNotEmpty) return sizes.first;
+    return '1024x1024';
+  }
 }
 
 final activeImageProvider = FutureProvider<ActiveImage?>((ref) async {

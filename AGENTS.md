@@ -120,6 +120,15 @@ lib/
 - 一键预设：`AgnesPresets`（`lib/features/provider_config/agnes_presets.dart`）可一键创建 Agnes AI 的 LLM/图片/视频 3 个供应商条目（协议分别为 `openai-chat` / `openai-images` / `openai-videos`），Base URL 固定 `https://apihub.agnes-ai.cn/v1`。
 - Agent 系统提示词从 `skills/` 资源加载，与业务代码分离；修改 Prompt 不触碰业务逻辑。
 
+### 图片生成与风格约定（M15）
+
+- **临时故障自动重试**：`ImageProviderAdapter._withRetry` 只对 `408/429/500/502/503/504` 与网络超时重发（默认 2 次，指数退避 2/4 秒，尊重供应商 `Retry-After` 并夹在 1–30 秒），4xx 参数错误立刻失败——重试只会白烧算力。每次重发前检查 `CancelToken`，取消不会被重试吞掉。
+- **错误必须走 `ImageGenerationException`**：`toString()` 即中文原因（状态码 + 归类 + 供应商消息截 300 字 + 已重试次数）。禁止把裸 `DioException` `$e` 吐给用户或写进台账——503 的响应体常带 base64 片段和超长英文堆栈。
+- **尺寸透传**：`ActiveImage.imageSize` 取该供应商已勾选模型的 `imageSizes` 第一项（无声明回落 `1024x1024`），`ShotService` / `AssetService` 生成时一律传 `size: image.imageSize`。供应商声明的尺寸档位（如 Agnes `1K/2K/3K/4K`）与像素值都合法，不要写死像素串。请求体只发 `model/prompt/n/size/response_format`，不要夹带 `stream`/`format`/`images`。
+- **单一风格字段**：图片与视频共用 `Scripts.artStyle`，未设置或空白时经 `script_models.dart` 的 `defaultArtStyle` / `effectiveArtStyle` 回落默认值，**禁止在业务代码里再写一份字面量**。编辑入口在剧本详情页「画面风格」，保存后资产图与视频提示词统一按新风格执行。
+- **资产提示词按模板生成**：`assets/skills/asset/asset_design.md` 给出角色四视图 / 场景主视图 / 道具 2x2 三套逐字模板与负向约束，LLM 只替换占位符，不自创散文；变体复用父资产模板 + `AssetService.variantPromptSuffix`，提示词里不写引用标记（父资产图由 App 自动上传）。
+- **变体提示词常量单一来源**：`AssetService.variantPromptSuffix` 同时用于落库与确认框 `promptPreview`，改文案只改这一处。
+
 ### 数据与备份约定（M11 P2 追加）
 
 - 全库备份：`BackupService.exportAll()` 导出所有项目为单 zip（`scope: full`），`importProject` 兼容全库包与单项目包；导入前经 `findConflicts` 做同名项目检测，冲突时弹窗确认。

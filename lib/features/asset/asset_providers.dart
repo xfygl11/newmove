@@ -15,6 +15,7 @@ final assetServiceProvider = Provider<AssetService>(
     assetDao: ref.watch(assetDaoProvider),
     beatDao: ref.watch(beatDaoProvider),
     shotDao: ref.watch(shotDaoProvider),
+    scriptDao: ref.watch(scriptDaoProvider),
     agents: ref.watch(assetAgentsProvider),
     imageAdapter: ref.watch(imageProviderAdapterProvider),
     fileStore: ref.watch(assetFileStoreProvider),

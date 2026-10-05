@@ -1,10 +1,13 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../app.dart';
+import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
+import '../../data/daos/script_dao.dart';
 import '../novel/novel_providers.dart';
 import '../shot/shot_compose_service.dart';
 import '../shot/shot_providers.dart';
@@ -160,6 +163,11 @@ class _HeaderCard extends ConsumerWidget {
             const SizedBox(height: 4),
             Text('版本 v${script.version} · ${script.fidelityMode}'),
             const SizedBox(height: 12),
+            _ArtStyleEditor(
+              script: script,
+              scriptDao: ref.read(scriptDaoProvider),
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -220,6 +228,94 @@ class _HeaderCard extends ConsumerWidget {
     );
     if (ok != true) return;
     await ref.read(scriptServiceProvider).finalizeScript(script.id);
+  }
+}
+
+class _ArtStyleEditor extends StatefulWidget {
+  const _ArtStyleEditor({required this.script, required this.scriptDao});
+
+  final Script script;
+  final ScriptDao scriptDao;
+
+  @override
+  State<_ArtStyleEditor> createState() => _ArtStyleEditorState();
+}
+
+class _ArtStyleEditorState extends State<_ArtStyleEditor> {
+  /// 图片与视频共用同一份风格描述；空值回落 [defaultArtStyle]。
+  late final TextEditingController _controller = TextEditingController(
+    text: effectiveArtStyle(widget.script.artStyle),
+  );
+
+  String get _current => effectiveArtStyle(widget.script.artStyle);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dirty = _controller.text.trim() != _current;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.palette_outlined,
+              size: 16,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 6),
+            Text('画面风格', style: theme.textTheme.labelMedium),
+            const Spacer(),
+            TextButton(
+              onPressed: _current == defaultArtStyle
+                  ? null
+                  : () => _controller.text = defaultArtStyle,
+              child: const Text('恢复默认'),
+            ),
+          ],
+        ),
+        TextField(
+          controller: _controller,
+          maxLines: 2,
+          decoration: const InputDecoration(
+            hintText: '例如：日式 2D 动画，干净线稿，柔和上色',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        if (dirty) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '保存后按新风格执行资产图与视频',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+              FilledButton(onPressed: _save, child: const Text('保存风格')),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _save() async {
+    final text = _controller.text.trim();
+    await widget.scriptDao.updateRow(
+      widget.script.copyWith(artStyle: Value(text.isEmpty ? null : text)),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(text.isEmpty ? '已清除风格，按默认值执行' : '已保存风格')),
+    );
   }
 }
 

@@ -80,8 +80,8 @@ Entries discovered by the Agent during task execution should follow this format:
 - Category: Testing Methods
 - Instructions:
   - 跑核心测试（约 35 秒）：`/opt/flutter/bin/flutter test test/novel_service_test.dart test/backup_service_test.dart test/daos_test.dart test/truth_file_store_test.dart test/revision_and_attempt_test.dart`
-  - 全量 `/opt/flutter/bin/flutter test` 约 7 分钟、峰值约 1.5 GiB，用 background terminal + `memory_percent: 60` 跑
-  - 当前基线：M14 全部落地，全量 193 例全通过，`/opt/flutter/bin/flutter analyze` 零问题（`flutter` 需用绝对路径 `/opt/flutter/bin/flutter`）
+  - 全量 `/opt/flutter/bin/flutter test` 约 8 分钟（加 `--concurrency=1`）、峰值约 1.5 GiB，用 background terminal 跑
+  - 当前基线：M14 + M15 落地，全量 200 例全通过，`/opt/flutter/bin/flutter analyze` 零问题（`flutter` 需用绝对路径 `/opt/flutter/bin/flutter`）
 
 [Flutter 3.47 Dialog / widget test 踩坑记录]
 - Date: 2026-10-05
@@ -93,6 +93,15 @@ Entries discovered by the Agent during task execution should follow this format:
   - widget test 里对话框含 `TextField` 时 **不能 `pumpAndSettle`**（caret 闪烁 timer 永不 settle），改用固定帧 `pump(Duration(milliseconds: 150))` 循环
   - `tester.scrollUntilVisible` 的 `scrollable` 形参必须命中 `Scrollable` widget，传 `find.byType(ListView)` 会抛 `ListView is not a subtype of Scrollable`
   - widget test 结束时用 `pumpWidget(SizedBox.shrink())` + `pump(Duration(milliseconds: 1))` 卸载树并 flush drift 流订阅的内部计时器，否则会报 pending timer
+
+[后台测试进程与本机能存（踩坑记录）]
+- Date: 2026-10-05
+- Context: 全量测试期间可用内存只剩 335 MB，4 个 80–95 分钟前遗留的 `flutter_tester`（PPID=1，各约 150–180 MB）在占内存
+- Category: Troubleshooting & Debugging
+- Instructions:
+  - 跑全量测试前先看 `free -m` 与 `ps -eo pid,ppid,stat,etime,rss,cmd --sort=-rss | grep flutter_tester`；本环境约 8 GiB，opencode 本体长期占约 700 MB
+  - `flutter test` 被中断后子进程 `flutter_tester` 会被 init 收养（PPID=1）成孤儿且不会自动退出；按具体 PID 逐个 `kill <pid>` 释放，不要用 pkill 按进程名批量杀
+  - 全量测试加 `--concurrency=1` 把并行套件数压到 1 降低同时段内存占用；后台命令不要用 `| tail -N` 包裹（tail 等 EOF 才输出，运行期间日志一直是 0 字节）
 
 [drift 2.35 更新语义与 Companion 限制（踩坑记录）]
 - Date: 2026-10-04

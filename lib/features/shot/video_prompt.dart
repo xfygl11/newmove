@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../core/json_values.dart';
 import '../../data/app_database.dart';
+import '../script/script_models.dart';
 
 /// 视频生成参数快照（提交前构造，随任务持久化）。
 class VideoGenParams {
@@ -86,7 +87,7 @@ class VideoPromptBuilder {
     required List<ShotFrame> frames,
     required List<AssetRef> refs,
     required Map<int, Asset> assetById,
-    String artStyle = '日式 2D 动画，干净线稿，柔和上色',
+    String artStyle = defaultArtStyle,
     int? durationSec,
   }) {
     final targetSec = durationSec ?? (shot.durationMs / 1000).round();

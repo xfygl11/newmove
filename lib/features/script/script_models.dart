@@ -3,6 +3,18 @@ library;
 
 import 'package:newmove/core/json_values.dart';
 
+/// 画面风格缺省值。
+///
+/// 剧本未设置画面风格时，资产 prompt、分镜 prompt、视频 prompt 三条链路共用
+/// 这一句文案；各链路各自硬编码会让默认画风在不同阶段漂移。
+const String defaultArtStyle = '日式 2D 动画，干净线稿，柔和上色';
+
+/// 取出剧本画面风格；空串与纯空白回落到 [defaultArtStyle]。
+String effectiveArtStyle(String? raw) {
+  final trimmed = raw?.trim() ?? '';
+  return trimmed.isEmpty ? defaultArtStyle : trimmed;
+}
+
 /// 一句对白 / 画外音。
 class DialogueLine {
   const DialogueLine({

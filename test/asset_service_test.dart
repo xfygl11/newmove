@@ -132,6 +132,7 @@ void main() {
       assetDao: db.assetDao,
       beatDao: db.beatDao,
       shotDao: db.shotDao,
+      scriptDao: db.scriptDao,
       agents: AssetAgents(adapter: _FakeLlmAdapter(_cannedAssets)),
       imageAdapter: _FakeImageAdapter(),
       fileStore: _FakeFileStore(),

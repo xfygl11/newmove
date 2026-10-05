@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../agent/active_image.dart';
 import '../../data/app_database.dart';
+import '../../widgets/confirm_sheet.dart';
 import '../../widgets/status_badge.dart';
 import 'asset_providers.dart';
+import 'asset_service.dart';
 
 /// 资产详情：大图预览、外观锚点、变体列表、生成/验收操作。
 class AssetDetailPage extends ConsumerStatefulWidget {
@@ -75,8 +77,20 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
   }
 
   Future<void> _regenerate() async {
+    final asset = ref.read(assetProvider(widget.assetId)).value;
     final image = await _resolveImage();
-    if (image == null) return;
+    if (image == null || !mounted) return;
+    // 消耗算力前必须过确认框：展示即将执行的提示词、模型与尺寸。
+    final ok = await ConfirmSheet.confirm(
+      context,
+      objectName: '资产图 · ${asset?.name ?? ''}',
+      quantity: '1 张',
+      promptPreview: asset?.prompt ?? '',
+      params: ['模型：${image.modelId}', '尺寸：${image.imageSize}'],
+      gate: '资产图阶段门：确认提示词后重新生成一张图',
+      title: '重新生成资产图',
+    );
+    if (!ok || !mounted) return;
     setState(() => _working = true);
     try {
       await ref
@@ -98,8 +112,23 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
   }
 
   Future<void> _createVariant() async {
+    final asset = ref.read(assetProvider(widget.assetId)).value;
     final image = await _resolveImage();
-    if (image == null) return;
+    if (image == null || !mounted) return;
+    // 变体走图生图：把基础图作为参考上传，提示词在服务端追加固定后缀。
+    final ok = await ConfirmSheet.confirm(
+      context,
+      objectName: '资产变体 · ${asset?.name ?? ''}',
+      quantity: '1 张',
+      promptPreview: asset == null
+          ? ''
+          : '${asset.prompt}\n${AssetService.variantPromptSuffix}',
+      params: ['模型：${image.modelId}', '尺寸：${image.imageSize}'],
+      refs: ['参考图 1：基础资产图'],
+      gate: '资产图阶段门：确认提示词后基于基础图生成一张变体',
+      title: '生成资产变体',
+    );
+    if (!ok || !mounted) return;
     setState(() => _working = true);
     try {
       await ref
