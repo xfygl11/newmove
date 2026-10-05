@@ -9,6 +9,7 @@ import '../../agent/active_image.dart';
 import '../../agent/active_video.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
+import '../../widgets/image_version_panel.dart';
 import '../asset/asset_providers.dart';
 import '../provider_config/provider_models.dart';
 import 'shot_models.dart';
@@ -41,6 +42,7 @@ class _ShotDetailPageState extends ConsumerState<ShotDetailPage>
   late TabController _tabCtrl;
   bool _editing = false;
   bool _generating = false;
+  bool _imageWorking = false;
   bool _initialized = false;
 
   @override
@@ -104,6 +106,16 @@ class _ShotDetailPageState extends ConsumerState<ShotDetailPage>
                   padding: const EdgeInsets.all(16),
                   children: [
                     _Preview(shot: shot),
+                    const SizedBox(height: 16),
+                    _ShotImageHistoryPanel(
+                      shotId: shot.id,
+                      currentPath: shot.outputType == 'image'
+                          ? shot.outputPath
+                          : null,
+                      working: _imageWorking,
+                      onSelect: (path) => _selectImageVersion(shot, path),
+                      onReplace: () => _replaceShotImage(shot),
+                    ),
                     const SizedBox(height: 16),
                     _PromptSection(
                       shot: shot,
@@ -222,6 +234,48 @@ class _ShotDetailPageState extends ConsumerState<ShotDetailPage>
     setState(() => _editing = false);
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('提示词已保存')));
+  }
+
+  /// 切换到分镜图历史版本（M17 T19.3）。
+  Future<void> _selectImageVersion(Shot shot, String outputPath) async {
+    setState(() => _imageWorking = true);
+    try {
+      await ref
+          .read(shotServiceProvider)
+          .selectImageVersion(shotId: shot.id, outputPath: outputPath);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('已切换分镜图版本')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('切换失败：$e')));
+    } finally {
+      if (mounted) setState(() => _imageWorking = false);
+    }
+  }
+
+  /// 用本地图片替换分镜图（≤100MB），旧图已存为历史版本。
+  Future<void> _replaceShotImage(Shot shot) async {
+    final result = await FilePicker.pickFiles(type: FileType.image);
+    if (result.isEmpty) return;
+    final path = result.single.path;
+    if (path == null || !mounted) return;
+    setState(() => _imageWorking = true);
+    try {
+      await ref
+          .read(shotServiceProvider)
+          .replaceImage(shotId: shot.id, sourcePath: path);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('已替换分镜图')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('替换失败：$e')));
+    } finally {
+      if (mounted) setState(() => _imageWorking = false);
+    }
   }
 
   /// 确认分镜图（待验收 → 分镜图已确认）。
@@ -1306,6 +1360,45 @@ class _FrameTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 分镜图历史版本面板（M17 T19.3）：读快照表 kind=image 的记录。
+class _ShotImageHistoryPanel extends ConsumerWidget {
+  const _ShotImageHistoryPanel({
+    required this.shotId,
+    required this.currentPath,
+    required this.working,
+    required this.onSelect,
+    required this.onReplace,
+  });
+
+  final int shotId;
+  final String? currentPath;
+  final bool working;
+  final ValueChanged<String> onSelect;
+  final VoidCallback onReplace;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final revisions =
+        ref.watch(shotRevisionsProvider(shotId)).value ??
+        const <ShotRevision>[];
+    return ImageVersionPanel(
+      items: [
+        for (final r in revisions)
+          if (r.kind == 'image')
+            ImageVersionItem(
+              label: '版本 ${r.revision} · ${formatSnapshotTime(r.createdAt)}',
+              path: imagePathOfSnapshot(r.snapshot),
+              subtitle: r.summary,
+            ),
+      ],
+      currentPath: currentPath,
+      onSelect: onSelect,
+      onReplace: onReplace,
+      working: working,
     );
   }
 }

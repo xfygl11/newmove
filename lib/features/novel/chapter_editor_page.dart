@@ -12,6 +12,7 @@ import '../../core/storage/providers.dart';
 import '../../core/text/chapter_import.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
+import 'chapter_word_gate.dart';
 import 'novel_models.dart';
 import 'novel_providers.dart';
 
@@ -70,6 +71,87 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
 
   int _lastWordCount = 0;
 
+  /// 每章目标字数（来自作品行，M17 T19.5）；0 表示不设门槛。
+  int _targetWords = 0;
+
+  bool _targetWordsLoaded = false;
+
+  /// 首次拿到章节后从作品行读一次目标字数，后续编辑走 [_saveTargetWords]。
+  Future<void> _ensureTargetWords(Chapter chapter) async {
+    if (_targetWordsLoaded) return;
+    final book = await ref.read(novelDaoProvider).findBook(chapter.bookId);
+    if (book == null || !mounted) return;
+    setState(() {
+      _targetWords = book.targetWords;
+      _targetWordsLoaded = true;
+    });
+  }
+
+  /// 保存目标字数到作品行：同一作品的所有章节共用同一个目标。
+  Future<void> _saveTargetWords(Chapter chapter, int targetWords) async {
+    final book = await ref.read(novelDaoProvider).findBook(chapter.bookId);
+    if (book == null) return;
+    await ref
+        .read(novelDaoProvider)
+        .updateBook(book.copyWith(targetWords: targetWords));
+    if (!mounted) return;
+    setState(() => _targetWords = targetWords);
+  }
+
+  /// 目标字数可编辑：底栏点字数标签即可改，0 表示不设门槛。
+  Future<void> _editTargetWords(Chapter chapter) async {
+    final input = TextEditingController(
+      text: _targetWords > 0 ? '$_targetWords' : '',
+    );
+    try {
+      final result = await showDialog<int>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('每章目标字数'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: input,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                  hintText: '0 表示不设门槛',
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '定稿时会按目标的 '
+                '${(ChapterWordGate.minRatio * 100).round()}% ~ '
+                '${(ChapterWordGate.maxRatio * 100).round()}% 提示。',
+                style: Theme.of(ctx).textTheme.bodySmall,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final v = int.tryParse(input.text.trim()) ?? 0;
+                Navigator.of(ctx).pop(v < 0 ? 0 : v);
+              },
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+      );
+      if (result == null) return;
+      await _saveTargetWords(chapter, result);
+    } finally {
+      input.dispose();
+    }
+  }
+
   /// 安全构造 Quill 文档：空内容用默认单换行文档，避免
   /// `DocumentDelta cannot be empty` 崩溃；非空内容必须补结尾换行，
   /// 否则 `loadDocument` 断言 `endsWith('\n')` 失败。
@@ -120,6 +202,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
           if (chapter == null) {
             return const Center(child: Text('章节不存在'));
           }
+          if (!_targetWordsLoaded) unawaited(_ensureTargetWords(chapter));
           final controller = _ensureController(chapter.content ?? '');
           return Column(
             children: [
@@ -147,11 +230,13 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
                 status: chapter.status,
                 hasContent: _plainText.isNotEmpty,
                 wordCount: _lastWordCount,
+                targetWords: _targetWords,
                 onWrite: () => _write(chapter),
                 onWritePlan: () => _write(chapter, usePlanner: true),
                 onReview: () => _review(chapter),
                 onFinalize: () => _finalize(chapter),
                 onSave: () => _save(chapter),
+                onTargetWordsChanged: () => _editTargetWords(chapter),
               ),
             ],
           );
@@ -263,7 +348,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
     final prompt = await svc.buildWritePrompt(
       bookId: chapter.bookId,
       chapterNumber: chapter.seq,
-      targetWords: 2000,
+      targetWords: _targetWords,
       existingContent: existing,
       chapterPlan: plan,
       maxTokens: llm.budgetTokens,
@@ -273,7 +358,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
       context,
       objectName: '第 ${chapter.seq} 章正文',
       gate: '章节写作（正文需人工验收后才进入下一章）',
-      quantity: '目标约 2000 字',
+      quantity: _targetWords > 0 ? '目标约 $_targetWords 字' : '目标字数未设置（点底栏字数标签设置）',
       promptPreview: prompt,
       params: [
         '供应商：${llm.provider.label}',
@@ -292,7 +377,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
       final stream = svc.writeChapter(
         bookId: chapter.bookId,
         chapterNumber: chapter.seq,
-        targetWords: 2000,
+        targetWords: _targetWords,
         existingContent: existing,
         chapterPlan: plan,
         chapterId: chapter.id,
@@ -357,20 +442,15 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
       final latest = await ref.read(novelDaoProvider).findChapter(chapter.id);
       if (latest == null) return;
 
-      // 字数契约校验：低于目标 80% 时给出提示，但不阻断。
-      final targetWords = 2000;
-      final actualWords = latest.wordCount;
-      if (actualWords < targetWords * 0.8) {
+      // 字数契约校验：低于下限或高于上限都只提示，用户仍可放行。
+      final gate = ChapterWordGate.issue(latest.wordCount, _targetWords);
+      if (gate != null) {
         if (!mounted) return;
         final proceed = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('字数偏低'),
-            content: Text(
-              '当前 $actualWords 字，目标约 $targetWords 字（达标率 '
-              '${(actualWords / targetWords * 100).round()}%）。\n'
-              '仍可定稿，但建议续写后再定。',
-            ),
+            title: Text(gate.low ? '字数偏低' : '字数偏高'),
+            content: Text(gate.message),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
@@ -481,6 +561,10 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
   }
 
   Future<void> _applyFix(Chapter chapter, ReviewIssue issue) async {
+    if (issue.isUnknownScope) {
+      _toast('该问题定位不清，先做整体重写，再定点修');
+      return;
+    }
     final llm = await _activeLlm();
     if (llm == null) return;
     setState(() => _busy = true);
@@ -637,7 +721,12 @@ class _IssueCard extends StatelessWidget {
                   ),
                 Chip(label: Text(issue.type.label)),
                 const SizedBox(width: 8),
-                if (issue.isStructural) const Chip(label: Text('结构')),
+                if (issue.isUnknownScope)
+                  const Chip(label: Text('待定位'))
+                else if (issue.isStructural)
+                  const Chip(label: Text('结构'))
+                else
+                  const Chip(label: Text('局部')),
                 if (issue.handling != 'ignore')
                   Chip(
                     label: Text(issue.handlingLabel),
@@ -727,17 +816,30 @@ class _BottomBar extends StatelessWidget {
     required this.onReview,
     required this.onFinalize,
     required this.onSave,
+    required this.targetWords,
+    required this.onTargetWordsChanged,
   });
 
   final bool busy;
   final String status;
   final bool hasContent;
   final int wordCount;
+  final int targetWords;
   final VoidCallback onWrite;
   final VoidCallback onWritePlan;
   final VoidCallback onReview;
   final VoidCallback onFinalize;
   final VoidCallback onSave;
+  final VoidCallback onTargetWordsChanged;
+
+  /// 字数标签：只有实际字数、只有目标、或「实际 / 目标」三种形态。
+  String get _wordCountLabel {
+    final actual = wordCount > 0 ? '$wordCount 字' : '';
+    final target = targetWords > 0 ? '目标 $targetWords' : '';
+    if (actual.isEmpty) return target;
+    if (target.isEmpty) return actual;
+    return '$actual / $target';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -747,18 +849,39 @@ class _BottomBar extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (wordCount > 0)
+            if (wordCount > 0 || targetWords > 0)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Text(
-                      '$wordCount 字',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.outline,
+                    GestureDetector(
+                      onTap: onTargetWordsChanged,
+                      child: Text(
+                        _wordCountLabel,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
                       ),
                     ),
+                    if (wordCount > 0 && targetWords > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Text(
+                          '${((wordCount / targetWords) * 100).round()}%',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color:
+                                    ChapterWordGate.issue(
+                                          wordCount,
+                                          targetWords,
+                                        ) ==
+                                        null
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.orange.shade700,
+                              ),
+                        ),
+                      ),
                   ],
                 ),
               ),

@@ -20,6 +20,7 @@ import 'features/script/script_versions_page.dart';
 import 'features/shot/shot_detail_page.dart';
 import 'features/shot/shot_list_page.dart';
 import 'features/skeleton/skeleton_page.dart';
+import 'features/task/attempt_log_page.dart';
 import 'features/task/task_page.dart';
 
 /// 根 Navigator key：供需要脱离页面 context 弹 Toast 的地方使用
@@ -66,6 +67,8 @@ final GoRouter appRouter = GoRouter(
       ],
     ),
     GoRoute(path: '/bad-route', builder: (_, _) => const BadRoutePage()),
+    // 生成台账：任务中心入口，只读展示历次生成尝试（M17 T19.4）。
+    GoRoute(path: '/tasks/attempts', builder: (_, _) => const AttemptLogPage()),
     // 小说模块：进入后全屏覆盖底部 TabBar（对齐 docs/05 3.2 流程即导航）。
     GoRoute(
       path: '/novel/:projectId',

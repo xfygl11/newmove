@@ -613,6 +613,18 @@ class $NovelBooksTable extends NovelBooks
     requiredDuringInsert: false,
     defaultValue: const Constant('长篇'),
   );
+  static const VerificationMeta _targetWordsMeta = const VerificationMeta(
+    'targetWords',
+  );
+  @override
+  late final GeneratedColumn<int> targetWords = GeneratedColumn<int>(
+    'target_words',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(2000),
+  );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -634,6 +646,7 @@ class $NovelBooksTable extends NovelBooks
     premise,
     outline,
     workType,
+    targetWords,
     status,
   ];
   @override
@@ -703,6 +716,15 @@ class $NovelBooksTable extends NovelBooks
         workType.isAcceptableOrUnknown(data['work_type']!, _workTypeMeta),
       );
     }
+    if (data.containsKey('target_words')) {
+      context.handle(
+        _targetWordsMeta,
+        targetWords.isAcceptableOrUnknown(
+          data['target_words']!,
+          _targetWordsMeta,
+        ),
+      );
+    }
     if (data.containsKey('status')) {
       context.handle(
         _statusMeta,
@@ -754,6 +776,10 @@ class $NovelBooksTable extends NovelBooks
         DriftSqlType.string,
         data['${effectivePrefix}work_type'],
       )!,
+      targetWords: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}target_words'],
+      )!,
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
@@ -777,6 +803,7 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
   final String? premise;
   final String? outline;
   final String workType;
+  final int targetWords;
   final String status;
   const NovelBook({
     required this.id,
@@ -788,6 +815,7 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
     this.premise,
     this.outline,
     required this.workType,
+    required this.targetWords,
     required this.status,
   });
   @override
@@ -812,6 +840,7 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
       map['outline'] = Variable<String>(outline);
     }
     map['work_type'] = Variable<String>(workType);
+    map['target_words'] = Variable<int>(targetWords);
     map['status'] = Variable<String>(status);
     return map;
   }
@@ -837,6 +866,7 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
           ? const Value.absent()
           : Value(outline),
       workType: Value(workType),
+      targetWords: Value(targetWords),
       status: Value(status),
     );
   }
@@ -856,6 +886,7 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
       premise: serializer.fromJson<String?>(json['premise']),
       outline: serializer.fromJson<String?>(json['outline']),
       workType: serializer.fromJson<String>(json['workType']),
+      targetWords: serializer.fromJson<int>(json['targetWords']),
       status: serializer.fromJson<String>(json['status']),
     );
   }
@@ -872,6 +903,7 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
       'premise': serializer.toJson<String?>(premise),
       'outline': serializer.toJson<String?>(outline),
       'workType': serializer.toJson<String>(workType),
+      'targetWords': serializer.toJson<int>(targetWords),
       'status': serializer.toJson<String>(status),
     };
   }
@@ -886,6 +918,7 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
     Value<String?> premise = const Value.absent(),
     Value<String?> outline = const Value.absent(),
     String? workType,
+    int? targetWords,
     String? status,
   }) => NovelBook(
     id: id ?? this.id,
@@ -897,6 +930,7 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
     premise: premise.present ? premise.value : this.premise,
     outline: outline.present ? outline.value : this.outline,
     workType: workType ?? this.workType,
+    targetWords: targetWords ?? this.targetWords,
     status: status ?? this.status,
   );
   NovelBook copyWithCompanion(NovelBooksCompanion data) {
@@ -912,6 +946,9 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
       premise: data.premise.present ? data.premise.value : this.premise,
       outline: data.outline.present ? data.outline.value : this.outline,
       workType: data.workType.present ? data.workType.value : this.workType,
+      targetWords: data.targetWords.present
+          ? data.targetWords.value
+          : this.targetWords,
       status: data.status.present ? data.status.value : this.status,
     );
   }
@@ -928,6 +965,7 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
           ..write('premise: $premise, ')
           ..write('outline: $outline, ')
           ..write('workType: $workType, ')
+          ..write('targetWords: $targetWords, ')
           ..write('status: $status')
           ..write(')'))
         .toString();
@@ -944,6 +982,7 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
     premise,
     outline,
     workType,
+    targetWords,
     status,
   );
   @override
@@ -959,6 +998,7 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
           other.premise == this.premise &&
           other.outline == this.outline &&
           other.workType == this.workType &&
+          other.targetWords == this.targetWords &&
           other.status == this.status);
 }
 
@@ -972,6 +1012,7 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
   final Value<String?> premise;
   final Value<String?> outline;
   final Value<String> workType;
+  final Value<int> targetWords;
   final Value<String> status;
   const NovelBooksCompanion({
     this.id = const Value.absent(),
@@ -983,6 +1024,7 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     this.premise = const Value.absent(),
     this.outline = const Value.absent(),
     this.workType = const Value.absent(),
+    this.targetWords = const Value.absent(),
     this.status = const Value.absent(),
   });
   NovelBooksCompanion.insert({
@@ -995,6 +1037,7 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     this.premise = const Value.absent(),
     this.outline = const Value.absent(),
     this.workType = const Value.absent(),
+    this.targetWords = const Value.absent(),
     this.status = const Value.absent(),
   }) : projectId = Value(projectId),
        title = Value(title);
@@ -1008,6 +1051,7 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     Expression<String>? premise,
     Expression<String>? outline,
     Expression<String>? workType,
+    Expression<int>? targetWords,
     Expression<String>? status,
   }) {
     return RawValuesInsertable({
@@ -1020,6 +1064,7 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
       if (premise != null) 'premise': premise,
       if (outline != null) 'outline': outline,
       if (workType != null) 'work_type': workType,
+      if (targetWords != null) 'target_words': targetWords,
       if (status != null) 'status': status,
     });
   }
@@ -1034,6 +1079,7 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     Value<String?>? premise,
     Value<String?>? outline,
     Value<String>? workType,
+    Value<int>? targetWords,
     Value<String>? status,
   }) {
     return NovelBooksCompanion(
@@ -1046,6 +1092,7 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
       premise: premise ?? this.premise,
       outline: outline ?? this.outline,
       workType: workType ?? this.workType,
+      targetWords: targetWords ?? this.targetWords,
       status: status ?? this.status,
     );
   }
@@ -1080,6 +1127,9 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     if (workType.present) {
       map['work_type'] = Variable<String>(workType.value);
     }
+    if (targetWords.present) {
+      map['target_words'] = Variable<int>(targetWords.value);
+    }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
@@ -1098,6 +1148,7 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
           ..write('premise: $premise, ')
           ..write('outline: $outline, ')
           ..write('workType: $workType, ')
+          ..write('targetWords: $targetWords, ')
           ..write('status: $status')
           ..write(')'))
         .toString();
@@ -10763,6 +10814,7 @@ typedef $$NovelBooksTableCreateCompanionBuilder = NovelBooksCompanion Function({
   Value<String?> premise,
   Value<String?> outline,
   Value<String> workType,
+  Value<int> targetWords,
   Value<String> status,
 });
 typedef $$NovelBooksTableUpdateCompanionBuilder = NovelBooksCompanion Function({
@@ -10775,6 +10827,7 @@ typedef $$NovelBooksTableUpdateCompanionBuilder = NovelBooksCompanion Function({
   Value<String?> premise,
   Value<String?> outline,
   Value<String> workType,
+  Value<int> targetWords,
   Value<String> status,
 });
 
@@ -10902,6 +10955,11 @@ class $$NovelBooksTableFilterComposer
 
   ColumnFilters<String> get workType => $composableBuilder(
     column: $table.workType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get targetWords => $composableBuilder(
+    column: $table.targetWords,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11058,6 +11116,11 @@ class $$NovelBooksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get targetWords => $composableBuilder(
+    column: $table.targetWords,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnOrderings(column),
@@ -11121,6 +11184,11 @@ class $$NovelBooksTableAnnotationComposer
 
   GeneratedColumn<String> get workType =>
       $composableBuilder(column: $table.workType, builder: (column) => column);
+
+  GeneratedColumn<int> get targetWords => $composableBuilder(
+    column: $table.targetWords,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
@@ -11266,6 +11334,7 @@ class $$NovelBooksTableTableManager
                 Value<String?> premise = const Value.absent(),
                 Value<String?> outline = const Value.absent(),
                 Value<String> workType = const Value.absent(),
+                Value<int> targetWords = const Value.absent(),
                 Value<String> status = const Value.absent(),
               }) => NovelBooksCompanion(
                 id: id,
@@ -11277,6 +11346,7 @@ class $$NovelBooksTableTableManager
                 premise: premise,
                 outline: outline,
                 workType: workType,
+                targetWords: targetWords,
                 status: status,
               ),
           createCompanionCallback:
@@ -11290,6 +11360,7 @@ class $$NovelBooksTableTableManager
                 Value<String?> premise = const Value.absent(),
                 Value<String?> outline = const Value.absent(),
                 Value<String> workType = const Value.absent(),
+                Value<int> targetWords = const Value.absent(),
                 Value<String> status = const Value.absent(),
               }) => NovelBooksCompanion.insert(
                 id: id,
@@ -11301,6 +11372,7 @@ class $$NovelBooksTableTableManager
                 premise: premise,
                 outline: outline,
                 workType: workType,
+                targetWords: targetWords,
                 status: status,
               ),
           withReferenceMapper: (p0) => p0

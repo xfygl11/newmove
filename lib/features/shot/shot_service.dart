@@ -13,6 +13,7 @@ import '../../core/json_values.dart';
 import '../../core/network/image_provider_adapter.dart';
 import '../../core/network/video_provider_adapter.dart';
 import '../../core/storage/shot_file_store.dart';
+import '../../core/storage/storage_rules.dart';
 import '../../core/storage/video_file_store.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/asset_dao.dart';
@@ -1125,15 +1126,61 @@ class ShotService {
     );
   }
 
+  /// 切换到分镜图历史版本（M17 T19.3）。
+  ///
+  /// 只改 `outputPath` 指针并补写一条快照，不重建对象、不重跑生成。
+  /// `outputType` 保持 `image`：分镜图与视频共用 `outputPath` 列，靠它区分。
+  Future<void> selectImageVersion({
+    required int shotId,
+    required String outputPath,
+  }) async {
+    final shot = await shotDao.find(shotId);
+    if (shot == null) throw StateError('镜头不存在：$shotId');
+    if (!File(outputPath).existsSync()) throw StateError('图片文件不存在');
+    await shotDao.updateById(
+      shotId,
+      ShotsCompanion(
+        outputPath: Value(outputPath),
+        outputType: const Value('image'),
+        status: const Value(ShotStatuses.confirmed),
+      ),
+    );
+    await _saveShotSnapshot(shotId, 'image', '切换到历史版本');
+  }
+
+  /// 用本地文件替换分镜图（M17 T19.3）。先查长度再复制，避免超大文件载入内存。
+  Future<void> replaceImage({
+    required int shotId,
+    required String sourcePath,
+  }) async {
+    final shot = await shotDao.find(shotId);
+    if (shot == null) throw StateError('镜头不存在：$shotId');
+    final source = File(sourcePath);
+    if (!source.existsSync()) throw StateError('文件不存在：$sourcePath');
+    if (source.lengthSync() > StorageLimits.maxReplaceableFileBytes) {
+      throw StateError('文件超过 100MB 上限');
+    }
+    final path = await fileStore.saveFromPath(shotId, sourcePath);
+    await shotDao.updateById(
+      shotId,
+      ShotsCompanion(
+        outputPath: Value(path),
+        outputType: const Value('image'),
+        status: const Value(ShotStatuses.confirmed),
+      ),
+    );
+    await _saveShotSnapshot(shotId, 'image', '手动替换分镜图');
+  }
+
   /// 用本地文件替换镜头视频产物（≤100MB，导入私有目录）。
   Future<void> replaceVideo({
     required int shotId,
     required String sourcePath,
   }) async {
-    final file = File(sourcePath);
-    if (!file.existsSync()) throw StateError('文件不存在：$sourcePath');
+    final source = File(sourcePath);
+    if (!source.existsSync()) throw StateError('文件不存在：$sourcePath');
     // 先校验大小再复制，避免超大文件先全量载入内存导致 OOM。
-    if (file.lengthSync() > 100 * 1024 * 1024) {
+    if (source.lengthSync() > StorageLimits.maxReplaceableFileBytes) {
       throw StateError('文件超过 100MB 上限');
     }
     final path = await videoFileStore.saveFromPath(shotId, sourcePath);

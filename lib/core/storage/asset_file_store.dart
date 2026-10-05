@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
 
+import 'storage_rules.dart';
+
 /// 资产图片文件存储：应用私有目录 `files/assets/`。
 class AssetFileStore {
   /// 返回并创建资产图片根目录。
@@ -16,11 +18,25 @@ class AssetFileStore {
   }
 
   /// 保存资产生成图，返回文件绝对路径。
+  ///
+  /// 文件名带微秒戳：每次生成都写新文件，历史版本字节不被覆盖。
   Future<String> save(int assetId, Uint8List bytes) async {
     final dir = await _baseDir();
-    final file = File('${dir.path}/asset_$assetId.png');
+    final file = File(
+      VersionedFileNames.build(dir, prefix: 'asset', id: assetId, ext: 'png'),
+    );
     await file.writeAsBytes(bytes, flush: true);
     return file.path;
+  }
+
+  /// 从源文件复制图片（流式复制，不整包载入内存），返回目标绝对路径。
+  Future<String> saveFromPath(int assetId, String sourcePath) async {
+    final dir = await _baseDir();
+    final target = File(
+      VersionedFileNames.build(dir, prefix: 'asset', id: assetId, ext: 'png'),
+    );
+    await File(sourcePath).copy(target.path);
+    return target.path;
   }
 
   /// 删除单个资产图片文件。

@@ -510,3 +510,38 @@ A0 的「叙事规模 / 总时长要求 / 目标模型」三项在对话式工�
 - **`stateAndDelivery.md` 的生产状态文件**：本项目已有生成尝试台账 + 版本快照表，比其 Markdown 台账更强。
 - **多集子目录组织**：对应本机数据表的 `episodeNo`，无文件系统层级概念。
 
+
+---
+
+## 6.6 M17 · 审校矩阵按题材分支（T19.6）
+
+对照 InkOS `packages/core/skills/inkos-story-review/SKILL.md` 与 `references/review-matrix.md`：审校不是单一标准，而是按题材调阈值。本项目 `assets/skills/novel/review.md` 原为六个维度一视同仁，会导致喜剧被当成逻辑漏洞、推理被当成普通言情评分。
+
+### 6.6.1 题材化阈值（写进 `review.md`，不是代码分支）
+
+审校矩阵是**提示词层**的能力，落在 `assets/skills/novel/review.md` 里，由 LLM 按传入的 `genre` 自行选分支；`NovelService.reviewChapter` 把 `genre` 注入 prompt 上下文。矩阵如下：
+
+| 题材 | 放宽 | 加严 |
+|---|---|---|
+| 喜剧 | 巧合、夸张、时间线跳跃可接受 | 笑点必须有铺垫；主角动机不能为了搞笑自毁 |
+| 言情 | 情绪时间可拉长、闪回可多 | 关系推进必须有可观测变化；情绪不能全靠旁白宣告 |
+| 推理 | 叙述顺序可乱（倒叙/不可靠叙述） | 必须有公平推理：读者可用的线索全在正文里；信息释放受控 |
+| 商业连载 | 单章可只有钩子没有收束 | 每章至少一个推进轴变化；伏笔不能连续三章不推进 |
+| 文学 | 节奏可慢、结尾可开放 | 语言不能出现 AI 腔套话；留白不能等于信息缺失 |
+| 其他 / 未标注 | 按通用六维度 | 同上 |
+
+### 6.6.2 `scope` 扩为三值
+
+`ReviewIssue.scope` 由 `local / structural` 扩为 `local / structural / unknown`：
+
+- `local`：改动范围限定在本章一句或一段，定点修订即可。
+- `structural`：需要跨章或跨设定改动，属于结构层问题。
+- `unknown`：证据不足，需要更大范围判断才能定位（例如「这里违和但说不清是哪条设定冲突」）。
+
+`unknown` 单独一个 Chip 展示，**不并入 `local` 分支**——并入会让定点修订工具拿一个定位不清的问题去改正文，风险高。对应实现：`novel_models.dart` 增加 `isUnknownScope`（与既有 `isStructural` 并列），`chapter_editor_page` 对三值分别展示 Chip；`reviewChapter` 的定点修订只接受 `local`。
+
+### 6.6.3 本轮不动的部分
+
+- 审校矩阵不落到代码里的分支表：题材是自由文本，代码做不了穷举匹配；由 LLM 在提示词里选择分支，`genre` 为空时走通用维度。
+- `ReviewIssue.code` / `quote` / `handling` / `verifyQuotes` 的既有约定不变，本轮只加 `scope` 第三值。
+

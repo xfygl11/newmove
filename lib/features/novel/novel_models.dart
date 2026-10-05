@@ -139,6 +139,9 @@ class ReviewIssue {
 
   bool get isStructural => scope == 'structural';
 
+  /// 需要更大范围判断才能定位：UI 单独 Chip，且不允许走定点修订。
+  bool get isUnknownScope => scope == 'unknown';
+
   /// 证据是否已由本地正文命中校验。
   bool get quoteVerified => quoteOffset != null;
 

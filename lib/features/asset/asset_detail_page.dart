@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../agent/active_image.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
+import '../../widgets/image_version_panel.dart';
 import '../../widgets/status_badge.dart';
 import 'asset_providers.dart';
 import 'asset_service.dart';
@@ -70,6 +72,8 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
             variants: variants,
             working: _working,
             onGenerateVariant: _createVariant,
+            onReplaceImage: _replaceImage,
+            onSelectVersion: _selectVersion,
           );
         },
       ),
@@ -142,6 +146,40 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
     }
   }
 
+  /// 切换到资产图历史版本（M17 T19.2）。
+  Future<void> _selectVersion(String imagePath) async {
+    setState(() => _working = true);
+    try {
+      await ref
+          .read(assetServiceProvider)
+          .selectImageVersion(assetId: widget.assetId, imagePath: imagePath);
+      _showMessage('已切换版本，待重新验收');
+    } catch (e) {
+      _showMessage('切换失败：$e');
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  /// 用本地图片替换资产图（≤100MB）；旧图已存为历史版本，可切回。
+  Future<void> _replaceImage() async {
+    final result = await FilePicker.pickFiles(type: FileType.image);
+    if (result.isEmpty) return;
+    final path = result.single.path;
+    if (path == null || !mounted) return;
+    setState(() => _working = true);
+    try {
+      await ref
+          .read(assetServiceProvider)
+          .replaceImage(assetId: widget.assetId, sourcePath: path);
+      _showMessage('已替换图片，待重新验收');
+    } catch (e) {
+      _showMessage('替换失败：$e');
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
   Future<ActiveImage?> _resolveImage() async {
     final image = await ref.read(activeImageProvider.future);
     if (image == null) {
@@ -157,21 +195,25 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
   }
 }
 
-class _DetailBody extends StatelessWidget {
+class _DetailBody extends ConsumerWidget {
   const _DetailBody({
     required this.asset,
     required this.variants,
     required this.working,
     required this.onGenerateVariant,
+    required this.onReplaceImage,
+    required this.onSelectVersion,
   });
 
   final Asset asset;
   final List<Asset> variants;
   final bool working;
   final VoidCallback onGenerateVariant;
+  final VoidCallback onReplaceImage;
+  final ValueChanged<String> onSelectVersion;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final path = asset.imagePath;
     final hasImage = path != null && path.isNotEmpty && File(path).existsSync();
 
@@ -195,6 +237,14 @@ class _DetailBody extends StatelessWidget {
                     ),
                   ),
           ),
+        ),
+        const SizedBox(height: 12),
+        _ImageHistoryPanel(
+          assetId: asset.id,
+          currentPath: path,
+          working: working,
+          onReplace: onReplaceImage,
+          onSelect: onSelectVersion,
         ),
         const SizedBox(height: 12),
         Card(
@@ -287,5 +337,45 @@ class _DetailBody extends StatelessWidget {
       // 忽略，回退原文。
     }
     return json;
+  }
+}
+
+/// 资产图历史版本面板（M17 T19.2）：读快照表 kind=image 的记录，
+/// 每条对应一份独立落盘文件，点击即切换指针，不重跑生成。
+class _ImageHistoryPanel extends ConsumerWidget {
+  const _ImageHistoryPanel({
+    required this.assetId,
+    required this.currentPath,
+    required this.working,
+    required this.onReplace,
+    required this.onSelect,
+  });
+
+  final int assetId;
+  final String? currentPath;
+  final bool working;
+  final VoidCallback onReplace;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final revisions =
+        ref.watch(assetRevisionsProvider(assetId)).value ??
+        const <AssetRevision>[];
+    return ImageVersionPanel(
+      items: [
+        for (final r in revisions)
+          if (r.kind == 'image')
+            ImageVersionItem(
+              label: '版本 ${r.revision} · ${formatSnapshotTime(r.createdAt)}',
+              path: imagePathOfSnapshot(r.snapshot),
+              subtitle: r.summary,
+            ),
+      ],
+      currentPath: currentPath,
+      onSelect: onSelect,
+      onReplace: onReplace,
+      working: working,
+    );
   }
 }

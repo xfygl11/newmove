@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
 
+import 'storage_rules.dart';
+
 /// 视频文件存储：应用私有目录 `files/videos/`。
 class VideoFileStore {
   /// 返回并创建视频根目录。
@@ -16,9 +18,13 @@ class VideoFileStore {
   }
 
   /// 保存视频文件，返回文件绝对路径。
+  ///
+  /// 文件名带微秒戳：每个成功任务写独立文件，历史版本可真正切换。
   Future<String> save(int shotId, Uint8List bytes) async {
     final dir = await _baseDir();
-    final file = File('${dir.path}/shot_$shotId.mp4');
+    final file = File(
+      VersionedFileNames.build(dir, prefix: 'shot', id: shotId, ext: 'mp4'),
+    );
     await file.writeAsBytes(bytes, flush: true);
     return file.path;
   }
@@ -26,10 +32,9 @@ class VideoFileStore {
   /// 从源文件复制视频（流式复制，不整包载入内存），返回目标绝对路径。
   Future<String> saveFromPath(int shotId, String sourcePath) async {
     final dir = await _baseDir();
-    final target = File('${dir.path}/shot_$shotId.mp4');
-    if (await target.exists()) {
-      await target.delete();
-    }
+    final target = File(
+      VersionedFileNames.build(dir, prefix: 'shot', id: shotId, ext: 'mp4'),
+    );
     await File(sourcePath).copy(target.path);
     return target.path;
   }

@@ -79,9 +79,9 @@ class GenerationAttemptDao extends DatabaseAccessor<AppDatabase>
           : Value(subjectLabel),
       projectId: projectId == null ? const Value.absent() : Value(projectId),
     );
-    return (update(generationAttempts)..where((t) => t.id.equals(id))).write(
-      companion,
-    );
+    return (update(
+      generationAttempts,
+    )..where((t) => t.id.equals(id))).write(companion);
   }
 
   Future<List<GenerationAttempt>> listBySubject(
@@ -96,6 +96,27 @@ class GenerationAttemptDao extends DatabaseAccessor<AppDatabase>
           )
           ..orderBy([(t) => OrderingTerm.desc(t.id)]))
         .get();
+  }
+
+  /// 生成尝试台账列表（新在前）。台账查看页的数据源。
+  ///
+  /// [status] / [projectId] 为 null 表示不过滤；状态取值见 [AttemptStatuses]。
+  /// 返回上限 [limit] 条，避免历史过长时一次性拉满内存。
+  Future<List<GenerationAttempt>> list({
+    String? status,
+    int? projectId,
+    int limit = 500,
+  }) {
+    final query = select(generationAttempts);
+    if (status != null) {
+      query.where((t) => t.status.equals(status));
+    }
+    if (projectId != null) {
+      query.where((t) => t.projectId.equals(projectId));
+    }
+    query.orderBy([(t) => OrderingTerm.desc(t.id)]);
+    query.limit(limit);
+    return query.get();
   }
 
   Future<void> deleteByProject(int projectId) {

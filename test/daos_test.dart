@@ -130,9 +130,9 @@ void main() {
     });
   });
 
-  group('schema v9 结构', () {
+  group('schema v10 结构', () {
     test('剧本表已删除 aspect_ratio 与 language 死字段', () async {
-      expect(db.schemaVersion, 9);
+      expect(db.schemaVersion, 10);
 
       final rows = await db.customSelect('PRAGMA table_info(scripts)').get();
       final columns = rows.map((row) => row.data['name'] as String).toSet();
@@ -162,6 +162,23 @@ void main() {
         columns,
         containsAll(['episode_no', 'target_duration_ms', 'model_version']),
       );
+    });
+
+    test('作品表新增 M17 每章目标字数，默认 2000', () async {
+      final rows = await db
+          .customSelect('PRAGMA table_info(novel_books)')
+          .get();
+      final columns = rows.map((row) => row.data['name'] as String).toSet();
+      expect(columns, contains('target_words'));
+
+      final pid = await db.projectDao.insertProject(
+        ProjectsCompanion.insert(name: 't'),
+      );
+      final id = await db.novelDao.insertBook(
+        NovelBooksCompanion.insert(projectId: pid, title: 't'),
+      );
+      final book = await db.novelDao.findBook(id);
+      expect(book?.targetWords, 2000);
     });
   });
 }

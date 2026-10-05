@@ -72,7 +72,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -124,6 +124,11 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(scripts, scripts.episodeNo);
         await m.addColumn(scripts, scripts.targetDurationMs);
         await m.addColumn(scripts, scripts.modelVersion);
+      }
+      if (from < 10) {
+        // M17 T19.5：作品级每章目标字数。此前定稿字数校验在 UI 里硬编码
+        // 2000，与作品实际体感无关；改为作品行可配置，0 表示不设门槛。
+        await m.addColumn(novelBooks, novelBooks.targetWords);
       }
     },
     beforeOpen: (details) async {

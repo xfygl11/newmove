@@ -139,6 +139,15 @@ lib/
 - **error 阻塞视频提交，不阻塞骨架提取**：`ShotService.submitVideo` 在临执行复核前跑 `validate`，`error` 项写入 `ConfirmSheet` 的 `note`，用户明确确认后放行；`warn` 项只提示。提取是生成前动作，允许带冲突落库后由用户调整。
 - **A7 衔接与时长预算是两个独立面板**：`ShotService.listTransitionIssues` 负责画面区分度（主体相同且景别差 <2 档且角度差 <90°），`SegmentBudget.validate` 负责时长与容量。都只提示不改数据，UI 上并列展示，不合并成一条。
 
+### 产物可回溯约定（M17）
+
+- **产物文件必须唯一命名，禁止覆盖写**：`AssetFileStore` / `ShotFileStore` / `VideoFileStore` 的 `save` 与 `saveFromPath` 一律写 `前缀_${id}_${时间戳}.扩展名`。同名覆盖会让 `ShotRevisions` / `AssetRevisions` / `VideoTasks.outputPath` 里的历史路径全部指向同一个文件，「历史版本切换」形同虚设——这是 M14 版本快照与 M8 视频多任务的失效根因。历史文件不主动清理，随对象删除走既有 `delete`。
+- **历史版本数据源固定**：视频历史走 `VideoTasks`（每次成功任务一条，`outputPath` 指向独立文件）；分镜图与资产图历史走 `ShotRevisions` / `AssetRevisions` 里 `kind == 'image'` 的快照，快照 JSON 含 `imagePath`。切换版本 = 把对象当前指针改回快照里的路径并补写一条快照，不重建对象。
+- **本地替换图片先查长度再复制**：与视频侧 `replaceVideo` 一致，先 `File.length()` 判 100MB 上限再 `copy`，禁止先 `readAsBytes()` 再判大小（超大文件会全量载入内存）。`Assets` / `Shots` 的图片侧 store 都需要 `saveFromPath`，路径由服务内部生成，不接收外部文件名。
+- **生成台账只读不写**：`GenerationAttempts` 由 `AttemptRecorder` 写入，台账查看页只读。回写只允许 `status` / `resultPath` / `errorMessage` / `subjectId` / `subjectLabel` / `projectId` 六列，**绝不回写提示词、参数、引用、授权指纹**——那是当次执行的证据。
+- **章节字数门槛只提示不阻塞**：`ChapterWordGate` 是目标字数校验的唯一入口（`lib/features/novel/chapter_word_gate.dart`，纯函数、不写库），下限 `0.8 × targetWords`、上限 `1.3 × targetWords`，常量单一来源，禁止在 UI 里再写字面量。`NovelBooks.targetWords` 为空或 0 时跳过校验。定稿前不达标弹确认提示，用户可放行。
+- **审校 `scope` 三值**：`local` / `structural` / `unknown`。`unknown` 表示问题需要更大范围判断才能定位，UI 展示独立 Chip，不落到 `local` 分支。新增取值先在 `review.md` 与 `ReviewIssue` 登记。
+
 ### 数据与备份约定（M11 P2 追加）
 
 - 全库备份：`BackupService.exportAll()` 导出所有项目为单 zip（`scope: full`），`importProject` 兼容全库包与单项目包；导入前经 `findConflicts` 做同名项目检测，冲突时弹窗确认。

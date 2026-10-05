@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:drift/drift.dart' show Value;
@@ -7,6 +8,7 @@ import '../../agent/active_image.dart';
 import '../../agent/active_llm.dart';
 import '../../core/network/image_provider_adapter.dart';
 import '../../core/storage/asset_file_store.dart';
+import '../../core/storage/storage_rules.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/asset_dao.dart';
 import '../../data/daos/beat_dao.dart';
@@ -354,6 +356,56 @@ class AssetService {
 
   Future<Asset> regenerate({required int assetId, required ActiveImage image}) {
     return generate(assetId: assetId, image: image);
+  }
+
+  /// 切换到资产图历史版本（M17 T19.2）。
+  ///
+  /// 只改 `imagePath` 指针并补写一条快照，不重建对象、不重跑生成。
+  /// 状态回「待验收」：换回的图片是历史产物，需要用户重新确认。
+  Future<Asset> selectImageVersion({
+    required int assetId,
+    required String imagePath,
+  }) async {
+    final asset = await assetDao.find(assetId);
+    if (asset == null) throw StateError('资产不存在：$assetId');
+    if (!File(imagePath).existsSync()) throw StateError('图片文件不存在');
+    await assetDao.updateById(
+      assetId,
+      AssetsCompanion(
+        imagePath: Value(imagePath),
+        status: const Value(AssetStatuses.reviewing),
+      ),
+    );
+    final updated = (await assetDao.find(assetId))!;
+    await _saveSnapshot(updated, kind: 'image', summary: '切换到历史版本');
+    return updated;
+  }
+
+  /// 用本地文件替换资产图（M17 T19.2）。
+  ///
+  /// 先查长度再复制：超大文件全量读入内存会 OOM。
+  Future<Asset> replaceImage({
+    required int assetId,
+    required String sourcePath,
+  }) async {
+    final asset = await assetDao.find(assetId);
+    if (asset == null) throw StateError('资产不存在：$assetId');
+    final source = File(sourcePath);
+    if (!source.existsSync()) throw StateError('文件不存在：$sourcePath');
+    if (source.lengthSync() > StorageLimits.maxReplaceableFileBytes) {
+      throw StateError('文件超过 100MB 上限');
+    }
+    final path = await fileStore.saveFromPath(assetId, sourcePath);
+    await assetDao.updateById(
+      assetId,
+      AssetsCompanion(
+        imagePath: Value(path),
+        status: const Value(AssetStatuses.reviewing),
+      ),
+    );
+    final updated = (await assetDao.find(assetId))!;
+    await _saveSnapshot(updated, kind: 'image', summary: '手动替换图片');
+    return updated;
   }
 
   /// 基于已采用基础图做图生图变体（T5.6）。

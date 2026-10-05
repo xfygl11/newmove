@@ -30,6 +30,8 @@ class NovelBooks extends Table {
   TextColumn get outline => text().nullable()();
   // P3-15 作品类型：长篇 / 短篇 / 剧本 / 影游，默认「长篇」。
   TextColumn get workType => text().withDefault(const Constant('长篇'))();
+  // M17 T19.5：每章目标字数，供写作与定稿字数门槛使用；0 表示不设门槛。
+  IntColumn get targetWords => integer().withDefault(const Constant(2000))();
   TextColumn get status => text().withDefault(const Constant('草稿'))();
 }
 

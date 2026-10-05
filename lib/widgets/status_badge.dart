@@ -26,6 +26,12 @@ class StatusKinds {
     '失败': StatusKind(Colors.red, Icons.error_outline, false),
     '已取消': StatusKind(Colors.orange, Icons.cancel_outlined, false),
     '视频生成失败': StatusKind(Colors.red, Icons.error_outline, false),
+    // 生成尝试台账（M17 T19.4）
+    'pending': StatusKind(Colors.grey, Icons.hourglass_bottom, false),
+    'running': StatusKind(Colors.blue, Icons.autorenew, true),
+    'succeeded': StatusKind(Colors.green, Icons.check_circle_outline, false),
+    'failed': StatusKind(Colors.red, Icons.error_outline, false),
+    'cancelled': StatusKind(Colors.orange, Icons.cancel_outlined, false),
     // 章节 / 伏笔
     '草稿': StatusKind(Colors.grey, Icons.edit_note, false),
     '定稿': StatusKind(Colors.green, Icons.fact_check, false),

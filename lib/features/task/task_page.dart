@@ -141,7 +141,16 @@ class _TaskPageState extends ConsumerState<TaskPage>
     final videoTasksAsync = ref.watch(activeVideoTasksProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('任务中心')),
+      appBar: AppBar(
+        title: const Text('任务中心'),
+        actions: [
+          IconButton(
+            tooltip: '生成台账',
+            icon: const Icon(Icons.receipt_long),
+            onPressed: () => context.go('/tasks/attempts'),
+          ),
+        ],
+      ),
       body: videoTasksAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('加载失败：$e')),

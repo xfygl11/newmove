@@ -267,8 +267,14 @@ class NovelService {
     required String content,
     int? maxTokens,
   }) async {
+    final book = await novelDao.findBook(bookId);
+    final genre = book?.genre ?? '';
+    final workType = book?.workType ?? '';
+    final head = StringBuffer()
+      ..writeln('【正文】$content')
+      ..writeln('【题材】${genre.isEmpty ? '未设定' : genre}')
+      ..writeln('【作品类型】${workType.isEmpty ? '未设定' : workType}');
     final texts = await storeFor(bookId).readAllText();
-    final head = StringBuffer()..writeln('【正文】$content');
     final budget = ContextBudget(
       maxTokens: maxTokens ?? ContextBudget.defaultMaxTokens,
     ).budgetTruthFiles(texts, fixedContext: head.toString());
