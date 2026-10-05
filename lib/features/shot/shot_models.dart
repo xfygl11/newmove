@@ -1,6 +1,8 @@
 /// 镜头状态常量（DB 直接存中文）。
 library;
 
+import 'dart:convert';
+
 import 'package:newmove/core/json_values.dart';
 
 class ShotStatuses {
@@ -89,6 +91,51 @@ class ShotFrameDraft {
   }
 }
 
+/// 镜头级服装覆盖（M19 T21.13）：本镜头内某角色换上特定服装套，
+/// 覆盖该资产的基础态造型。套名取自资产的 `costumeSets`，不由模型自创。
+class ShotCostumeOverride {
+  const ShotCostumeOverride({required this.stableId, required this.name});
+
+  /// 角色资产稳定 ID，与 `refs[].stableId` 同源。
+  final String stableId;
+
+  /// 服装套名。
+  final String name;
+
+  factory ShotCostumeOverride.fromJson(Map<String, dynamic> json) {
+    return ShotCostumeOverride(
+      stableId: jsonString(json['stableId']).trim(),
+      name: jsonString(json['name']).trim(),
+    );
+  }
+
+  /// 落库编码：`[{stableId, name}]`，空清单返回空串。
+  static String encode(List<ShotCostumeOverride> overrides) => jsonEncode([
+    for (final o in overrides)
+      <String, String>{'stableId': o.stableId, 'name': o.name},
+  ]);
+
+  /// 落库解码：只保留 stableId 与 name 均非空的项，异常按空处理。
+  static List<ShotCostumeOverride> decode(String? raw) {
+    if (raw == null || raw.isEmpty) return const [];
+    Object? decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } on FormatException {
+      return const [];
+    }
+    if (decoded is! List) return const [];
+    final out = <ShotCostumeOverride>[];
+    for (final item in decoded) {
+      if (item is! Map) continue;
+      final override = ShotCostumeOverride.fromJson(jsonMap(item));
+      if (override.stableId.isEmpty || override.name.isEmpty) continue;
+      out.add(override);
+    }
+    return out;
+  }
+}
+
 /// ShotDirector 输出的一条参考绑定草案。
 class ShotRefDraft {
   const ShotRefDraft({required this.role, required this.stableId});
@@ -131,6 +178,7 @@ class ShotDraft {
     this.blocking,
     this.dialogueStartRatio,
     this.dialogueEndRatio,
+    this.costumeOverrides,
   });
 
   final String globalSeq;
@@ -156,6 +204,9 @@ class ShotDraft {
   final int? dialogueStartRatio;
   final int? dialogueEndRatio;
 
+  /// 镜头级服装覆盖（M19 T21.13）；null 表示全部沿用资产基础态造型。
+  final List<ShotCostumeOverride>? costumeOverrides;
+
   factory ShotDraft.fromJson(Map<String, dynamic> json) {
     final start = _ratio(json['dialogueStartRatio']);
     final end = _ratio(json['dialogueEndRatio']);
@@ -172,6 +223,7 @@ class ShotDraft {
       blocking: _text(json['blocking']),
       dialogueStartRatio: start,
       dialogueEndRatio: end,
+      costumeOverrides: _costumeOverrides(json['costumeOverrides']),
       frames: [
         for (final f in jsonList(json['frames']))
           ShotFrameDraft.fromJson(jsonMap(f)),
@@ -210,6 +262,21 @@ class ShotDraft {
         : double.tryParse(jsonString(value).trim()) ?? -1;
     if (n < 0 || n > 100) return null;
     return n.round();
+  }
+
+  /// 服装覆盖容错：只保留 stableId 与 name 均非空的项，全空视为未指定。
+  /// 不写空数组进库——空与未指定同义，UI 按「沿用基础态」展示。
+  static List<ShotCostumeOverride>? _costumeOverrides(Object? value) {
+    if (value == null) return null;
+    final list = value is List ? value : const [];
+    final out = <ShotCostumeOverride>[];
+    for (final item in list) {
+      if (item is! Map) continue;
+      final override = ShotCostumeOverride.fromJson(jsonMap(item));
+      if (override.stableId.isEmpty || override.name.isEmpty) continue;
+      out.add(override);
+    }
+    return out.isEmpty ? null : out;
   }
 
   static const _placeholders = {'无', '未指定', '同上', '-', 'N/A', 'n/a'};

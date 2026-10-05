@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../core/json_values.dart';
+import '../../data/app_database.dart';
 
 /// 资产类型常量（DB 直接存中文）。
 class AssetTypes {
@@ -163,5 +164,47 @@ class AssetExtractionResult {
           if (item is Map<String, dynamic>) AssetDraft.fromJson(item),
       ],
     );
+  }
+}
+
+/// 落库 costumeSets 的读取扩展（M19 T21.13）。
+///
+/// 资产的服装套以 JSON 数组落在 `costumeSets` 列，`[{name, description}]`。
+/// 读取方（导演上下文、服装覆盖门、镜头详情页）统一走这里，避免各写一份解码。
+extension AssetCostumeSets on Asset {
+  /// 服装套名清单；空值与异常折叠为空数组（不代表「无服装」，只代表未登记）。
+  List<String> get costumeNames {
+    final decoded = _decodeCostumeSets(costumeSets);
+    final names = <String>[];
+    for (final set in decoded) {
+      final name = jsonString(set['name']).trim();
+      if (name.isEmpty) continue;
+      names.add(name);
+    }
+    return names;
+  }
+
+  /// 按套名取描述；找不到套名返回空串，不编造描述。
+  String costumeDescriptionOf(String name) {
+    for (final set in _decodeCostumeSets(costumeSets)) {
+      if (jsonString(set['name']).trim() != name) continue;
+      return jsonString(set['description']).trim();
+    }
+    return '';
+  }
+
+  static List<Map<String, dynamic>> _decodeCostumeSets(String? raw) {
+    if (raw == null || raw.isEmpty) return const [];
+    Object? decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } on FormatException {
+      return const [];
+    }
+    if (decoded is! List) return const [];
+    return [
+      for (final item in decoded)
+        if (item is Map) Map<String, dynamic>.from(item),
+    ];
   }
 }

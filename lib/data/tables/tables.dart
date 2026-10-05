@@ -205,6 +205,11 @@ class Shots extends Table {
   // 对白起止占段时长比例（百分比 0-100）；用于校验台词是否塞得下。
   IntColumn get dialogueStartRatio => integer().nullable()();
   IntColumn get dialogueEndRatio => integer().nullable()();
+  // M19 T21.13 镜头级服装覆盖：JSON 数组 [{stableId, name}]。
+  // 本镜头内角色换上特定服装套（套名取自该资产的 costumeSets），
+  // 覆盖资产默认造型；分镜图与视频提示词按此渲染。
+  // 无覆盖或全为默认造型时该列为空，不写空数组。
+  TextColumn get costumeOverrides => text().nullable()();
   IntColumn get sceneId => integer().nullable()();
   // 最终生成提示词。
   TextColumn get prompt => text().withDefault(const Constant(''))();

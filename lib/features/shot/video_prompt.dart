@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../core/json_values.dart';
 import '../../data/app_database.dart';
 import '../script/script_models.dart';
+import 'shot_models.dart';
 
 /// 视频生成参数快照（提交前构造，随任务持久化）。
 class VideoGenParams {
@@ -107,6 +108,28 @@ class VideoPromptBuilder {
       buf.writeln('- {{ref${i + 1}}}：$name（$type 参考）');
     }
     if (refs.isEmpty) buf.writeln('- 无');
+
+    // Costume overrides：本镜头的服装覆盖。参考图锁的是基础态造型，
+    // 覆盖必须在提示词里显式声明，模型才会改掉参考图里的衣服。
+    final nameByStableId = <String, String>{};
+    for (final ref in refs) {
+      final asset = assetById[ref.assetId];
+      if (asset != null) nameByStableId[asset.stableId] = asset.name;
+    }
+    final overrides = ShotCostumeOverride.decode(shot.costumeOverrides);
+    final overridesKnown = overrides
+        .where((o) => nameByStableId[o.stableId] != null)
+        .toList();
+    if (overridesKnown.isNotEmpty) {
+      buf.writeln();
+      buf.writeln('Costume overrides:');
+      for (final o in overridesKnown) {
+        buf.writeln(
+          '- ${nameByStableId[o.stableId]}：本镜头穿「${o.name}」，'
+          '覆盖参考图中的基础态造型，其余外观保持参考图一致',
+        );
+      }
+    }
 
     // Immutable locks：从出镜状态提取主要角色与场景（静态锁定项）。
     buf.writeln(

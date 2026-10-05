@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../agent/active_video.dart';
+import '../../core/gate_issue.dart';
 import '../../core/network/providers.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
@@ -99,6 +100,11 @@ final shotBudgetIssuesProvider =
             videoModel: ref.watch(activeVideoProvider).value?.model,
           ),
     );
+
+/// 某剧本的镜头级服装覆盖校验结果（M19 T21.13）。
+final shotCostumeIssuesProvider = FutureProvider.family<List<GateIssue>, int>(
+  (ref, scriptId) => ref.watch(shotServiceProvider).listCostumeIssues(scriptId),
+);
 
 /// 某镜头的视频任务列表（最新在前）。
 final videoTasksByShotProvider = StreamProvider.family<List<VideoTask>, int>(

@@ -131,9 +131,9 @@ void main() {
     });
   });
 
-  group('schema v11 结构', () {
+  group('schema v12 结构', () {
     test('剧本表已删除 aspect_ratio 与 language 死字段', () async {
-      expect(db.schemaVersion, 11);
+      expect(db.schemaVersion, 12);
 
       final rows = await db.customSelect('PRAGMA table_info(scripts)').get();
       final columns = rows.map((row) => row.data['name'] as String).toSet();
@@ -200,6 +200,16 @@ void main() {
           'is_stale',
         ]),
       );
+    });
+
+    test('M19 T21.13 镜头表新增服装覆盖列', () async {
+      final rows = await db.customSelect('PRAGMA table_info(shots)').get();
+      final rowsMeta = rows
+          .where((r) => r.data['name'] == 'costume_overrides')
+          .toList();
+      expect(rowsMeta, hasLength(1));
+      // 可空：无覆盖的镜头该列为 NULL，与「全部沿用基础态」同义。
+      expect(rowsMeta.single.data['notnull'], 0);
     });
 
     test('M19 剧本指纹与资产结构化字段、失效标记', () async {

@@ -11,6 +11,7 @@ import '../../core/status_constants.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
 import '../../widgets/image_version_panel.dart';
+import '../asset/asset_models.dart';
 import '../asset/asset_providers.dart';
 import '../provider_config/provider_models.dart';
 import 'shot_models.dart';
@@ -124,6 +125,12 @@ class _ShotDetailPageState extends ConsumerState<ShotDetailPage>
                       editing: _editing,
                       onEditToggle: () => setState(() => _editing = !_editing),
                       onSave: () => _savePrompt(shot),
+                    ),
+                    const SizedBox(height: 16),
+                    _CostumeOverridesSection(
+                      shot: shot,
+                      refs: refs,
+                      assets: assets,
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -1345,6 +1352,154 @@ extension ShotCinemaParams on Shot {
           ),
         ),
     ];
+  }
+}
+
+/// 镜头级服装覆盖编辑（M19 T21.13）。
+///
+/// 只对本镜头参考绑定里、且已登记服装套的角色开放；套名取自该角色的
+/// costumeSets，不在清单内不可选。本镜头没有出镜角色时整段不占位。
+class _CostumeOverridesSection extends ConsumerStatefulWidget {
+  const _CostumeOverridesSection({
+    required this.shot,
+    required this.refs,
+    required this.assets,
+  });
+
+  final Shot shot;
+  final List<AssetRef> refs;
+  final List<Asset> assets;
+
+  @override
+  ConsumerState<_CostumeOverridesSection> createState() =>
+      _CostumeOverridesSectionState();
+}
+
+class _CostumeOverridesSectionState
+    extends ConsumerState<_CostumeOverridesSection> {
+  late Map<String, String> _selection;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selection = {
+      for (final o in _decode(widget.shot.costumeOverrides)) o.stableId: o.name,
+    };
+  }
+
+  static List<ShotCostumeOverride> _decode(String? raw) =>
+      ShotCostumeOverride.decode(raw);
+
+  /// 本镜头出镜且已登记服装套的角色资产。
+  List<Asset> get _characters {
+    final assetById = {for (final a in widget.assets) a.id: a};
+    return [
+      for (final ref in widget.refs)
+        if (ref.role.contains('角色'))
+          if (assetById[ref.assetId]?.costumeNames.isNotEmpty ?? false)
+            assetById[ref.assetId]!,
+    ];
+  }
+
+  bool get _dirty {
+    final saved = {
+      for (final o in _decode(widget.shot.costumeOverrides)) o.stableId: o.name,
+    };
+    if (saved.length != _selection.length) return true;
+    return saved.entries.any((e) => _selection[e.key] != e.value);
+  }
+
+  Future<void> _save() async {
+    final overrides = [
+      for (final entry in _selection.entries)
+        if (entry.value.isNotEmpty)
+          ShotCostumeOverride(stableId: entry.key, name: entry.value),
+    ];
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(shotServiceProvider)
+          .updateCostumeOverrides(shotId: widget.shot.id, overrides: overrides);
+      if (!mounted) return;
+      setState(() {
+        _selection = {for (final o in overrides) o.stableId: o.name};
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(overrides.isEmpty ? '已清除服装覆盖' : '服装覆盖已保存')),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('保存失败：$e')));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final characters = _characters;
+    if (characters.isEmpty) return const SizedBox.shrink();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text('服装覆盖', style: Theme.of(context).textTheme.titleSmall),
+                const Spacer(),
+                if (_dirty)
+                  FilledButton(
+                    onPressed: _saving ? null : _save,
+                    child: const Text('保存'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (final asset in characters) ...[
+              DropdownButton<String>(
+                value: _dropdownValue(asset),
+                onChanged: (value) {
+                  setState(() {
+                    final name = value ?? '';
+                    if (name.isEmpty) {
+                      _selection.remove(asset.stableId);
+                    } else {
+                      _selection[asset.stableId] = name;
+                    }
+                  });
+                },
+                items: [
+                  DropdownMenuItem<String>(
+                    value: '',
+                    child: Text('${asset.name}：沿用基础态'),
+                  ),
+                  for (final name in asset.costumeNames)
+                    DropdownMenuItem<String>(
+                      value: name,
+                      child: Text('${asset.name}：$name'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 下拉当前值：未覆盖时落回空串（沿用基础态），覆盖套名不在清单里时
+  /// 也落回空串，避免 DropdownButton 因找不到 value 而断言失败。
+  String _dropdownValue(Asset asset) {
+    final name = _selection[asset.stableId];
+    if (name == null || name.isEmpty) return '';
+    return asset.costumeNames.contains(name) ? name : '';
   }
 }
 

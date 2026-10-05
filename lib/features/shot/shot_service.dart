@@ -10,6 +10,7 @@ import '../../agent/active_image.dart';
 import '../../agent/active_llm.dart';
 import '../../agent/active_video.dart';
 import '../../core/app_log.dart';
+import '../../core/gate_issue.dart';
 import '../../core/json_values.dart';
 import '../../core/status_constants.dart';
 import '../../core/network/image_provider_adapter.dart';
@@ -29,8 +30,10 @@ import '../../data/daos/shot_dao.dart';
 import '../../data/daos/shot_frame_dao.dart';
 import '../../data/daos/video_task_dao.dart';
 import '../../data/daos/provider_dao.dart';
+import '../asset/asset_models.dart';
 import '../provider_config/provider_models.dart';
 import '../script/script_models.dart';
+import 'costume_gate.dart';
 import 'shot_agents.dart';
 import 'shot_models.dart';
 import 'segment_budget.dart';
@@ -287,7 +290,14 @@ class ShotService {
     buf.writeln(
       jsonEncode([
         for (final a in assets)
-          {'stableId': a.stableId, 'type': a.type, 'name': a.name},
+          {
+            'stableId': a.stableId,
+            'type': a.type,
+            'name': a.name,
+            // M19 T21.13：服装套清单。导演要写 costumeOverrides 时，
+            // 套名只能从这里取，没有清单的角色一律不写覆盖。
+            if (a.costumeNames.isNotEmpty) 'costumeSets': a.costumeNames,
+          },
       ]),
     );
     buf.writeln('【分段与节拍】');
@@ -352,7 +362,11 @@ class ShotService {
       }),
       bookId: bookId,
     );
-    final result = await agents.direct(prompt: context, llm: llm, bookId: bookId);
+    final result = await agents.direct(
+      prompt: context,
+      llm: llm,
+      bookId: bookId,
+    );
     await _finishAttempt(
       id: directionAttempt,
       status: AttemptStatuses.succeeded,
@@ -396,6 +410,12 @@ class ShotService {
             blocking: Value(draft.blocking),
             dialogueStartRatio: Value(draft.dialogueStartRatio),
             dialogueEndRatio: Value(draft.dialogueEndRatio),
+            // M19 T21.13 服装覆盖：空也显式写回，重导可清掉旧覆盖。
+            costumeOverrides: Value(
+              draft.costumeOverrides == null
+                  ? null
+                  : ShotCostumeOverride.encode(draft.costumeOverrides!),
+            ),
           ),
         );
 
@@ -670,6 +690,10 @@ class ShotService {
   }
 
   /// 把提示词中的 {{ref N}} 替换为「参考图 N（资产名）」的语义描述。
+  ///
+  /// 末尾追加服装覆盖行：参考图锁定的是角色基础态造型，本镜头换了装时
+  /// 只靠自由正文描述，模型对「本镜头穿什么」的注意力低于参考图。
+  /// 套名与套描述取自资产 costumeSets，不由模型推断。
   Future<String> _resolvePrompt(Shot shot, List<AssetRef> refs) async {
     var prompt = shot.prompt;
     for (var i = 0; i < refs.length; i++) {
@@ -679,6 +703,25 @@ class ShotService {
         '{{ref${i + 1}}}',
         '参考图${i + 1}（${asset.type}·${asset.name}）',
       );
+    }
+
+    final byStableId = <String, Asset>{};
+    for (final ref in refs) {
+      final asset = await assetDao.find(ref.assetId);
+      if (asset != null) byStableId[asset.stableId] = asset;
+    }
+    final lines = <String>[];
+    for (final override in ShotCostumeOverride.decode(shot.costumeOverrides)) {
+      final asset = byStableId[override.stableId];
+      if (asset == null) continue;
+      lines.add(
+        '服装设定：${asset.name} 本镜头穿「${override.name}」'
+        '（${asset.costumeDescriptionOf(override.name)}），'
+        '覆盖参考图的基础态造型',
+      );
+    }
+    for (final line in lines) {
+      prompt = '$prompt\n$line';
     }
     return prompt;
   }
@@ -794,6 +837,25 @@ class ShotService {
       for (final i in issues)
         if (i.isError) i,
     ];
+  }
+
+  /// 某剧本的镜头级服装覆盖校验（M19 T21.13）；只提示不阻塞。
+  ///
+  /// 逐镜头调 [CostumeGate]：覆盖的套名必须是该角色资产 costumeSets 里的
+  /// 套名，覆盖的角色必须在本镜头参考绑定里。
+  Future<List<GateIssue>> listCostumeIssues(int scriptId) async {
+    final shots = await shotDao.listByScript(scriptId);
+    final assets = await assetDao.listByScript(scriptId);
+    final assetById = {for (final a in assets) a.id: a};
+
+    final issues = <GateIssue>[];
+    for (final shot in shots) {
+      final overrides = ShotCostumeOverride.decode(shot.costumeOverrides);
+      if (overrides.isEmpty) continue;
+      final refs = await assetRefDao.listByShot(shot.id);
+      issues.addAll(CostumeGate.validate(shot, refs, assetById));
+    }
+    return issues;
   }
 
   // ---- 视频生成（M6：T7.1–T7.4） ----
@@ -1252,6 +1314,23 @@ class ShotService {
     required String prompt,
   }) async {
     await shotDao.updateById(shotId, ShotsCompanion(prompt: Value(prompt)));
+  }
+
+  /// 手动保存镜头级服装覆盖（M19 T21.13）。
+  ///
+  /// 空清单写 null，与「导演未给覆盖」同义，UI 按基础态造型展示。
+  Future<void> updateCostumeOverrides({
+    required int shotId,
+    required List<ShotCostumeOverride> overrides,
+  }) async {
+    await shotDao.updateById(
+      shotId,
+      ShotsCompanion(
+        costumeOverrides: Value(
+          overrides.isEmpty ? null : ShotCostumeOverride.encode(overrides),
+        ),
+      ),
+    );
   }
 
   /// 确认分镜图（待验收 → 分镜图已确认）。

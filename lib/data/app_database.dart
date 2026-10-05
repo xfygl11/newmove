@@ -76,7 +76,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -157,6 +157,12 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(shots, shots.isStale);
         // 提示词三级覆盖：项目级 > 全局级 > 代码默认。
         await m.createTable(promptOverrides);
+      }
+      if (from < 12) {
+        // M19 T21.13：镜头级服装覆盖。角色换了装而不改资产默认造型时，
+        // 分镜图与视频只能靠自由文本描述服装，模型对「本镜头穿什么」
+        // 的注意力低于结构化字段；单列承载覆盖清单，空即默认造型。
+        await m.addColumn(shots, shots.costumeOverrides);
       }
     },
     beforeOpen: (details) async {

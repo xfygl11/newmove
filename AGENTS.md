@@ -371,6 +371,12 @@ lib/
        `prop_has_hand`（error，道具提示词无手部排除标记）、
        `scene_named_character`（warn，场景提示词出现角色名）、
        `style_conflict`（warn，同批资产跨画风族）。
+     - `CostumeGate`（`lib/features/shot/costume_gate.dart`，镜头级服装覆盖）：
+       `costume_unknown`（warn，覆盖套名不在该资产 `costumeSets` 清单里，
+       模型自创套名会让分镜图画出资产图里没有的第四套衣服）、
+       `costume_orphan`（warn，覆盖的角色不在本镜头 `AssetRefs` 里，条目无效）、
+       `costume_duplicate`（warn，同一镜头同一角色给了多套服装，无法判定穿哪套）。
+       三条全 warn：门能指出问题所在，但改数据要用户显式动作（改覆盖或重导）。
       - 统一结果类型 `GateIssue` / `GateSeverity` 在 `lib/core/gate_issue.dart`，
         `noteLine` 给确认框 `note` 用；与 `SegmentBudgetIssue` 同型但字段语义不同，
         不合并。

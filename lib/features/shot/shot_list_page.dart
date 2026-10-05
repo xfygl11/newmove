@@ -134,6 +134,25 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
                 orElse: () => const SizedBox.shrink(),
               ),
 
+          // 镜头级服装覆盖校验（M19 T21.13）：覆盖的套名必须是角色资产清单里的
+          // 套名，覆盖的角色必须在本镜头参考绑定里。只提示，不阻塞生成。
+          ref
+              .watch(shotCostumeIssuesProvider(widget.scriptId))
+              .maybeWhen(
+                data: (issues) {
+                  if (issues.isEmpty) return const SizedBox.shrink();
+                  return _issueCard(
+                    context: context,
+                    title: '服装覆盖提示（${issues.length}）',
+                    message: '提示级：分镜图与视频会按覆盖渲染，建议先修正',
+                    entries: [for (final issue in issues) issue.noteLine],
+                    color: Colors.amber.shade900,
+                    tint: Colors.amber.shade100,
+                  );
+                },
+                orElse: () => const SizedBox.shrink(),
+              ),
+
           Expanded(
             child: shotsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),

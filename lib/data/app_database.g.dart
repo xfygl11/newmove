@@ -5996,6 +5996,17 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _costumeOverridesMeta = const VerificationMeta(
+    'costumeOverrides',
+  );
+  @override
+  late final GeneratedColumn<String> costumeOverrides = GeneratedColumn<String>(
+    'costume_overrides',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _sceneIdMeta = const VerificationMeta(
     'sceneId',
   );
@@ -6083,6 +6094,7 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
     blocking,
     dialogueStartRatio,
     dialogueEndRatio,
+    costumeOverrides,
     sceneId,
     prompt,
     status,
@@ -6240,6 +6252,15 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
         ),
       );
     }
+    if (data.containsKey('costume_overrides')) {
+      context.handle(
+        _costumeOverridesMeta,
+        costumeOverrides.isAcceptableOrUnknown(
+          data['costume_overrides']!,
+          _costumeOverridesMeta,
+        ),
+      );
+    }
     if (data.containsKey('scene_id')) {
       context.handle(
         _sceneIdMeta,
@@ -6361,6 +6382,10 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
         DriftSqlType.int,
         data['${effectivePrefix}dialogue_end_ratio'],
       ),
+      costumeOverrides: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}costume_overrides'],
+      ),
       sceneId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}scene_id'],
@@ -6414,6 +6439,7 @@ class Shot extends DataClass implements Insertable<Shot> {
   final String? blocking;
   final int? dialogueStartRatio;
   final int? dialogueEndRatio;
+  final String? costumeOverrides;
   final int? sceneId;
   final String prompt;
   final String status;
@@ -6440,6 +6466,7 @@ class Shot extends DataClass implements Insertable<Shot> {
     this.blocking,
     this.dialogueStartRatio,
     this.dialogueEndRatio,
+    this.costumeOverrides,
     this.sceneId,
     required this.prompt,
     required this.status,
@@ -6490,6 +6517,9 @@ class Shot extends DataClass implements Insertable<Shot> {
     }
     if (!nullToAbsent || dialogueEndRatio != null) {
       map['dialogue_end_ratio'] = Variable<int>(dialogueEndRatio);
+    }
+    if (!nullToAbsent || costumeOverrides != null) {
+      map['costume_overrides'] = Variable<String>(costumeOverrides);
     }
     if (!nullToAbsent || sceneId != null) {
       map['scene_id'] = Variable<int>(sceneId);
@@ -6545,6 +6575,9 @@ class Shot extends DataClass implements Insertable<Shot> {
       dialogueEndRatio: dialogueEndRatio == null && nullToAbsent
           ? const Value.absent()
           : Value(dialogueEndRatio),
+      costumeOverrides: costumeOverrides == null && nullToAbsent
+          ? const Value.absent()
+          : Value(costumeOverrides),
       sceneId: sceneId == null && nullToAbsent
           ? const Value.absent()
           : Value(sceneId),
@@ -6583,6 +6616,7 @@ class Shot extends DataClass implements Insertable<Shot> {
       blocking: serializer.fromJson<String?>(json['blocking']),
       dialogueStartRatio: serializer.fromJson<int?>(json['dialogueStartRatio']),
       dialogueEndRatio: serializer.fromJson<int?>(json['dialogueEndRatio']),
+      costumeOverrides: serializer.fromJson<String?>(json['costumeOverrides']),
       sceneId: serializer.fromJson<int?>(json['sceneId']),
       prompt: serializer.fromJson<String>(json['prompt']),
       status: serializer.fromJson<String>(json['status']),
@@ -6614,6 +6648,7 @@ class Shot extends DataClass implements Insertable<Shot> {
       'blocking': serializer.toJson<String?>(blocking),
       'dialogueStartRatio': serializer.toJson<int?>(dialogueStartRatio),
       'dialogueEndRatio': serializer.toJson<int?>(dialogueEndRatio),
+      'costumeOverrides': serializer.toJson<String?>(costumeOverrides),
       'sceneId': serializer.toJson<int?>(sceneId),
       'prompt': serializer.toJson<String>(prompt),
       'status': serializer.toJson<String>(status),
@@ -6643,6 +6678,7 @@ class Shot extends DataClass implements Insertable<Shot> {
     Value<String?> blocking = const Value.absent(),
     Value<int?> dialogueStartRatio = const Value.absent(),
     Value<int?> dialogueEndRatio = const Value.absent(),
+    Value<String?> costumeOverrides = const Value.absent(),
     Value<int?> sceneId = const Value.absent(),
     String? prompt,
     String? status,
@@ -6675,6 +6711,9 @@ class Shot extends DataClass implements Insertable<Shot> {
     dialogueEndRatio: dialogueEndRatio.present
         ? dialogueEndRatio.value
         : this.dialogueEndRatio,
+    costumeOverrides: costumeOverrides.present
+        ? costumeOverrides.value
+        : this.costumeOverrides,
     sceneId: sceneId.present ? sceneId.value : this.sceneId,
     prompt: prompt ?? this.prompt,
     status: status ?? this.status,
@@ -6719,6 +6758,9 @@ class Shot extends DataClass implements Insertable<Shot> {
       dialogueEndRatio: data.dialogueEndRatio.present
           ? data.dialogueEndRatio.value
           : this.dialogueEndRatio,
+      costumeOverrides: data.costumeOverrides.present
+          ? data.costumeOverrides.value
+          : this.costumeOverrides,
       sceneId: data.sceneId.present ? data.sceneId.value : this.sceneId,
       prompt: data.prompt.present ? data.prompt.value : this.prompt,
       status: data.status.present ? data.status.value : this.status,
@@ -6754,6 +6796,7 @@ class Shot extends DataClass implements Insertable<Shot> {
           ..write('blocking: $blocking, ')
           ..write('dialogueStartRatio: $dialogueStartRatio, ')
           ..write('dialogueEndRatio: $dialogueEndRatio, ')
+          ..write('costumeOverrides: $costumeOverrides, ')
           ..write('sceneId: $sceneId, ')
           ..write('prompt: $prompt, ')
           ..write('status: $status, ')
@@ -6785,6 +6828,7 @@ class Shot extends DataClass implements Insertable<Shot> {
     blocking,
     dialogueStartRatio,
     dialogueEndRatio,
+    costumeOverrides,
     sceneId,
     prompt,
     status,
@@ -6815,6 +6859,7 @@ class Shot extends DataClass implements Insertable<Shot> {
           other.blocking == this.blocking &&
           other.dialogueStartRatio == this.dialogueStartRatio &&
           other.dialogueEndRatio == this.dialogueEndRatio &&
+          other.costumeOverrides == this.costumeOverrides &&
           other.sceneId == this.sceneId &&
           other.prompt == this.prompt &&
           other.status == this.status &&
@@ -6843,6 +6888,7 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
   final Value<String?> blocking;
   final Value<int?> dialogueStartRatio;
   final Value<int?> dialogueEndRatio;
+  final Value<String?> costumeOverrides;
   final Value<int?> sceneId;
   final Value<String> prompt;
   final Value<String> status;
@@ -6869,6 +6915,7 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     this.blocking = const Value.absent(),
     this.dialogueStartRatio = const Value.absent(),
     this.dialogueEndRatio = const Value.absent(),
+    this.costumeOverrides = const Value.absent(),
     this.sceneId = const Value.absent(),
     this.prompt = const Value.absent(),
     this.status = const Value.absent(),
@@ -6896,6 +6943,7 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     this.blocking = const Value.absent(),
     this.dialogueStartRatio = const Value.absent(),
     this.dialogueEndRatio = const Value.absent(),
+    this.costumeOverrides = const Value.absent(),
     this.sceneId = const Value.absent(),
     this.prompt = const Value.absent(),
     this.status = const Value.absent(),
@@ -6925,6 +6973,7 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     Expression<String>? blocking,
     Expression<int>? dialogueStartRatio,
     Expression<int>? dialogueEndRatio,
+    Expression<String>? costumeOverrides,
     Expression<int>? sceneId,
     Expression<String>? prompt,
     Expression<String>? status,
@@ -6953,6 +7002,7 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
       if (dialogueStartRatio != null)
         'dialogue_start_ratio': dialogueStartRatio,
       if (dialogueEndRatio != null) 'dialogue_end_ratio': dialogueEndRatio,
+      if (costumeOverrides != null) 'costume_overrides': costumeOverrides,
       if (sceneId != null) 'scene_id': sceneId,
       if (prompt != null) 'prompt': prompt,
       if (status != null) 'status': status,
@@ -6982,6 +7032,7 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     Value<String?>? blocking,
     Value<int?>? dialogueStartRatio,
     Value<int?>? dialogueEndRatio,
+    Value<String?>? costumeOverrides,
     Value<int?>? sceneId,
     Value<String>? prompt,
     Value<String>? status,
@@ -7009,6 +7060,7 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
       blocking: blocking ?? this.blocking,
       dialogueStartRatio: dialogueStartRatio ?? this.dialogueStartRatio,
       dialogueEndRatio: dialogueEndRatio ?? this.dialogueEndRatio,
+      costumeOverrides: costumeOverrides ?? this.costumeOverrides,
       sceneId: sceneId ?? this.sceneId,
       prompt: prompt ?? this.prompt,
       status: status ?? this.status,
@@ -7078,6 +7130,9 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     if (dialogueEndRatio.present) {
       map['dialogue_end_ratio'] = Variable<int>(dialogueEndRatio.value);
     }
+    if (costumeOverrides.present) {
+      map['costume_overrides'] = Variable<String>(costumeOverrides.value);
+    }
     if (sceneId.present) {
       map['scene_id'] = Variable<int>(sceneId.value);
     }
@@ -7121,6 +7176,7 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
           ..write('blocking: $blocking, ')
           ..write('dialogueStartRatio: $dialogueStartRatio, ')
           ..write('dialogueEndRatio: $dialogueEndRatio, ')
+          ..write('costumeOverrides: $costumeOverrides, ')
           ..write('sceneId: $sceneId, ')
           ..write('prompt: $prompt, ')
           ..write('status: $status, ')
@@ -16639,6 +16695,7 @@ typedef $$ShotsTableCreateCompanionBuilder = ShotsCompanion Function({
   Value<String?> blocking,
   Value<int?> dialogueStartRatio,
   Value<int?> dialogueEndRatio,
+  Value<String?> costumeOverrides,
   Value<int?> sceneId,
   Value<String> prompt,
   Value<String> status,
@@ -16666,6 +16723,7 @@ typedef $$ShotsTableUpdateCompanionBuilder = ShotsCompanion Function({
   Value<String?> blocking,
   Value<int?> dialogueStartRatio,
   Value<int?> dialogueEndRatio,
+  Value<String?> costumeOverrides,
   Value<int?> sceneId,
   Value<String> prompt,
   Value<String> status,
@@ -16863,6 +16921,11 @@ class $$ShotsTableFilterComposer extends Composer<_$AppDatabase, $ShotsTable> {
 
   ColumnFilters<int> get dialogueEndRatio => $composableBuilder(
     column: $table.dialogueEndRatio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get costumeOverrides => $composableBuilder(
+    column: $table.costumeOverrides,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17119,6 +17182,11 @@ class $$ShotsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get costumeOverrides => $composableBuilder(
+    column: $table.costumeOverrides,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sceneId => $composableBuilder(
     column: $table.sceneId,
     builder: (column) => ColumnOrderings(column),
@@ -17249,6 +17317,11 @@ class $$ShotsTableAnnotationComposer
 
   GeneratedColumn<int> get dialogueEndRatio => $composableBuilder(
     column: $table.dialogueEndRatio,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get costumeOverrides => $composableBuilder(
+    column: $table.costumeOverrides,
     builder: (column) => column,
   );
 
@@ -17451,6 +17524,7 @@ class $$ShotsTableTableManager
                 Value<String?> blocking = const Value.absent(),
                 Value<int?> dialogueStartRatio = const Value.absent(),
                 Value<int?> dialogueEndRatio = const Value.absent(),
+                Value<String?> costumeOverrides = const Value.absent(),
                 Value<int?> sceneId = const Value.absent(),
                 Value<String> prompt = const Value.absent(),
                 Value<String> status = const Value.absent(),
@@ -17477,6 +17551,7 @@ class $$ShotsTableTableManager
                 blocking: blocking,
                 dialogueStartRatio: dialogueStartRatio,
                 dialogueEndRatio: dialogueEndRatio,
+                costumeOverrides: costumeOverrides,
                 sceneId: sceneId,
                 prompt: prompt,
                 status: status,
@@ -17505,6 +17580,7 @@ class $$ShotsTableTableManager
                 Value<String?> blocking = const Value.absent(),
                 Value<int?> dialogueStartRatio = const Value.absent(),
                 Value<int?> dialogueEndRatio = const Value.absent(),
+                Value<String?> costumeOverrides = const Value.absent(),
                 Value<int?> sceneId = const Value.absent(),
                 Value<String> prompt = const Value.absent(),
                 Value<String> status = const Value.absent(),
@@ -17531,6 +17607,7 @@ class $$ShotsTableTableManager
                 blocking: blocking,
                 dialogueStartRatio: dialogueStartRatio,
                 dialogueEndRatio: dialogueEndRatio,
+                costumeOverrides: costumeOverrides,
                 sceneId: sceneId,
                 prompt: prompt,
                 status: status,

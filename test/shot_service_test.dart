@@ -919,4 +919,110 @@ void main() {
       expect(issues, isEmpty);
     });
   });
+
+  group('ShotService 镜头级服装覆盖（M19 T21.13）', () {
+    late int qingId;
+    late int costumeShotId;
+
+    setUp(() async {
+      qingId = (await db.assetDao.listByScript(scriptId))
+          .firstWhere((a) => a.stableId == 'char_qing')
+          .id;
+      await db.assetDao.updateById(
+        qingId,
+        AssetsCompanion(
+          costumeSets: const Value(
+            '[{"name":"校服","description":"蓝白运动外套配深蓝长裤"},'
+            '{"name":"斗篷","description":"深灰长斗篷"}]',
+          ),
+        ),
+      );
+      costumeShotId = (await db.shotDao.listByScript(scriptId))
+          .firstWhere((s) => s.globalSeq == 'G01')
+          .id;
+    });
+
+    test('updateCostumeOverrides 落库可读回；空清单写 null', () async {
+      await service.updateCostumeOverrides(
+        shotId: costumeShotId,
+        overrides: const [
+          ShotCostumeOverride(stableId: 'char_qing', name: '校服'),
+        ],
+      );
+
+      final saved = (await db.shotDao.find(costumeShotId))!;
+      final decoded = ShotCostumeOverride.decode(saved.costumeOverrides);
+      expect(decoded, hasLength(1));
+      expect(decoded.single.stableId, 'char_qing');
+      expect(decoded.single.name, '校服');
+
+      await service.updateCostumeOverrides(
+        shotId: costumeShotId,
+        overrides: const [],
+      );
+      expect((await db.shotDao.find(costumeShotId))!.costumeOverrides, isNull);
+    });
+
+    test('buildDirectionContext 把服装套清单注入资产清单', () async {
+      final context = await service.buildDirectionContext(scriptId);
+
+      expect(context, contains('costumeSets'));
+      expect(context, contains('校服'));
+      expect(context, contains('斗篷'));
+    });
+
+    test('listCostumeIssues 识别清单外套名、未出镜角色与重复覆盖', () async {
+      await db.assetRefDao.insert(
+        AssetRefsCompanion.insert(
+          shotId: costumeShotId,
+          assetId: qingId,
+          role: '角色参考',
+          order: Value(0),
+        ),
+      );
+      await service.updateCostumeOverrides(
+        shotId: costumeShotId,
+        overrides: const [
+          ShotCostumeOverride(stableId: 'char_qing', name: '囚服'),
+          ShotCostumeOverride(stableId: 'char_missing', name: '校服'),
+          ShotCostumeOverride(stableId: 'char_qing', name: '斗篷'),
+        ],
+      );
+
+      final issues = await service.listCostumeIssues(scriptId);
+
+      expect(
+        issues.map((i) => i.code),
+        containsAll(['costume_unknown', 'costume_orphan', 'costume_duplicate']),
+      );
+      expect(issues.every((i) => !i.isError), isTrue);
+      expect(
+        issues.singleWhere((i) => i.code == 'costume_unknown').message,
+        contains('可用：校服 / 斗篷'),
+      );
+    });
+
+    test('套名在清单内且角色已出镜时不报问题', () async {
+      await db.assetRefDao.insert(
+        AssetRefsCompanion.insert(
+          shotId: costumeShotId,
+          assetId: qingId,
+          role: '角色参考',
+          order: Value(0),
+        ),
+      );
+      await service.updateCostumeOverrides(
+        shotId: costumeShotId,
+        overrides: const [
+          ShotCostumeOverride(stableId: 'char_qing', name: '斗篷'),
+        ],
+      );
+
+      expect(await service.listCostumeIssues(scriptId), isEmpty);
+    });
+
+    test('无覆盖的镜头不产生任何问题', () async {
+      expect(await service.listCostumeIssues(scriptId), isEmpty);
+    });
+  });
 }
