@@ -488,6 +488,8 @@ class ShotService {
         ShotsCompanion(
           outputPath: Value(path),
           status: const Value(ShotStatuses.reviewing),
+          // 刚按当前提示词出过图，失效标记清除（M19 T21.14）。
+          isStale: const Value(0),
         ),
       );
       await _saveShotSnapshot(shotId, 'image', '分镜图已生成');
@@ -1024,6 +1026,8 @@ class ShotService {
             ShotsCompanion(
               outputPath: Value(path),
               status: const Value(ShotStatuses.videoDone),
+              // 视频已按当前提示词出片，失效标记清除（M19 T21.14）。
+              isStale: const Value(0),
             ),
           );
           return (await videoTaskDao.find(task.id))!;

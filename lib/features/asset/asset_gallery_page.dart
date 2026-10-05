@@ -267,6 +267,10 @@ class _AssetCard extends StatelessWidget {
                       ),
                       const Spacer(),
                       StatusBadge(status: asset.status),
+                      if (asset.isStale != 0) ...[
+                        const SizedBox(width: 6),
+                        StaleBadge(isStale: asset.isStale),
+                      ],
                     ],
                   ),
                 ],

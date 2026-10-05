@@ -102,3 +102,29 @@ class StatusBadge extends StatelessWidget {
     );
   }
 }
+
+/// 下游产物失效徽章（M19 T21.14）。
+///
+/// 上游剧本场次变更后置位，产物重生成后清除。非 0 即失效，展示橙色胶囊
+/// 提示用户「这张图 / 这段视频已经跟不上剧本了」。
+class StaleBadge extends StatelessWidget {
+  const StaleBadge({super.key, required this.isStale});
+
+  final int isStale;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isStale == 0) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Text(
+        '已失效',
+        style: TextStyle(color: Colors.orange, fontSize: 11),
+      ),
+    );
+  }
+}

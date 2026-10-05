@@ -92,6 +92,8 @@ class Scripts extends Table {
   IntColumn get targetDurationMs => integer().withDefault(const Constant(0))();
   // 目标模型版本（'2.0' / '2.5'）；决定单段时长上限与批次容量的回落值。
   TextColumn get modelVersion => text().nullable()();
+  // 剧本内容指纹（M19 T21.14）：content 变化即重算，用于判定下游产物是否失效。
+  TextColumn get scriptHash => text().nullable()();
 }
 
 /// 场。
@@ -149,12 +151,20 @@ class Assets extends Table {
   IntColumn get variantOf => integer().nullable()();
   // 外观锚点 JSON。
   TextColumn get appearanceAnchor => text().nullable()();
+  // M19 T21.13 角色结构化字段：身高（厘米）、体型、服装套（JSON 数组）。
+  // 多人同框比例失控的根因之一是角色只有提示词文本，缺可量化的身体参数。
+  IntColumn get heightCm => integer().nullable()();
+  TextColumn get bodyType => text().nullable()();
+  TextColumn get costumeSets => text().nullable()();
   // 版式：四视图 / 主视图 / 2x2。
   TextColumn get boardLayout => text().withDefault(const Constant('四视图'))();
   TextColumn get prompt => text().withDefault(const Constant(''))();
   TextColumn get imagePath => text().nullable()();
   // 状态：待生成 / 生成中 / 待验收 / 已采用 / 废弃。
   TextColumn get status => text().withDefault(const Constant('待生成'))();
+  // M19 T21.14 下游失效标记：上游剧本或本资产提示词变更后置 1，
+  // 重新出图后清 0。非 0 即失效。
+  IntColumn get isStale => integer().withDefault(const Constant(0))();
 }
 
 /// 镜头 / 片段（借鉴 Toonflow A3 分段）。
@@ -176,6 +186,25 @@ class Shots extends Table {
   TextColumn get assetStates => text().withDefault(const Constant('{}'))();
   // 景别 / 主体等。
   TextColumn get shotType => text().nullable()();
+  // M19 T21.12 镜头结构化字段：把分镜从「一段自由正文」升级为可量化字段，
+  // 分镜图与视频提示词按字段引用，不再靠自由文本描述构图。
+  // 构图（人物在画面中的位置与比例）。
+  TextColumn get composition => text().nullable()();
+  // 焦距与景深，如「35mm 浅景深」。
+  TextColumn get lens => text().nullable()();
+  // 机位，如「平视低位、离主体两米」。
+  TextColumn get cameraPosition => text().nullable()();
+  // 视线落点，如「看画外右侧」。
+  TextColumn get eyeline => text().nullable()();
+  // 焦点，如「锁主角面部」。
+  TextColumn get focus => text().nullable()();
+  // 稳定性，如「手持微晃」/「三脚架固定」。
+  TextColumn get stability => text().nullable()();
+  // 段级走位：人物在几秒内的移动轨迹。
+  TextColumn get blocking => text().nullable()();
+  // 对白起止占段时长比例（百分比 0-100）；用于校验台词是否塞得下。
+  IntColumn get dialogueStartRatio => integer().nullable()();
+  IntColumn get dialogueEndRatio => integer().nullable()();
   IntColumn get sceneId => integer().nullable()();
   // 最终生成提示词。
   TextColumn get prompt => text().withDefault(const Constant(''))();
@@ -183,6 +212,9 @@ class Shots extends Table {
   TextColumn get outputPath => text().nullable()();
   // 产物类型：image / video。
   TextColumn get outputType => text().withDefault(const Constant('image'))();
+  // M19 T21.14 下游失效标记：上游剧本或引用资产提示词变更后置 1，
+  // 重新出图 / 出视频后清 0。非 0 即失效。
+  IntColumn get isStale => integer().withDefault(const Constant(0))();
 }
 
 /// 镜头内画面（借鉴 Toonflow A4 出镜状态）。
@@ -352,4 +384,29 @@ class GenerationAttempts extends Table {
   TextColumn get resultPath => text().nullable()();
   TextColumn get errorMessage => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// 用户可编辑的提示词覆盖（M19 T21.11）。
+///
+/// 内置 skill 是打进 APK 的只读资源，用户改不了提示词。这张表提供
+/// 项目级 > 全局级 > 代码默认 的三级覆盖：同一 (scope, slotKey) 下项目级优先，
+/// 没有项目级回落全局级，两级都没有用内置 skill 原文。
+///
+/// 覆盖按整段替换，不做局部合并——局部合并需要插槽解析，语义太脆。
+///
+/// 列名不用 `key` / `text`：drift 2.35.1 的 `ColumnParser` 解析这两个 getter
+/// 会抛 `FunctionExpressionInvocationImpl is not a subtype of MethodInvocation`，
+/// 并使整个 `app_database.g.dart` 退化成空 schema。
+@DataClassName('PromptOverride')
+class PromptOverrides extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // 作用域：global（全局级，所有项目生效）/ project（仅指定项目）。
+  TextColumn get scope => text()();
+  // 归属项目；scope == 'project' 时必填，'global' 时为 null。
+  IntColumn get projectId => integer().nullable()();
+  // 提示词键，与内置 skill 相对路径一一对应，如 'shot/storyboard.md'。
+  TextColumn get slotKey => text()();
+  // 覆盖全文。
+  TextColumn get body => text()();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }

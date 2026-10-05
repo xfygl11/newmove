@@ -2676,6 +2676,17 @@ class $ScriptsTable extends Scripts with TableInfo<$ScriptsTable, Script> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _scriptHashMeta = const VerificationMeta(
+    'scriptHash',
+  );
+  @override
+  late final GeneratedColumn<String> scriptHash = GeneratedColumn<String>(
+    'script_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2689,6 +2700,7 @@ class $ScriptsTable extends Scripts with TableInfo<$ScriptsTable, Script> {
     episodeNo,
     targetDurationMs,
     modelVersion,
+    scriptHash,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2778,6 +2790,12 @@ class $ScriptsTable extends Scripts with TableInfo<$ScriptsTable, Script> {
         ),
       );
     }
+    if (data.containsKey('script_hash')) {
+      context.handle(
+        _scriptHashMeta,
+        scriptHash.isAcceptableOrUnknown(data['script_hash']!, _scriptHashMeta),
+      );
+    }
     return context;
   }
 
@@ -2831,6 +2849,10 @@ class $ScriptsTable extends Scripts with TableInfo<$ScriptsTable, Script> {
         DriftSqlType.string,
         data['${effectivePrefix}model_version'],
       ),
+      scriptHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}script_hash'],
+      ),
     );
   }
 
@@ -2852,6 +2874,7 @@ class Script extends DataClass implements Insertable<Script> {
   final int? episodeNo;
   final int targetDurationMs;
   final String? modelVersion;
+  final String? scriptHash;
   const Script({
     required this.id,
     required this.bookId,
@@ -2864,6 +2887,7 @@ class Script extends DataClass implements Insertable<Script> {
     this.episodeNo,
     required this.targetDurationMs,
     this.modelVersion,
+    this.scriptHash,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2884,6 +2908,9 @@ class Script extends DataClass implements Insertable<Script> {
     map['target_duration_ms'] = Variable<int>(targetDurationMs);
     if (!nullToAbsent || modelVersion != null) {
       map['model_version'] = Variable<String>(modelVersion);
+    }
+    if (!nullToAbsent || scriptHash != null) {
+      map['script_hash'] = Variable<String>(scriptHash);
     }
     return map;
   }
@@ -2907,6 +2934,9 @@ class Script extends DataClass implements Insertable<Script> {
       modelVersion: modelVersion == null && nullToAbsent
           ? const Value.absent()
           : Value(modelVersion),
+      scriptHash: scriptHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(scriptHash),
     );
   }
 
@@ -2927,6 +2957,7 @@ class Script extends DataClass implements Insertable<Script> {
       episodeNo: serializer.fromJson<int?>(json['episodeNo']),
       targetDurationMs: serializer.fromJson<int>(json['targetDurationMs']),
       modelVersion: serializer.fromJson<String?>(json['modelVersion']),
+      scriptHash: serializer.fromJson<String?>(json['scriptHash']),
     );
   }
   @override
@@ -2944,6 +2975,7 @@ class Script extends DataClass implements Insertable<Script> {
       'episodeNo': serializer.toJson<int?>(episodeNo),
       'targetDurationMs': serializer.toJson<int>(targetDurationMs),
       'modelVersion': serializer.toJson<String?>(modelVersion),
+      'scriptHash': serializer.toJson<String?>(scriptHash),
     };
   }
 
@@ -2959,6 +2991,7 @@ class Script extends DataClass implements Insertable<Script> {
     Value<int?> episodeNo = const Value.absent(),
     int? targetDurationMs,
     Value<String?> modelVersion = const Value.absent(),
+    Value<String?> scriptHash = const Value.absent(),
   }) => Script(
     id: id ?? this.id,
     bookId: bookId ?? this.bookId,
@@ -2971,6 +3004,7 @@ class Script extends DataClass implements Insertable<Script> {
     episodeNo: episodeNo.present ? episodeNo.value : this.episodeNo,
     targetDurationMs: targetDurationMs ?? this.targetDurationMs,
     modelVersion: modelVersion.present ? modelVersion.value : this.modelVersion,
+    scriptHash: scriptHash.present ? scriptHash.value : this.scriptHash,
   );
   Script copyWithCompanion(ScriptsCompanion data) {
     return Script(
@@ -2991,6 +3025,9 @@ class Script extends DataClass implements Insertable<Script> {
       modelVersion: data.modelVersion.present
           ? data.modelVersion.value
           : this.modelVersion,
+      scriptHash: data.scriptHash.present
+          ? data.scriptHash.value
+          : this.scriptHash,
     );
   }
 
@@ -3007,7 +3044,8 @@ class Script extends DataClass implements Insertable<Script> {
           ..write('content: $content, ')
           ..write('episodeNo: $episodeNo, ')
           ..write('targetDurationMs: $targetDurationMs, ')
-          ..write('modelVersion: $modelVersion')
+          ..write('modelVersion: $modelVersion, ')
+          ..write('scriptHash: $scriptHash')
           ..write(')'))
         .toString();
   }
@@ -3025,6 +3063,7 @@ class Script extends DataClass implements Insertable<Script> {
     episodeNo,
     targetDurationMs,
     modelVersion,
+    scriptHash,
   );
   @override
   bool operator ==(Object other) =>
@@ -3040,7 +3079,8 @@ class Script extends DataClass implements Insertable<Script> {
           other.content == this.content &&
           other.episodeNo == this.episodeNo &&
           other.targetDurationMs == this.targetDurationMs &&
-          other.modelVersion == this.modelVersion);
+          other.modelVersion == this.modelVersion &&
+          other.scriptHash == this.scriptHash);
 }
 
 class ScriptsCompanion extends UpdateCompanion<Script> {
@@ -3055,6 +3095,7 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
   final Value<int?> episodeNo;
   final Value<int> targetDurationMs;
   final Value<String?> modelVersion;
+  final Value<String?> scriptHash;
   const ScriptsCompanion({
     this.id = const Value.absent(),
     this.bookId = const Value.absent(),
@@ -3067,6 +3108,7 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     this.episodeNo = const Value.absent(),
     this.targetDurationMs = const Value.absent(),
     this.modelVersion = const Value.absent(),
+    this.scriptHash = const Value.absent(),
   });
   ScriptsCompanion.insert({
     this.id = const Value.absent(),
@@ -3080,6 +3122,7 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     this.episodeNo = const Value.absent(),
     this.targetDurationMs = const Value.absent(),
     this.modelVersion = const Value.absent(),
+    this.scriptHash = const Value.absent(),
   }) : bookId = Value(bookId),
        title = Value(title);
   static Insertable<Script> custom({
@@ -3094,6 +3137,7 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     Expression<int>? episodeNo,
     Expression<int>? targetDurationMs,
     Expression<String>? modelVersion,
+    Expression<String>? scriptHash,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3107,6 +3151,7 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
       if (episodeNo != null) 'episode_no': episodeNo,
       if (targetDurationMs != null) 'target_duration_ms': targetDurationMs,
       if (modelVersion != null) 'model_version': modelVersion,
+      if (scriptHash != null) 'script_hash': scriptHash,
     });
   }
 
@@ -3122,6 +3167,7 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     Value<int?>? episodeNo,
     Value<int>? targetDurationMs,
     Value<String?>? modelVersion,
+    Value<String?>? scriptHash,
   }) {
     return ScriptsCompanion(
       id: id ?? this.id,
@@ -3135,6 +3181,7 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
       episodeNo: episodeNo ?? this.episodeNo,
       targetDurationMs: targetDurationMs ?? this.targetDurationMs,
       modelVersion: modelVersion ?? this.modelVersion,
+      scriptHash: scriptHash ?? this.scriptHash,
     );
   }
 
@@ -3174,6 +3221,9 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
     if (modelVersion.present) {
       map['model_version'] = Variable<String>(modelVersion.value);
     }
+    if (scriptHash.present) {
+      map['script_hash'] = Variable<String>(scriptHash.value);
+    }
     return map;
   }
 
@@ -3190,7 +3240,8 @@ class ScriptsCompanion extends UpdateCompanion<Script> {
           ..write('content: $content, ')
           ..write('episodeNo: $episodeNo, ')
           ..write('targetDurationMs: $targetDurationMs, ')
-          ..write('modelVersion: $modelVersion')
+          ..write('modelVersion: $modelVersion, ')
+          ..write('scriptHash: $scriptHash')
           ..write(')'))
         .toString();
   }
@@ -4965,6 +5016,39 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, Asset> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _heightCmMeta = const VerificationMeta(
+    'heightCm',
+  );
+  @override
+  late final GeneratedColumn<int> heightCm = GeneratedColumn<int>(
+    'height_cm',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bodyTypeMeta = const VerificationMeta(
+    'bodyType',
+  );
+  @override
+  late final GeneratedColumn<String> bodyType = GeneratedColumn<String>(
+    'body_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _costumeSetsMeta = const VerificationMeta(
+    'costumeSets',
+  );
+  @override
+  late final GeneratedColumn<String> costumeSets = GeneratedColumn<String>(
+    'costume_sets',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _boardLayoutMeta = const VerificationMeta(
     'boardLayout',
   );
@@ -5008,6 +5092,18 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, Asset> {
     requiredDuringInsert: false,
     defaultValue: const Constant('待生成'),
   );
+  static const VerificationMeta _isStaleMeta = const VerificationMeta(
+    'isStale',
+  );
+  @override
+  late final GeneratedColumn<int> isStale = GeneratedColumn<int>(
+    'is_stale',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -5017,10 +5113,14 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, Asset> {
     stableId,
     variantOf,
     appearanceAnchor,
+    heightCm,
+    bodyType,
+    costumeSets,
     boardLayout,
     prompt,
     imagePath,
     status,
+    isStale,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5084,6 +5184,27 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, Asset> {
         ),
       );
     }
+    if (data.containsKey('height_cm')) {
+      context.handle(
+        _heightCmMeta,
+        heightCm.isAcceptableOrUnknown(data['height_cm']!, _heightCmMeta),
+      );
+    }
+    if (data.containsKey('body_type')) {
+      context.handle(
+        _bodyTypeMeta,
+        bodyType.isAcceptableOrUnknown(data['body_type']!, _bodyTypeMeta),
+      );
+    }
+    if (data.containsKey('costume_sets')) {
+      context.handle(
+        _costumeSetsMeta,
+        costumeSets.isAcceptableOrUnknown(
+          data['costume_sets']!,
+          _costumeSetsMeta,
+        ),
+      );
+    }
     if (data.containsKey('board_layout')) {
       context.handle(
         _boardLayoutMeta,
@@ -5109,6 +5230,12 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, Asset> {
       context.handle(
         _statusMeta,
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('is_stale')) {
+      context.handle(
+        _isStaleMeta,
+        isStale.isAcceptableOrUnknown(data['is_stale']!, _isStaleMeta),
       );
     }
     return context;
@@ -5148,6 +5275,18 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, Asset> {
         DriftSqlType.string,
         data['${effectivePrefix}appearance_anchor'],
       ),
+      heightCm: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}height_cm'],
+      ),
+      bodyType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body_type'],
+      ),
+      costumeSets: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}costume_sets'],
+      ),
       boardLayout: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}board_layout'],
@@ -5163,6 +5302,10 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, Asset> {
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
+      )!,
+      isStale: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}is_stale'],
       )!,
     );
   }
@@ -5181,10 +5324,14 @@ class Asset extends DataClass implements Insertable<Asset> {
   final String stableId;
   final int? variantOf;
   final String? appearanceAnchor;
+  final int? heightCm;
+  final String? bodyType;
+  final String? costumeSets;
   final String boardLayout;
   final String prompt;
   final String? imagePath;
   final String status;
+  final int isStale;
   const Asset({
     required this.id,
     required this.scriptId,
@@ -5193,10 +5340,14 @@ class Asset extends DataClass implements Insertable<Asset> {
     required this.stableId,
     this.variantOf,
     this.appearanceAnchor,
+    this.heightCm,
+    this.bodyType,
+    this.costumeSets,
     required this.boardLayout,
     required this.prompt,
     this.imagePath,
     required this.status,
+    required this.isStale,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5212,12 +5363,22 @@ class Asset extends DataClass implements Insertable<Asset> {
     if (!nullToAbsent || appearanceAnchor != null) {
       map['appearance_anchor'] = Variable<String>(appearanceAnchor);
     }
+    if (!nullToAbsent || heightCm != null) {
+      map['height_cm'] = Variable<int>(heightCm);
+    }
+    if (!nullToAbsent || bodyType != null) {
+      map['body_type'] = Variable<String>(bodyType);
+    }
+    if (!nullToAbsent || costumeSets != null) {
+      map['costume_sets'] = Variable<String>(costumeSets);
+    }
     map['board_layout'] = Variable<String>(boardLayout);
     map['prompt'] = Variable<String>(prompt);
     if (!nullToAbsent || imagePath != null) {
       map['image_path'] = Variable<String>(imagePath);
     }
     map['status'] = Variable<String>(status);
+    map['is_stale'] = Variable<int>(isStale);
     return map;
   }
 
@@ -5234,12 +5395,22 @@ class Asset extends DataClass implements Insertable<Asset> {
       appearanceAnchor: appearanceAnchor == null && nullToAbsent
           ? const Value.absent()
           : Value(appearanceAnchor),
+      heightCm: heightCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(heightCm),
+      bodyType: bodyType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bodyType),
+      costumeSets: costumeSets == null && nullToAbsent
+          ? const Value.absent()
+          : Value(costumeSets),
       boardLayout: Value(boardLayout),
       prompt: Value(prompt),
       imagePath: imagePath == null && nullToAbsent
           ? const Value.absent()
           : Value(imagePath),
       status: Value(status),
+      isStale: Value(isStale),
     );
   }
 
@@ -5256,10 +5427,14 @@ class Asset extends DataClass implements Insertable<Asset> {
       stableId: serializer.fromJson<String>(json['stableId']),
       variantOf: serializer.fromJson<int?>(json['variantOf']),
       appearanceAnchor: serializer.fromJson<String?>(json['appearanceAnchor']),
+      heightCm: serializer.fromJson<int?>(json['heightCm']),
+      bodyType: serializer.fromJson<String?>(json['bodyType']),
+      costumeSets: serializer.fromJson<String?>(json['costumeSets']),
       boardLayout: serializer.fromJson<String>(json['boardLayout']),
       prompt: serializer.fromJson<String>(json['prompt']),
       imagePath: serializer.fromJson<String?>(json['imagePath']),
       status: serializer.fromJson<String>(json['status']),
+      isStale: serializer.fromJson<int>(json['isStale']),
     );
   }
   @override
@@ -5273,10 +5448,14 @@ class Asset extends DataClass implements Insertable<Asset> {
       'stableId': serializer.toJson<String>(stableId),
       'variantOf': serializer.toJson<int?>(variantOf),
       'appearanceAnchor': serializer.toJson<String?>(appearanceAnchor),
+      'heightCm': serializer.toJson<int?>(heightCm),
+      'bodyType': serializer.toJson<String?>(bodyType),
+      'costumeSets': serializer.toJson<String?>(costumeSets),
       'boardLayout': serializer.toJson<String>(boardLayout),
       'prompt': serializer.toJson<String>(prompt),
       'imagePath': serializer.toJson<String?>(imagePath),
       'status': serializer.toJson<String>(status),
+      'isStale': serializer.toJson<int>(isStale),
     };
   }
 
@@ -5288,10 +5467,14 @@ class Asset extends DataClass implements Insertable<Asset> {
     String? stableId,
     Value<int?> variantOf = const Value.absent(),
     Value<String?> appearanceAnchor = const Value.absent(),
+    Value<int?> heightCm = const Value.absent(),
+    Value<String?> bodyType = const Value.absent(),
+    Value<String?> costumeSets = const Value.absent(),
     String? boardLayout,
     String? prompt,
     Value<String?> imagePath = const Value.absent(),
     String? status,
+    int? isStale,
   }) => Asset(
     id: id ?? this.id,
     scriptId: scriptId ?? this.scriptId,
@@ -5302,10 +5485,14 @@ class Asset extends DataClass implements Insertable<Asset> {
     appearanceAnchor: appearanceAnchor.present
         ? appearanceAnchor.value
         : this.appearanceAnchor,
+    heightCm: heightCm.present ? heightCm.value : this.heightCm,
+    bodyType: bodyType.present ? bodyType.value : this.bodyType,
+    costumeSets: costumeSets.present ? costumeSets.value : this.costumeSets,
     boardLayout: boardLayout ?? this.boardLayout,
     prompt: prompt ?? this.prompt,
     imagePath: imagePath.present ? imagePath.value : this.imagePath,
     status: status ?? this.status,
+    isStale: isStale ?? this.isStale,
   );
   Asset copyWithCompanion(AssetsCompanion data) {
     return Asset(
@@ -5318,12 +5505,18 @@ class Asset extends DataClass implements Insertable<Asset> {
       appearanceAnchor: data.appearanceAnchor.present
           ? data.appearanceAnchor.value
           : this.appearanceAnchor,
+      heightCm: data.heightCm.present ? data.heightCm.value : this.heightCm,
+      bodyType: data.bodyType.present ? data.bodyType.value : this.bodyType,
+      costumeSets: data.costumeSets.present
+          ? data.costumeSets.value
+          : this.costumeSets,
       boardLayout: data.boardLayout.present
           ? data.boardLayout.value
           : this.boardLayout,
       prompt: data.prompt.present ? data.prompt.value : this.prompt,
       imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
       status: data.status.present ? data.status.value : this.status,
+      isStale: data.isStale.present ? data.isStale.value : this.isStale,
     );
   }
 
@@ -5337,10 +5530,14 @@ class Asset extends DataClass implements Insertable<Asset> {
           ..write('stableId: $stableId, ')
           ..write('variantOf: $variantOf, ')
           ..write('appearanceAnchor: $appearanceAnchor, ')
+          ..write('heightCm: $heightCm, ')
+          ..write('bodyType: $bodyType, ')
+          ..write('costumeSets: $costumeSets, ')
           ..write('boardLayout: $boardLayout, ')
           ..write('prompt: $prompt, ')
           ..write('imagePath: $imagePath, ')
-          ..write('status: $status')
+          ..write('status: $status, ')
+          ..write('isStale: $isStale')
           ..write(')'))
         .toString();
   }
@@ -5354,10 +5551,14 @@ class Asset extends DataClass implements Insertable<Asset> {
     stableId,
     variantOf,
     appearanceAnchor,
+    heightCm,
+    bodyType,
+    costumeSets,
     boardLayout,
     prompt,
     imagePath,
     status,
+    isStale,
   );
   @override
   bool operator ==(Object other) =>
@@ -5370,10 +5571,14 @@ class Asset extends DataClass implements Insertable<Asset> {
           other.stableId == this.stableId &&
           other.variantOf == this.variantOf &&
           other.appearanceAnchor == this.appearanceAnchor &&
+          other.heightCm == this.heightCm &&
+          other.bodyType == this.bodyType &&
+          other.costumeSets == this.costumeSets &&
           other.boardLayout == this.boardLayout &&
           other.prompt == this.prompt &&
           other.imagePath == this.imagePath &&
-          other.status == this.status);
+          other.status == this.status &&
+          other.isStale == this.isStale);
 }
 
 class AssetsCompanion extends UpdateCompanion<Asset> {
@@ -5384,10 +5589,14 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
   final Value<String> stableId;
   final Value<int?> variantOf;
   final Value<String?> appearanceAnchor;
+  final Value<int?> heightCm;
+  final Value<String?> bodyType;
+  final Value<String?> costumeSets;
   final Value<String> boardLayout;
   final Value<String> prompt;
   final Value<String?> imagePath;
   final Value<String> status;
+  final Value<int> isStale;
   const AssetsCompanion({
     this.id = const Value.absent(),
     this.scriptId = const Value.absent(),
@@ -5396,10 +5605,14 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
     this.stableId = const Value.absent(),
     this.variantOf = const Value.absent(),
     this.appearanceAnchor = const Value.absent(),
+    this.heightCm = const Value.absent(),
+    this.bodyType = const Value.absent(),
+    this.costumeSets = const Value.absent(),
     this.boardLayout = const Value.absent(),
     this.prompt = const Value.absent(),
     this.imagePath = const Value.absent(),
     this.status = const Value.absent(),
+    this.isStale = const Value.absent(),
   });
   AssetsCompanion.insert({
     this.id = const Value.absent(),
@@ -5409,10 +5622,14 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
     required String stableId,
     this.variantOf = const Value.absent(),
     this.appearanceAnchor = const Value.absent(),
+    this.heightCm = const Value.absent(),
+    this.bodyType = const Value.absent(),
+    this.costumeSets = const Value.absent(),
     this.boardLayout = const Value.absent(),
     this.prompt = const Value.absent(),
     this.imagePath = const Value.absent(),
     this.status = const Value.absent(),
+    this.isStale = const Value.absent(),
   }) : scriptId = Value(scriptId),
        type = Value(type),
        name = Value(name),
@@ -5425,10 +5642,14 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
     Expression<String>? stableId,
     Expression<int>? variantOf,
     Expression<String>? appearanceAnchor,
+    Expression<int>? heightCm,
+    Expression<String>? bodyType,
+    Expression<String>? costumeSets,
     Expression<String>? boardLayout,
     Expression<String>? prompt,
     Expression<String>? imagePath,
     Expression<String>? status,
+    Expression<int>? isStale,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -5438,10 +5659,14 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
       if (stableId != null) 'stable_id': stableId,
       if (variantOf != null) 'variant_of': variantOf,
       if (appearanceAnchor != null) 'appearance_anchor': appearanceAnchor,
+      if (heightCm != null) 'height_cm': heightCm,
+      if (bodyType != null) 'body_type': bodyType,
+      if (costumeSets != null) 'costume_sets': costumeSets,
       if (boardLayout != null) 'board_layout': boardLayout,
       if (prompt != null) 'prompt': prompt,
       if (imagePath != null) 'image_path': imagePath,
       if (status != null) 'status': status,
+      if (isStale != null) 'is_stale': isStale,
     });
   }
 
@@ -5453,10 +5678,14 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
     Value<String>? stableId,
     Value<int?>? variantOf,
     Value<String?>? appearanceAnchor,
+    Value<int?>? heightCm,
+    Value<String?>? bodyType,
+    Value<String?>? costumeSets,
     Value<String>? boardLayout,
     Value<String>? prompt,
     Value<String?>? imagePath,
     Value<String>? status,
+    Value<int>? isStale,
   }) {
     return AssetsCompanion(
       id: id ?? this.id,
@@ -5466,10 +5695,14 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
       stableId: stableId ?? this.stableId,
       variantOf: variantOf ?? this.variantOf,
       appearanceAnchor: appearanceAnchor ?? this.appearanceAnchor,
+      heightCm: heightCm ?? this.heightCm,
+      bodyType: bodyType ?? this.bodyType,
+      costumeSets: costumeSets ?? this.costumeSets,
       boardLayout: boardLayout ?? this.boardLayout,
       prompt: prompt ?? this.prompt,
       imagePath: imagePath ?? this.imagePath,
       status: status ?? this.status,
+      isStale: isStale ?? this.isStale,
     );
   }
 
@@ -5497,6 +5730,15 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
     if (appearanceAnchor.present) {
       map['appearance_anchor'] = Variable<String>(appearanceAnchor.value);
     }
+    if (heightCm.present) {
+      map['height_cm'] = Variable<int>(heightCm.value);
+    }
+    if (bodyType.present) {
+      map['body_type'] = Variable<String>(bodyType.value);
+    }
+    if (costumeSets.present) {
+      map['costume_sets'] = Variable<String>(costumeSets.value);
+    }
     if (boardLayout.present) {
       map['board_layout'] = Variable<String>(boardLayout.value);
     }
@@ -5508,6 +5750,9 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
     }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
+    }
+    if (isStale.present) {
+      map['is_stale'] = Variable<int>(isStale.value);
     }
     return map;
   }
@@ -5522,10 +5767,14 @@ class AssetsCompanion extends UpdateCompanion<Asset> {
           ..write('stableId: $stableId, ')
           ..write('variantOf: $variantOf, ')
           ..write('appearanceAnchor: $appearanceAnchor, ')
+          ..write('heightCm: $heightCm, ')
+          ..write('bodyType: $bodyType, ')
+          ..write('costumeSets: $costumeSets, ')
           ..write('boardLayout: $boardLayout, ')
           ..write('prompt: $prompt, ')
           ..write('imagePath: $imagePath, ')
-          ..write('status: $status')
+          ..write('status: $status, ')
+          ..write('isStale: $isStale')
           ..write(')'))
         .toString();
   }
@@ -5653,6 +5902,100 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _compositionMeta = const VerificationMeta(
+    'composition',
+  );
+  @override
+  late final GeneratedColumn<String> composition = GeneratedColumn<String>(
+    'composition',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lensMeta = const VerificationMeta('lens');
+  @override
+  late final GeneratedColumn<String> lens = GeneratedColumn<String>(
+    'lens',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cameraPositionMeta = const VerificationMeta(
+    'cameraPosition',
+  );
+  @override
+  late final GeneratedColumn<String> cameraPosition = GeneratedColumn<String>(
+    'camera_position',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _eyelineMeta = const VerificationMeta(
+    'eyeline',
+  );
+  @override
+  late final GeneratedColumn<String> eyeline = GeneratedColumn<String>(
+    'eyeline',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _focusMeta = const VerificationMeta('focus');
+  @override
+  late final GeneratedColumn<String> focus = GeneratedColumn<String>(
+    'focus',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _stabilityMeta = const VerificationMeta(
+    'stability',
+  );
+  @override
+  late final GeneratedColumn<String> stability = GeneratedColumn<String>(
+    'stability',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _blockingMeta = const VerificationMeta(
+    'blocking',
+  );
+  @override
+  late final GeneratedColumn<String> blocking = GeneratedColumn<String>(
+    'blocking',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dialogueStartRatioMeta =
+      const VerificationMeta('dialogueStartRatio');
+  @override
+  late final GeneratedColumn<int> dialogueStartRatio = GeneratedColumn<int>(
+    'dialogue_start_ratio',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dialogueEndRatioMeta = const VerificationMeta(
+    'dialogueEndRatio',
+  );
+  @override
+  late final GeneratedColumn<int> dialogueEndRatio = GeneratedColumn<int>(
+    'dialogue_end_ratio',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _sceneIdMeta = const VerificationMeta(
     'sceneId',
   );
@@ -5707,6 +6050,18 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
     requiredDuringInsert: false,
     defaultValue: const Constant('image'),
   );
+  static const VerificationMeta _isStaleMeta = const VerificationMeta(
+    'isStale',
+  );
+  @override
+  late final GeneratedColumn<int> isStale = GeneratedColumn<int>(
+    'is_stale',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -5719,11 +6074,21 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
     beatRefs,
     assetStates,
     shotType,
+    composition,
+    lens,
+    cameraPosition,
+    eyeline,
+    focus,
+    stability,
+    blocking,
+    dialogueStartRatio,
+    dialogueEndRatio,
     sceneId,
     prompt,
     status,
     outputPath,
     outputType,
+    isStale,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5809,6 +6174,72 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
         shotType.isAcceptableOrUnknown(data['shot_type']!, _shotTypeMeta),
       );
     }
+    if (data.containsKey('composition')) {
+      context.handle(
+        _compositionMeta,
+        composition.isAcceptableOrUnknown(
+          data['composition']!,
+          _compositionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('lens')) {
+      context.handle(
+        _lensMeta,
+        lens.isAcceptableOrUnknown(data['lens']!, _lensMeta),
+      );
+    }
+    if (data.containsKey('camera_position')) {
+      context.handle(
+        _cameraPositionMeta,
+        cameraPosition.isAcceptableOrUnknown(
+          data['camera_position']!,
+          _cameraPositionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('eyeline')) {
+      context.handle(
+        _eyelineMeta,
+        eyeline.isAcceptableOrUnknown(data['eyeline']!, _eyelineMeta),
+      );
+    }
+    if (data.containsKey('focus')) {
+      context.handle(
+        _focusMeta,
+        focus.isAcceptableOrUnknown(data['focus']!, _focusMeta),
+      );
+    }
+    if (data.containsKey('stability')) {
+      context.handle(
+        _stabilityMeta,
+        stability.isAcceptableOrUnknown(data['stability']!, _stabilityMeta),
+      );
+    }
+    if (data.containsKey('blocking')) {
+      context.handle(
+        _blockingMeta,
+        blocking.isAcceptableOrUnknown(data['blocking']!, _blockingMeta),
+      );
+    }
+    if (data.containsKey('dialogue_start_ratio')) {
+      context.handle(
+        _dialogueStartRatioMeta,
+        dialogueStartRatio.isAcceptableOrUnknown(
+          data['dialogue_start_ratio']!,
+          _dialogueStartRatioMeta,
+        ),
+      );
+    }
+    if (data.containsKey('dialogue_end_ratio')) {
+      context.handle(
+        _dialogueEndRatioMeta,
+        dialogueEndRatio.isAcceptableOrUnknown(
+          data['dialogue_end_ratio']!,
+          _dialogueEndRatioMeta,
+        ),
+      );
+    }
     if (data.containsKey('scene_id')) {
       context.handle(
         _sceneIdMeta,
@@ -5837,6 +6268,12 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
       context.handle(
         _outputTypeMeta,
         outputType.isAcceptableOrUnknown(data['output_type']!, _outputTypeMeta),
+      );
+    }
+    if (data.containsKey('is_stale')) {
+      context.handle(
+        _isStaleMeta,
+        isStale.isAcceptableOrUnknown(data['is_stale']!, _isStaleMeta),
       );
     }
     return context;
@@ -5888,6 +6325,42 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
         DriftSqlType.string,
         data['${effectivePrefix}shot_type'],
       ),
+      composition: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}composition'],
+      ),
+      lens: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lens'],
+      ),
+      cameraPosition: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}camera_position'],
+      ),
+      eyeline: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}eyeline'],
+      ),
+      focus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}focus'],
+      ),
+      stability: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}stability'],
+      ),
+      blocking: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}blocking'],
+      ),
+      dialogueStartRatio: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dialogue_start_ratio'],
+      ),
+      dialogueEndRatio: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dialogue_end_ratio'],
+      ),
       sceneId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}scene_id'],
@@ -5907,6 +6380,10 @@ class $ShotsTable extends Shots with TableInfo<$ShotsTable, Shot> {
       outputType: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}output_type'],
+      )!,
+      isStale: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}is_stale'],
       )!,
     );
   }
@@ -5928,11 +6405,21 @@ class Shot extends DataClass implements Insertable<Shot> {
   final String beatRefs;
   final String assetStates;
   final String? shotType;
+  final String? composition;
+  final String? lens;
+  final String? cameraPosition;
+  final String? eyeline;
+  final String? focus;
+  final String? stability;
+  final String? blocking;
+  final int? dialogueStartRatio;
+  final int? dialogueEndRatio;
   final int? sceneId;
   final String prompt;
   final String status;
   final String? outputPath;
   final String outputType;
+  final int isStale;
   const Shot({
     required this.id,
     required this.scriptId,
@@ -5944,11 +6431,21 @@ class Shot extends DataClass implements Insertable<Shot> {
     required this.beatRefs,
     required this.assetStates,
     this.shotType,
+    this.composition,
+    this.lens,
+    this.cameraPosition,
+    this.eyeline,
+    this.focus,
+    this.stability,
+    this.blocking,
+    this.dialogueStartRatio,
+    this.dialogueEndRatio,
     this.sceneId,
     required this.prompt,
     required this.status,
     this.outputPath,
     required this.outputType,
+    required this.isStale,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5967,6 +6464,33 @@ class Shot extends DataClass implements Insertable<Shot> {
     if (!nullToAbsent || shotType != null) {
       map['shot_type'] = Variable<String>(shotType);
     }
+    if (!nullToAbsent || composition != null) {
+      map['composition'] = Variable<String>(composition);
+    }
+    if (!nullToAbsent || lens != null) {
+      map['lens'] = Variable<String>(lens);
+    }
+    if (!nullToAbsent || cameraPosition != null) {
+      map['camera_position'] = Variable<String>(cameraPosition);
+    }
+    if (!nullToAbsent || eyeline != null) {
+      map['eyeline'] = Variable<String>(eyeline);
+    }
+    if (!nullToAbsent || focus != null) {
+      map['focus'] = Variable<String>(focus);
+    }
+    if (!nullToAbsent || stability != null) {
+      map['stability'] = Variable<String>(stability);
+    }
+    if (!nullToAbsent || blocking != null) {
+      map['blocking'] = Variable<String>(blocking);
+    }
+    if (!nullToAbsent || dialogueStartRatio != null) {
+      map['dialogue_start_ratio'] = Variable<int>(dialogueStartRatio);
+    }
+    if (!nullToAbsent || dialogueEndRatio != null) {
+      map['dialogue_end_ratio'] = Variable<int>(dialogueEndRatio);
+    }
     if (!nullToAbsent || sceneId != null) {
       map['scene_id'] = Variable<int>(sceneId);
     }
@@ -5976,6 +6500,7 @@ class Shot extends DataClass implements Insertable<Shot> {
       map['output_path'] = Variable<String>(outputPath);
     }
     map['output_type'] = Variable<String>(outputType);
+    map['is_stale'] = Variable<int>(isStale);
     return map;
   }
 
@@ -5995,6 +6520,31 @@ class Shot extends DataClass implements Insertable<Shot> {
       shotType: shotType == null && nullToAbsent
           ? const Value.absent()
           : Value(shotType),
+      composition: composition == null && nullToAbsent
+          ? const Value.absent()
+          : Value(composition),
+      lens: lens == null && nullToAbsent ? const Value.absent() : Value(lens),
+      cameraPosition: cameraPosition == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cameraPosition),
+      eyeline: eyeline == null && nullToAbsent
+          ? const Value.absent()
+          : Value(eyeline),
+      focus: focus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(focus),
+      stability: stability == null && nullToAbsent
+          ? const Value.absent()
+          : Value(stability),
+      blocking: blocking == null && nullToAbsent
+          ? const Value.absent()
+          : Value(blocking),
+      dialogueStartRatio: dialogueStartRatio == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dialogueStartRatio),
+      dialogueEndRatio: dialogueEndRatio == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dialogueEndRatio),
       sceneId: sceneId == null && nullToAbsent
           ? const Value.absent()
           : Value(sceneId),
@@ -6004,6 +6554,7 @@ class Shot extends DataClass implements Insertable<Shot> {
           ? const Value.absent()
           : Value(outputPath),
       outputType: Value(outputType),
+      isStale: Value(isStale),
     );
   }
 
@@ -6023,11 +6574,21 @@ class Shot extends DataClass implements Insertable<Shot> {
       beatRefs: serializer.fromJson<String>(json['beatRefs']),
       assetStates: serializer.fromJson<String>(json['assetStates']),
       shotType: serializer.fromJson<String?>(json['shotType']),
+      composition: serializer.fromJson<String?>(json['composition']),
+      lens: serializer.fromJson<String?>(json['lens']),
+      cameraPosition: serializer.fromJson<String?>(json['cameraPosition']),
+      eyeline: serializer.fromJson<String?>(json['eyeline']),
+      focus: serializer.fromJson<String?>(json['focus']),
+      stability: serializer.fromJson<String?>(json['stability']),
+      blocking: serializer.fromJson<String?>(json['blocking']),
+      dialogueStartRatio: serializer.fromJson<int?>(json['dialogueStartRatio']),
+      dialogueEndRatio: serializer.fromJson<int?>(json['dialogueEndRatio']),
       sceneId: serializer.fromJson<int?>(json['sceneId']),
       prompt: serializer.fromJson<String>(json['prompt']),
       status: serializer.fromJson<String>(json['status']),
       outputPath: serializer.fromJson<String?>(json['outputPath']),
       outputType: serializer.fromJson<String>(json['outputType']),
+      isStale: serializer.fromJson<int>(json['isStale']),
     );
   }
   @override
@@ -6044,11 +6605,21 @@ class Shot extends DataClass implements Insertable<Shot> {
       'beatRefs': serializer.toJson<String>(beatRefs),
       'assetStates': serializer.toJson<String>(assetStates),
       'shotType': serializer.toJson<String?>(shotType),
+      'composition': serializer.toJson<String?>(composition),
+      'lens': serializer.toJson<String?>(lens),
+      'cameraPosition': serializer.toJson<String?>(cameraPosition),
+      'eyeline': serializer.toJson<String?>(eyeline),
+      'focus': serializer.toJson<String?>(focus),
+      'stability': serializer.toJson<String?>(stability),
+      'blocking': serializer.toJson<String?>(blocking),
+      'dialogueStartRatio': serializer.toJson<int?>(dialogueStartRatio),
+      'dialogueEndRatio': serializer.toJson<int?>(dialogueEndRatio),
       'sceneId': serializer.toJson<int?>(sceneId),
       'prompt': serializer.toJson<String>(prompt),
       'status': serializer.toJson<String>(status),
       'outputPath': serializer.toJson<String?>(outputPath),
       'outputType': serializer.toJson<String>(outputType),
+      'isStale': serializer.toJson<int>(isStale),
     };
   }
 
@@ -6063,11 +6634,21 @@ class Shot extends DataClass implements Insertable<Shot> {
     String? beatRefs,
     String? assetStates,
     Value<String?> shotType = const Value.absent(),
+    Value<String?> composition = const Value.absent(),
+    Value<String?> lens = const Value.absent(),
+    Value<String?> cameraPosition = const Value.absent(),
+    Value<String?> eyeline = const Value.absent(),
+    Value<String?> focus = const Value.absent(),
+    Value<String?> stability = const Value.absent(),
+    Value<String?> blocking = const Value.absent(),
+    Value<int?> dialogueStartRatio = const Value.absent(),
+    Value<int?> dialogueEndRatio = const Value.absent(),
     Value<int?> sceneId = const Value.absent(),
     String? prompt,
     String? status,
     Value<String?> outputPath = const Value.absent(),
     String? outputType,
+    int? isStale,
   }) => Shot(
     id: id ?? this.id,
     scriptId: scriptId ?? this.scriptId,
@@ -6079,11 +6660,27 @@ class Shot extends DataClass implements Insertable<Shot> {
     beatRefs: beatRefs ?? this.beatRefs,
     assetStates: assetStates ?? this.assetStates,
     shotType: shotType.present ? shotType.value : this.shotType,
+    composition: composition.present ? composition.value : this.composition,
+    lens: lens.present ? lens.value : this.lens,
+    cameraPosition: cameraPosition.present
+        ? cameraPosition.value
+        : this.cameraPosition,
+    eyeline: eyeline.present ? eyeline.value : this.eyeline,
+    focus: focus.present ? focus.value : this.focus,
+    stability: stability.present ? stability.value : this.stability,
+    blocking: blocking.present ? blocking.value : this.blocking,
+    dialogueStartRatio: dialogueStartRatio.present
+        ? dialogueStartRatio.value
+        : this.dialogueStartRatio,
+    dialogueEndRatio: dialogueEndRatio.present
+        ? dialogueEndRatio.value
+        : this.dialogueEndRatio,
     sceneId: sceneId.present ? sceneId.value : this.sceneId,
     prompt: prompt ?? this.prompt,
     status: status ?? this.status,
     outputPath: outputPath.present ? outputPath.value : this.outputPath,
     outputType: outputType ?? this.outputType,
+    isStale: isStale ?? this.isStale,
   );
   Shot copyWithCompanion(ShotsCompanion data) {
     return Shot(
@@ -6105,6 +6702,23 @@ class Shot extends DataClass implements Insertable<Shot> {
           ? data.assetStates.value
           : this.assetStates,
       shotType: data.shotType.present ? data.shotType.value : this.shotType,
+      composition: data.composition.present
+          ? data.composition.value
+          : this.composition,
+      lens: data.lens.present ? data.lens.value : this.lens,
+      cameraPosition: data.cameraPosition.present
+          ? data.cameraPosition.value
+          : this.cameraPosition,
+      eyeline: data.eyeline.present ? data.eyeline.value : this.eyeline,
+      focus: data.focus.present ? data.focus.value : this.focus,
+      stability: data.stability.present ? data.stability.value : this.stability,
+      blocking: data.blocking.present ? data.blocking.value : this.blocking,
+      dialogueStartRatio: data.dialogueStartRatio.present
+          ? data.dialogueStartRatio.value
+          : this.dialogueStartRatio,
+      dialogueEndRatio: data.dialogueEndRatio.present
+          ? data.dialogueEndRatio.value
+          : this.dialogueEndRatio,
       sceneId: data.sceneId.present ? data.sceneId.value : this.sceneId,
       prompt: data.prompt.present ? data.prompt.value : this.prompt,
       status: data.status.present ? data.status.value : this.status,
@@ -6114,6 +6728,7 @@ class Shot extends DataClass implements Insertable<Shot> {
       outputType: data.outputType.present
           ? data.outputType.value
           : this.outputType,
+      isStale: data.isStale.present ? data.isStale.value : this.isStale,
     );
   }
 
@@ -6130,17 +6745,27 @@ class Shot extends DataClass implements Insertable<Shot> {
           ..write('beatRefs: $beatRefs, ')
           ..write('assetStates: $assetStates, ')
           ..write('shotType: $shotType, ')
+          ..write('composition: $composition, ')
+          ..write('lens: $lens, ')
+          ..write('cameraPosition: $cameraPosition, ')
+          ..write('eyeline: $eyeline, ')
+          ..write('focus: $focus, ')
+          ..write('stability: $stability, ')
+          ..write('blocking: $blocking, ')
+          ..write('dialogueStartRatio: $dialogueStartRatio, ')
+          ..write('dialogueEndRatio: $dialogueEndRatio, ')
           ..write('sceneId: $sceneId, ')
           ..write('prompt: $prompt, ')
           ..write('status: $status, ')
           ..write('outputPath: $outputPath, ')
-          ..write('outputType: $outputType')
+          ..write('outputType: $outputType, ')
+          ..write('isStale: $isStale')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     scriptId,
     globalSeq,
@@ -6151,12 +6776,22 @@ class Shot extends DataClass implements Insertable<Shot> {
     beatRefs,
     assetStates,
     shotType,
+    composition,
+    lens,
+    cameraPosition,
+    eyeline,
+    focus,
+    stability,
+    blocking,
+    dialogueStartRatio,
+    dialogueEndRatio,
     sceneId,
     prompt,
     status,
     outputPath,
     outputType,
-  );
+    isStale,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -6171,11 +6806,21 @@ class Shot extends DataClass implements Insertable<Shot> {
           other.beatRefs == this.beatRefs &&
           other.assetStates == this.assetStates &&
           other.shotType == this.shotType &&
+          other.composition == this.composition &&
+          other.lens == this.lens &&
+          other.cameraPosition == this.cameraPosition &&
+          other.eyeline == this.eyeline &&
+          other.focus == this.focus &&
+          other.stability == this.stability &&
+          other.blocking == this.blocking &&
+          other.dialogueStartRatio == this.dialogueStartRatio &&
+          other.dialogueEndRatio == this.dialogueEndRatio &&
           other.sceneId == this.sceneId &&
           other.prompt == this.prompt &&
           other.status == this.status &&
           other.outputPath == this.outputPath &&
-          other.outputType == this.outputType);
+          other.outputType == this.outputType &&
+          other.isStale == this.isStale);
 }
 
 class ShotsCompanion extends UpdateCompanion<Shot> {
@@ -6189,11 +6834,21 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
   final Value<String> beatRefs;
   final Value<String> assetStates;
   final Value<String?> shotType;
+  final Value<String?> composition;
+  final Value<String?> lens;
+  final Value<String?> cameraPosition;
+  final Value<String?> eyeline;
+  final Value<String?> focus;
+  final Value<String?> stability;
+  final Value<String?> blocking;
+  final Value<int?> dialogueStartRatio;
+  final Value<int?> dialogueEndRatio;
   final Value<int?> sceneId;
   final Value<String> prompt;
   final Value<String> status;
   final Value<String?> outputPath;
   final Value<String> outputType;
+  final Value<int> isStale;
   const ShotsCompanion({
     this.id = const Value.absent(),
     this.scriptId = const Value.absent(),
@@ -6205,11 +6860,21 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     this.beatRefs = const Value.absent(),
     this.assetStates = const Value.absent(),
     this.shotType = const Value.absent(),
+    this.composition = const Value.absent(),
+    this.lens = const Value.absent(),
+    this.cameraPosition = const Value.absent(),
+    this.eyeline = const Value.absent(),
+    this.focus = const Value.absent(),
+    this.stability = const Value.absent(),
+    this.blocking = const Value.absent(),
+    this.dialogueStartRatio = const Value.absent(),
+    this.dialogueEndRatio = const Value.absent(),
     this.sceneId = const Value.absent(),
     this.prompt = const Value.absent(),
     this.status = const Value.absent(),
     this.outputPath = const Value.absent(),
     this.outputType = const Value.absent(),
+    this.isStale = const Value.absent(),
   });
   ShotsCompanion.insert({
     this.id = const Value.absent(),
@@ -6222,11 +6887,21 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     this.beatRefs = const Value.absent(),
     this.assetStates = const Value.absent(),
     this.shotType = const Value.absent(),
+    this.composition = const Value.absent(),
+    this.lens = const Value.absent(),
+    this.cameraPosition = const Value.absent(),
+    this.eyeline = const Value.absent(),
+    this.focus = const Value.absent(),
+    this.stability = const Value.absent(),
+    this.blocking = const Value.absent(),
+    this.dialogueStartRatio = const Value.absent(),
+    this.dialogueEndRatio = const Value.absent(),
     this.sceneId = const Value.absent(),
     this.prompt = const Value.absent(),
     this.status = const Value.absent(),
     this.outputPath = const Value.absent(),
     this.outputType = const Value.absent(),
+    this.isStale = const Value.absent(),
   }) : scriptId = Value(scriptId),
        globalSeq = Value(globalSeq),
        globalTimeRange = Value(globalTimeRange);
@@ -6241,11 +6916,21 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     Expression<String>? beatRefs,
     Expression<String>? assetStates,
     Expression<String>? shotType,
+    Expression<String>? composition,
+    Expression<String>? lens,
+    Expression<String>? cameraPosition,
+    Expression<String>? eyeline,
+    Expression<String>? focus,
+    Expression<String>? stability,
+    Expression<String>? blocking,
+    Expression<int>? dialogueStartRatio,
+    Expression<int>? dialogueEndRatio,
     Expression<int>? sceneId,
     Expression<String>? prompt,
     Expression<String>? status,
     Expression<String>? outputPath,
     Expression<String>? outputType,
+    Expression<int>? isStale,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -6258,11 +6943,22 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
       if (beatRefs != null) 'beat_refs': beatRefs,
       if (assetStates != null) 'asset_states': assetStates,
       if (shotType != null) 'shot_type': shotType,
+      if (composition != null) 'composition': composition,
+      if (lens != null) 'lens': lens,
+      if (cameraPosition != null) 'camera_position': cameraPosition,
+      if (eyeline != null) 'eyeline': eyeline,
+      if (focus != null) 'focus': focus,
+      if (stability != null) 'stability': stability,
+      if (blocking != null) 'blocking': blocking,
+      if (dialogueStartRatio != null)
+        'dialogue_start_ratio': dialogueStartRatio,
+      if (dialogueEndRatio != null) 'dialogue_end_ratio': dialogueEndRatio,
       if (sceneId != null) 'scene_id': sceneId,
       if (prompt != null) 'prompt': prompt,
       if (status != null) 'status': status,
       if (outputPath != null) 'output_path': outputPath,
       if (outputType != null) 'output_type': outputType,
+      if (isStale != null) 'is_stale': isStale,
     });
   }
 
@@ -6277,11 +6973,21 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     Value<String>? beatRefs,
     Value<String>? assetStates,
     Value<String?>? shotType,
+    Value<String?>? composition,
+    Value<String?>? lens,
+    Value<String?>? cameraPosition,
+    Value<String?>? eyeline,
+    Value<String?>? focus,
+    Value<String?>? stability,
+    Value<String?>? blocking,
+    Value<int?>? dialogueStartRatio,
+    Value<int?>? dialogueEndRatio,
     Value<int?>? sceneId,
     Value<String>? prompt,
     Value<String>? status,
     Value<String?>? outputPath,
     Value<String>? outputType,
+    Value<int>? isStale,
   }) {
     return ShotsCompanion(
       id: id ?? this.id,
@@ -6294,11 +7000,21 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
       beatRefs: beatRefs ?? this.beatRefs,
       assetStates: assetStates ?? this.assetStates,
       shotType: shotType ?? this.shotType,
+      composition: composition ?? this.composition,
+      lens: lens ?? this.lens,
+      cameraPosition: cameraPosition ?? this.cameraPosition,
+      eyeline: eyeline ?? this.eyeline,
+      focus: focus ?? this.focus,
+      stability: stability ?? this.stability,
+      blocking: blocking ?? this.blocking,
+      dialogueStartRatio: dialogueStartRatio ?? this.dialogueStartRatio,
+      dialogueEndRatio: dialogueEndRatio ?? this.dialogueEndRatio,
       sceneId: sceneId ?? this.sceneId,
       prompt: prompt ?? this.prompt,
       status: status ?? this.status,
       outputPath: outputPath ?? this.outputPath,
       outputType: outputType ?? this.outputType,
+      isStale: isStale ?? this.isStale,
     );
   }
 
@@ -6335,6 +7051,33 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     if (shotType.present) {
       map['shot_type'] = Variable<String>(shotType.value);
     }
+    if (composition.present) {
+      map['composition'] = Variable<String>(composition.value);
+    }
+    if (lens.present) {
+      map['lens'] = Variable<String>(lens.value);
+    }
+    if (cameraPosition.present) {
+      map['camera_position'] = Variable<String>(cameraPosition.value);
+    }
+    if (eyeline.present) {
+      map['eyeline'] = Variable<String>(eyeline.value);
+    }
+    if (focus.present) {
+      map['focus'] = Variable<String>(focus.value);
+    }
+    if (stability.present) {
+      map['stability'] = Variable<String>(stability.value);
+    }
+    if (blocking.present) {
+      map['blocking'] = Variable<String>(blocking.value);
+    }
+    if (dialogueStartRatio.present) {
+      map['dialogue_start_ratio'] = Variable<int>(dialogueStartRatio.value);
+    }
+    if (dialogueEndRatio.present) {
+      map['dialogue_end_ratio'] = Variable<int>(dialogueEndRatio.value);
+    }
     if (sceneId.present) {
       map['scene_id'] = Variable<int>(sceneId.value);
     }
@@ -6349,6 +7092,9 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
     }
     if (outputType.present) {
       map['output_type'] = Variable<String>(outputType.value);
+    }
+    if (isStale.present) {
+      map['is_stale'] = Variable<int>(isStale.value);
     }
     return map;
   }
@@ -6366,11 +7112,21 @@ class ShotsCompanion extends UpdateCompanion<Shot> {
           ..write('beatRefs: $beatRefs, ')
           ..write('assetStates: $assetStates, ')
           ..write('shotType: $shotType, ')
+          ..write('composition: $composition, ')
+          ..write('lens: $lens, ')
+          ..write('cameraPosition: $cameraPosition, ')
+          ..write('eyeline: $eyeline, ')
+          ..write('focus: $focus, ')
+          ..write('stability: $stability, ')
+          ..write('blocking: $blocking, ')
+          ..write('dialogueStartRatio: $dialogueStartRatio, ')
+          ..write('dialogueEndRatio: $dialogueEndRatio, ')
           ..write('sceneId: $sceneId, ')
           ..write('prompt: $prompt, ')
           ..write('status: $status, ')
           ..write('outputPath: $outputPath, ')
-          ..write('outputType: $outputType')
+          ..write('outputType: $outputType, ')
+          ..write('isStale: $isStale')
           ..write(')'))
         .toString();
   }
@@ -10376,6 +11132,401 @@ class GenerationAttemptsCompanion extends UpdateCompanion<GenerationAttempt> {
   }
 }
 
+class $PromptOverridesTable extends PromptOverrides
+    with TableInfo<$PromptOverridesTable, PromptOverride> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PromptOverridesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _scopeMeta = const VerificationMeta('scope');
+  @override
+  late final GeneratedColumn<String> scope = GeneratedColumn<String>(
+    'scope',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _projectIdMeta = const VerificationMeta(
+    'projectId',
+  );
+  @override
+  late final GeneratedColumn<int> projectId = GeneratedColumn<int>(
+    'project_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _slotKeyMeta = const VerificationMeta(
+    'slotKey',
+  );
+  @override
+  late final GeneratedColumn<String> slotKey = GeneratedColumn<String>(
+    'slot_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    scope,
+    projectId,
+    slotKey,
+    body,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'prompt_overrides';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PromptOverride> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('scope')) {
+      context.handle(
+        _scopeMeta,
+        scope.isAcceptableOrUnknown(data['scope']!, _scopeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scopeMeta);
+    }
+    if (data.containsKey('project_id')) {
+      context.handle(
+        _projectIdMeta,
+        projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta),
+      );
+    }
+    if (data.containsKey('slot_key')) {
+      context.handle(
+        _slotKeyMeta,
+        slotKey.isAcceptableOrUnknown(data['slot_key']!, _slotKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_slotKeyMeta);
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bodyMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PromptOverride map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PromptOverride(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      scope: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scope'],
+      )!,
+      projectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}project_id'],
+      ),
+      slotKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}slot_key'],
+      )!,
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PromptOverridesTable createAlias(String alias) {
+    return $PromptOverridesTable(attachedDatabase, alias);
+  }
+}
+
+class PromptOverride extends DataClass implements Insertable<PromptOverride> {
+  final int id;
+  final String scope;
+  final int? projectId;
+  final String slotKey;
+  final String body;
+  final DateTime updatedAt;
+  const PromptOverride({
+    required this.id,
+    required this.scope,
+    this.projectId,
+    required this.slotKey,
+    required this.body,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['scope'] = Variable<String>(scope);
+    if (!nullToAbsent || projectId != null) {
+      map['project_id'] = Variable<int>(projectId);
+    }
+    map['slot_key'] = Variable<String>(slotKey);
+    map['body'] = Variable<String>(body);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  PromptOverridesCompanion toCompanion(bool nullToAbsent) {
+    return PromptOverridesCompanion(
+      id: Value(id),
+      scope: Value(scope),
+      projectId: projectId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(projectId),
+      slotKey: Value(slotKey),
+      body: Value(body),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory PromptOverride.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PromptOverride(
+      id: serializer.fromJson<int>(json['id']),
+      scope: serializer.fromJson<String>(json['scope']),
+      projectId: serializer.fromJson<int?>(json['projectId']),
+      slotKey: serializer.fromJson<String>(json['slotKey']),
+      body: serializer.fromJson<String>(json['body']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'scope': serializer.toJson<String>(scope),
+      'projectId': serializer.toJson<int?>(projectId),
+      'slotKey': serializer.toJson<String>(slotKey),
+      'body': serializer.toJson<String>(body),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  PromptOverride copyWith({
+    int? id,
+    String? scope,
+    Value<int?> projectId = const Value.absent(),
+    String? slotKey,
+    String? body,
+    DateTime? updatedAt,
+  }) => PromptOverride(
+    id: id ?? this.id,
+    scope: scope ?? this.scope,
+    projectId: projectId.present ? projectId.value : this.projectId,
+    slotKey: slotKey ?? this.slotKey,
+    body: body ?? this.body,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  PromptOverride copyWithCompanion(PromptOverridesCompanion data) {
+    return PromptOverride(
+      id: data.id.present ? data.id.value : this.id,
+      scope: data.scope.present ? data.scope.value : this.scope,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
+      slotKey: data.slotKey.present ? data.slotKey.value : this.slotKey,
+      body: data.body.present ? data.body.value : this.body,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PromptOverride(')
+          ..write('id: $id, ')
+          ..write('scope: $scope, ')
+          ..write('projectId: $projectId, ')
+          ..write('slotKey: $slotKey, ')
+          ..write('body: $body, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, scope, projectId, slotKey, body, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PromptOverride &&
+          other.id == this.id &&
+          other.scope == this.scope &&
+          other.projectId == this.projectId &&
+          other.slotKey == this.slotKey &&
+          other.body == this.body &&
+          other.updatedAt == this.updatedAt);
+}
+
+class PromptOverridesCompanion extends UpdateCompanion<PromptOverride> {
+  final Value<int> id;
+  final Value<String> scope;
+  final Value<int?> projectId;
+  final Value<String> slotKey;
+  final Value<String> body;
+  final Value<DateTime> updatedAt;
+  const PromptOverridesCompanion({
+    this.id = const Value.absent(),
+    this.scope = const Value.absent(),
+    this.projectId = const Value.absent(),
+    this.slotKey = const Value.absent(),
+    this.body = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  PromptOverridesCompanion.insert({
+    this.id = const Value.absent(),
+    required String scope,
+    this.projectId = const Value.absent(),
+    required String slotKey,
+    required String body,
+    this.updatedAt = const Value.absent(),
+  }) : scope = Value(scope),
+       slotKey = Value(slotKey),
+       body = Value(body);
+  static Insertable<PromptOverride> custom({
+    Expression<int>? id,
+    Expression<String>? scope,
+    Expression<int>? projectId,
+    Expression<String>? slotKey,
+    Expression<String>? body,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (scope != null) 'scope': scope,
+      if (projectId != null) 'project_id': projectId,
+      if (slotKey != null) 'slot_key': slotKey,
+      if (body != null) 'body': body,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  PromptOverridesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? scope,
+    Value<int?>? projectId,
+    Value<String>? slotKey,
+    Value<String>? body,
+    Value<DateTime>? updatedAt,
+  }) {
+    return PromptOverridesCompanion(
+      id: id ?? this.id,
+      scope: scope ?? this.scope,
+      projectId: projectId ?? this.projectId,
+      slotKey: slotKey ?? this.slotKey,
+      body: body ?? this.body,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (scope.present) {
+      map['scope'] = Variable<String>(scope.value);
+    }
+    if (projectId.present) {
+      map['project_id'] = Variable<int>(projectId.value);
+    }
+    if (slotKey.present) {
+      map['slot_key'] = Variable<String>(slotKey.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PromptOverridesCompanion(')
+          ..write('id: $id, ')
+          ..write('scope: $scope, ')
+          ..write('projectId: $projectId, ')
+          ..write('slotKey: $slotKey, ')
+          ..write('body: $body, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -10404,6 +11555,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AssetRevisionsTable assetRevisions = $AssetRevisionsTable(this);
   late final $GenerationAttemptsTable generationAttempts =
       $GenerationAttemptsTable(this);
+  late final $PromptOverridesTable promptOverrides = $PromptOverridesTable(
+    this,
+  );
   late final ProjectDao projectDao = ProjectDao(this as AppDatabase);
   late final NovelDao novelDao = NovelDao(this as AppDatabase);
   late final CascadeDao cascadeDao = CascadeDao(this as AppDatabase);
@@ -10425,6 +11579,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final ProviderDao providerDao = ProviderDao(this as AppDatabase);
   late final RevisionDao revisionDao = RevisionDao(this as AppDatabase);
   late final GenerationAttemptDao generationAttemptDao = GenerationAttemptDao(
+    this as AppDatabase,
+  );
+  late final PromptOverrideDao promptOverrideDao = PromptOverrideDao(
     this as AppDatabase,
   );
   @override
@@ -10450,6 +11607,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     shotRevisions,
     assetRevisions,
     generationAttempts,
+    promptOverrides,
   ];
 }
 
@@ -12689,6 +13847,7 @@ typedef $$ScriptsTableCreateCompanionBuilder = ScriptsCompanion Function({
   Value<int?> episodeNo,
   Value<int> targetDurationMs,
   Value<String?> modelVersion,
+  Value<String?> scriptHash,
 });
 typedef $$ScriptsTableUpdateCompanionBuilder = ScriptsCompanion Function({
   Value<int> id,
@@ -12702,6 +13861,7 @@ typedef $$ScriptsTableUpdateCompanionBuilder = ScriptsCompanion Function({
   Value<int?> episodeNo,
   Value<int> targetDurationMs,
   Value<String?> modelVersion,
+  Value<String?> scriptHash,
 });
 
 final class $$ScriptsTableReferences
@@ -12859,6 +14019,11 @@ class $$ScriptsTableFilterComposer
 
   ColumnFilters<String> get modelVersion => $composableBuilder(
     column: $table.modelVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scriptHash => $composableBuilder(
+    column: $table.scriptHash,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13045,6 +14210,11 @@ class $$ScriptsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get scriptHash => $composableBuilder(
+    column: $table.scriptHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$NovelBooksTableOrderingComposer get bookId {
     final $$NovelBooksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -13111,6 +14281,11 @@ class $$ScriptsTableAnnotationComposer
 
   GeneratedColumn<String> get modelVersion => $composableBuilder(
     column: $table.modelVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get scriptHash => $composableBuilder(
+    column: $table.scriptHash,
     builder: (column) => column,
   );
 
@@ -13283,6 +14458,7 @@ class $$ScriptsTableTableManager
                 Value<int?> episodeNo = const Value.absent(),
                 Value<int> targetDurationMs = const Value.absent(),
                 Value<String?> modelVersion = const Value.absent(),
+                Value<String?> scriptHash = const Value.absent(),
               }) => ScriptsCompanion(
                 id: id,
                 bookId: bookId,
@@ -13295,6 +14471,7 @@ class $$ScriptsTableTableManager
                 episodeNo: episodeNo,
                 targetDurationMs: targetDurationMs,
                 modelVersion: modelVersion,
+                scriptHash: scriptHash,
               ),
           createCompanionCallback:
               ({
@@ -13309,6 +14486,7 @@ class $$ScriptsTableTableManager
                 Value<int?> episodeNo = const Value.absent(),
                 Value<int> targetDurationMs = const Value.absent(),
                 Value<String?> modelVersion = const Value.absent(),
+                Value<String?> scriptHash = const Value.absent(),
               }) => ScriptsCompanion.insert(
                 id: id,
                 bookId: bookId,
@@ -13321,6 +14499,7 @@ class $$ScriptsTableTableManager
                 episodeNo: episodeNo,
                 targetDurationMs: targetDurationMs,
                 modelVersion: modelVersion,
+                scriptHash: scriptHash,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -14750,10 +15929,14 @@ typedef $$AssetsTableCreateCompanionBuilder = AssetsCompanion Function({
   required String stableId,
   Value<int?> variantOf,
   Value<String?> appearanceAnchor,
+  Value<int?> heightCm,
+  Value<String?> bodyType,
+  Value<String?> costumeSets,
   Value<String> boardLayout,
   Value<String> prompt,
   Value<String?> imagePath,
   Value<String> status,
+  Value<int> isStale,
 });
 typedef $$AssetsTableUpdateCompanionBuilder = AssetsCompanion Function({
   Value<int> id,
@@ -14763,10 +15946,14 @@ typedef $$AssetsTableUpdateCompanionBuilder = AssetsCompanion Function({
   Value<String> stableId,
   Value<int?> variantOf,
   Value<String?> appearanceAnchor,
+  Value<int?> heightCm,
+  Value<String?> bodyType,
+  Value<String?> costumeSets,
   Value<String> boardLayout,
   Value<String> prompt,
   Value<String?> imagePath,
   Value<String> status,
+  Value<int> isStale,
 });
 
 final class $$AssetsTableReferences
@@ -14866,6 +16053,21 @@ class $$AssetsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get heightCm => $composableBuilder(
+    column: $table.heightCm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bodyType => $composableBuilder(
+    column: $table.bodyType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get costumeSets => $composableBuilder(
+    column: $table.costumeSets,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get boardLayout => $composableBuilder(
     column: $table.boardLayout,
     builder: (column) => ColumnFilters(column),
@@ -14883,6 +16085,11 @@ class $$AssetsTableFilterComposer
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get isStale => $composableBuilder(
+    column: $table.isStale,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14999,6 +16206,21 @@ class $$AssetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get heightCm => $composableBuilder(
+    column: $table.heightCm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bodyType => $composableBuilder(
+    column: $table.bodyType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get costumeSets => $composableBuilder(
+    column: $table.costumeSets,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get boardLayout => $composableBuilder(
     column: $table.boardLayout,
     builder: (column) => ColumnOrderings(column),
@@ -15016,6 +16238,11 @@ class $$AssetsTableOrderingComposer
 
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get isStale => $composableBuilder(
+    column: $table.isStale,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -15072,6 +16299,17 @@ class $$AssetsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get heightCm =>
+      $composableBuilder(column: $table.heightCm, builder: (column) => column);
+
+  GeneratedColumn<String> get bodyType =>
+      $composableBuilder(column: $table.bodyType, builder: (column) => column);
+
+  GeneratedColumn<String> get costumeSets => $composableBuilder(
+    column: $table.costumeSets,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get boardLayout => $composableBuilder(
     column: $table.boardLayout,
     builder: (column) => column,
@@ -15085,6 +16323,9 @@ class $$AssetsTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get isStale =>
+      $composableBuilder(column: $table.isStale, builder: (column) => column);
 
   $$ScriptsTableAnnotationComposer get scriptId {
     final $$ScriptsTableAnnotationComposer composer = $composerBuilder(
@@ -15199,10 +16440,14 @@ class $$AssetsTableTableManager
                 Value<String> stableId = const Value.absent(),
                 Value<int?> variantOf = const Value.absent(),
                 Value<String?> appearanceAnchor = const Value.absent(),
+                Value<int?> heightCm = const Value.absent(),
+                Value<String?> bodyType = const Value.absent(),
+                Value<String?> costumeSets = const Value.absent(),
                 Value<String> boardLayout = const Value.absent(),
                 Value<String> prompt = const Value.absent(),
                 Value<String?> imagePath = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<int> isStale = const Value.absent(),
               }) => AssetsCompanion(
                 id: id,
                 scriptId: scriptId,
@@ -15211,10 +16456,14 @@ class $$AssetsTableTableManager
                 stableId: stableId,
                 variantOf: variantOf,
                 appearanceAnchor: appearanceAnchor,
+                heightCm: heightCm,
+                bodyType: bodyType,
+                costumeSets: costumeSets,
                 boardLayout: boardLayout,
                 prompt: prompt,
                 imagePath: imagePath,
                 status: status,
+                isStale: isStale,
               ),
           createCompanionCallback:
               ({
@@ -15225,10 +16474,14 @@ class $$AssetsTableTableManager
                 required String stableId,
                 Value<int?> variantOf = const Value.absent(),
                 Value<String?> appearanceAnchor = const Value.absent(),
+                Value<int?> heightCm = const Value.absent(),
+                Value<String?> bodyType = const Value.absent(),
+                Value<String?> costumeSets = const Value.absent(),
                 Value<String> boardLayout = const Value.absent(),
                 Value<String> prompt = const Value.absent(),
                 Value<String?> imagePath = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<int> isStale = const Value.absent(),
               }) => AssetsCompanion.insert(
                 id: id,
                 scriptId: scriptId,
@@ -15237,10 +16490,14 @@ class $$AssetsTableTableManager
                 stableId: stableId,
                 variantOf: variantOf,
                 appearanceAnchor: appearanceAnchor,
+                heightCm: heightCm,
+                bodyType: bodyType,
+                costumeSets: costumeSets,
                 boardLayout: boardLayout,
                 prompt: prompt,
                 imagePath: imagePath,
                 status: status,
+                isStale: isStale,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -15373,11 +16630,21 @@ typedef $$ShotsTableCreateCompanionBuilder = ShotsCompanion Function({
   Value<String> beatRefs,
   Value<String> assetStates,
   Value<String?> shotType,
+  Value<String?> composition,
+  Value<String?> lens,
+  Value<String?> cameraPosition,
+  Value<String?> eyeline,
+  Value<String?> focus,
+  Value<String?> stability,
+  Value<String?> blocking,
+  Value<int?> dialogueStartRatio,
+  Value<int?> dialogueEndRatio,
   Value<int?> sceneId,
   Value<String> prompt,
   Value<String> status,
   Value<String?> outputPath,
   Value<String> outputType,
+  Value<int> isStale,
 });
 typedef $$ShotsTableUpdateCompanionBuilder = ShotsCompanion Function({
   Value<int> id,
@@ -15390,11 +16657,21 @@ typedef $$ShotsTableUpdateCompanionBuilder = ShotsCompanion Function({
   Value<String> beatRefs,
   Value<String> assetStates,
   Value<String?> shotType,
+  Value<String?> composition,
+  Value<String?> lens,
+  Value<String?> cameraPosition,
+  Value<String?> eyeline,
+  Value<String?> focus,
+  Value<String?> stability,
+  Value<String?> blocking,
+  Value<int?> dialogueStartRatio,
+  Value<int?> dialogueEndRatio,
   Value<int?> sceneId,
   Value<String> prompt,
   Value<String> status,
   Value<String?> outputPath,
   Value<String> outputType,
+  Value<int> isStale,
 });
 
 final class $$ShotsTableReferences
@@ -15544,6 +16821,51 @@ class $$ShotsTableFilterComposer extends Composer<_$AppDatabase, $ShotsTable> {
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get composition => $composableBuilder(
+    column: $table.composition,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lens => $composableBuilder(
+    column: $table.lens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cameraPosition => $composableBuilder(
+    column: $table.cameraPosition,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get eyeline => $composableBuilder(
+    column: $table.eyeline,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get focus => $composableBuilder(
+    column: $table.focus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get stability => $composableBuilder(
+    column: $table.stability,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get blocking => $composableBuilder(
+    column: $table.blocking,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dialogueStartRatio => $composableBuilder(
+    column: $table.dialogueStartRatio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dialogueEndRatio => $composableBuilder(
+    column: $table.dialogueEndRatio,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get sceneId => $composableBuilder(
     column: $table.sceneId,
     builder: (column) => ColumnFilters(column),
@@ -15566,6 +16888,11 @@ class $$ShotsTableFilterComposer extends Composer<_$AppDatabase, $ShotsTable> {
 
   ColumnFilters<String> get outputType => $composableBuilder(
     column: $table.outputType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get isStale => $composableBuilder(
+    column: $table.isStale,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15747,6 +17074,51 @@ class $$ShotsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get composition => $composableBuilder(
+    column: $table.composition,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lens => $composableBuilder(
+    column: $table.lens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cameraPosition => $composableBuilder(
+    column: $table.cameraPosition,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get eyeline => $composableBuilder(
+    column: $table.eyeline,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get focus => $composableBuilder(
+    column: $table.focus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get stability => $composableBuilder(
+    column: $table.stability,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get blocking => $composableBuilder(
+    column: $table.blocking,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dialogueStartRatio => $composableBuilder(
+    column: $table.dialogueStartRatio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dialogueEndRatio => $composableBuilder(
+    column: $table.dialogueEndRatio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sceneId => $composableBuilder(
     column: $table.sceneId,
     builder: (column) => ColumnOrderings(column),
@@ -15769,6 +17141,11 @@ class $$ShotsTableOrderingComposer
 
   ColumnOrderings<String> get outputType => $composableBuilder(
     column: $table.outputType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get isStale => $composableBuilder(
+    column: $table.isStale,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -15840,6 +17217,41 @@ class $$ShotsTableAnnotationComposer
   GeneratedColumn<String> get shotType =>
       $composableBuilder(column: $table.shotType, builder: (column) => column);
 
+  GeneratedColumn<String> get composition => $composableBuilder(
+    column: $table.composition,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lens =>
+      $composableBuilder(column: $table.lens, builder: (column) => column);
+
+  GeneratedColumn<String> get cameraPosition => $composableBuilder(
+    column: $table.cameraPosition,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get eyeline =>
+      $composableBuilder(column: $table.eyeline, builder: (column) => column);
+
+  GeneratedColumn<String> get focus =>
+      $composableBuilder(column: $table.focus, builder: (column) => column);
+
+  GeneratedColumn<String> get stability =>
+      $composableBuilder(column: $table.stability, builder: (column) => column);
+
+  GeneratedColumn<String> get blocking =>
+      $composableBuilder(column: $table.blocking, builder: (column) => column);
+
+  GeneratedColumn<int> get dialogueStartRatio => $composableBuilder(
+    column: $table.dialogueStartRatio,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get dialogueEndRatio => $composableBuilder(
+    column: $table.dialogueEndRatio,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get sceneId =>
       $composableBuilder(column: $table.sceneId, builder: (column) => column);
 
@@ -15858,6 +17270,9 @@ class $$ShotsTableAnnotationComposer
     column: $table.outputType,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get isStale =>
+      $composableBuilder(column: $table.isStale, builder: (column) => column);
 
   $$ScriptsTableAnnotationComposer get scriptId {
     final $$ScriptsTableAnnotationComposer composer = $composerBuilder(
@@ -16027,11 +17442,21 @@ class $$ShotsTableTableManager
                 Value<String> beatRefs = const Value.absent(),
                 Value<String> assetStates = const Value.absent(),
                 Value<String?> shotType = const Value.absent(),
+                Value<String?> composition = const Value.absent(),
+                Value<String?> lens = const Value.absent(),
+                Value<String?> cameraPosition = const Value.absent(),
+                Value<String?> eyeline = const Value.absent(),
+                Value<String?> focus = const Value.absent(),
+                Value<String?> stability = const Value.absent(),
+                Value<String?> blocking = const Value.absent(),
+                Value<int?> dialogueStartRatio = const Value.absent(),
+                Value<int?> dialogueEndRatio = const Value.absent(),
                 Value<int?> sceneId = const Value.absent(),
                 Value<String> prompt = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> outputPath = const Value.absent(),
                 Value<String> outputType = const Value.absent(),
+                Value<int> isStale = const Value.absent(),
               }) => ShotsCompanion(
                 id: id,
                 scriptId: scriptId,
@@ -16043,11 +17468,21 @@ class $$ShotsTableTableManager
                 beatRefs: beatRefs,
                 assetStates: assetStates,
                 shotType: shotType,
+                composition: composition,
+                lens: lens,
+                cameraPosition: cameraPosition,
+                eyeline: eyeline,
+                focus: focus,
+                stability: stability,
+                blocking: blocking,
+                dialogueStartRatio: dialogueStartRatio,
+                dialogueEndRatio: dialogueEndRatio,
                 sceneId: sceneId,
                 prompt: prompt,
                 status: status,
                 outputPath: outputPath,
                 outputType: outputType,
+                isStale: isStale,
               ),
           createCompanionCallback:
               ({
@@ -16061,11 +17496,21 @@ class $$ShotsTableTableManager
                 Value<String> beatRefs = const Value.absent(),
                 Value<String> assetStates = const Value.absent(),
                 Value<String?> shotType = const Value.absent(),
+                Value<String?> composition = const Value.absent(),
+                Value<String?> lens = const Value.absent(),
+                Value<String?> cameraPosition = const Value.absent(),
+                Value<String?> eyeline = const Value.absent(),
+                Value<String?> focus = const Value.absent(),
+                Value<String?> stability = const Value.absent(),
+                Value<String?> blocking = const Value.absent(),
+                Value<int?> dialogueStartRatio = const Value.absent(),
+                Value<int?> dialogueEndRatio = const Value.absent(),
                 Value<int?> sceneId = const Value.absent(),
                 Value<String> prompt = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> outputPath = const Value.absent(),
                 Value<String> outputType = const Value.absent(),
+                Value<int> isStale = const Value.absent(),
               }) => ShotsCompanion.insert(
                 id: id,
                 scriptId: scriptId,
@@ -16077,11 +17522,21 @@ class $$ShotsTableTableManager
                 beatRefs: beatRefs,
                 assetStates: assetStates,
                 shotType: shotType,
+                composition: composition,
+                lens: lens,
+                cameraPosition: cameraPosition,
+                eyeline: eyeline,
+                focus: focus,
+                stability: stability,
+                blocking: blocking,
+                dialogueStartRatio: dialogueStartRatio,
+                dialogueEndRatio: dialogueEndRatio,
                 sceneId: sceneId,
                 prompt: prompt,
                 status: status,
                 outputPath: outputPath,
                 outputType: outputType,
+                isStale: isStale,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -18933,6 +20388,234 @@ typedef $$GenerationAttemptsTableProcessedTableManager =
       GenerationAttempt,
       PrefetchHooks Function()
     >;
+typedef $$PromptOverridesTableCreateCompanionBuilder =
+    PromptOverridesCompanion Function({
+      Value<int> id,
+      required String scope,
+      Value<int?> projectId,
+      required String slotKey,
+      required String body,
+      Value<DateTime> updatedAt,
+    });
+typedef $$PromptOverridesTableUpdateCompanionBuilder =
+    PromptOverridesCompanion Function({
+      Value<int> id,
+      Value<String> scope,
+      Value<int?> projectId,
+      Value<String> slotKey,
+      Value<String> body,
+      Value<DateTime> updatedAt,
+    });
+
+class $$PromptOverridesTableFilterComposer
+    extends Composer<_$AppDatabase, $PromptOverridesTable> {
+  $$PromptOverridesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scope => $composableBuilder(
+    column: $table.scope,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get projectId => $composableBuilder(
+    column: $table.projectId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get slotKey => $composableBuilder(
+    column: $table.slotKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PromptOverridesTableOrderingComposer
+    extends Composer<_$AppDatabase, $PromptOverridesTable> {
+  $$PromptOverridesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scope => $composableBuilder(
+    column: $table.scope,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get projectId => $composableBuilder(
+    column: $table.projectId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get slotKey => $composableBuilder(
+    column: $table.slotKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PromptOverridesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PromptOverridesTable> {
+  $$PromptOverridesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get scope =>
+      $composableBuilder(column: $table.scope, builder: (column) => column);
+
+  GeneratedColumn<int> get projectId =>
+      $composableBuilder(column: $table.projectId, builder: (column) => column);
+
+  GeneratedColumn<String> get slotKey =>
+      $composableBuilder(column: $table.slotKey, builder: (column) => column);
+
+  GeneratedColumn<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$PromptOverridesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PromptOverridesTable,
+          PromptOverride,
+          $$PromptOverridesTableFilterComposer,
+          $$PromptOverridesTableOrderingComposer,
+          $$PromptOverridesTableAnnotationComposer,
+          $$PromptOverridesTableCreateCompanionBuilder,
+          $$PromptOverridesTableUpdateCompanionBuilder,
+          (
+            PromptOverride,
+            BaseReferences<
+              _$AppDatabase,
+              $PromptOverridesTable,
+              PromptOverride
+            >,
+          ),
+          PromptOverride,
+          PrefetchHooks Function()
+        > {
+  $$PromptOverridesTableTableManager(
+    _$AppDatabase db,
+    $PromptOverridesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PromptOverridesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PromptOverridesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PromptOverridesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> scope = const Value.absent(),
+                Value<int?> projectId = const Value.absent(),
+                Value<String> slotKey = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => PromptOverridesCompanion(
+                id: id,
+                scope: scope,
+                projectId: projectId,
+                slotKey: slotKey,
+                body: body,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String scope,
+                Value<int?> projectId = const Value.absent(),
+                required String slotKey,
+                required String body,
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => PromptOverridesCompanion.insert(
+                id: id,
+                scope: scope,
+                projectId: projectId,
+                slotKey: slotKey,
+                body: body,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PromptOverridesTable, PromptOverride>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $PromptOverridesTable,
+                    PromptOverride
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PromptOverridesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PromptOverridesTable,
+      PromptOverride,
+      $$PromptOverridesTableFilterComposer,
+      $$PromptOverridesTableOrderingComposer,
+      $$PromptOverridesTableAnnotationComposer,
+      $$PromptOverridesTableCreateCompanionBuilder,
+      $$PromptOverridesTableUpdateCompanionBuilder,
+      (
+        PromptOverride,
+        BaseReferences<_$AppDatabase, $PromptOverridesTable, PromptOverride>,
+      ),
+      PromptOverride,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -18973,4 +20656,6 @@ class $AppDatabaseManager {
       $$AssetRevisionsTableTableManager(_db, _db.assetRevisions);
   $$GenerationAttemptsTableTableManager get generationAttempts =>
       $$GenerationAttemptsTableTableManager(_db, _db.generationAttempts);
+  $$PromptOverridesTableTableManager get promptOverrides =>
+      $$PromptOverridesTableTableManager(_db, _db.promptOverrides);
 }

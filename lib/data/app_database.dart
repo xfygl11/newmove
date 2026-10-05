@@ -7,6 +7,7 @@ import 'daos/asset_ref_dao.dart';
 import 'daos/beat_dao.dart';
 import 'daos/cascade_dao.dart';
 import 'daos/generation_attempt_dao.dart';
+import 'daos/prompt_override_dao.dart';
 import 'daos/revision_dao.dart';
 import 'daos/chapter_revision_dao.dart';
 import 'daos/novel_dao.dart';
@@ -44,6 +45,7 @@ part 'app_database.g.dart';
     ShotRevisions,
     AssetRevisions,
     GenerationAttempts,
+    PromptOverrides,
   ],
   daos: [
     ProjectDao,
@@ -63,6 +65,7 @@ part 'app_database.g.dart';
     ProviderDao,
     RevisionDao,
     GenerationAttemptDao,
+    PromptOverrideDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -73,7 +76,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -130,6 +133,30 @@ class AppDatabase extends _$AppDatabase {
         // M17 T19.5：作品级每章目标字数。此前定稿字数校验在 UI 里硬编码
         // 2000，与作品实际体感无关；改为作品行可配置，0 表示不设门槛。
         await m.addColumn(novelBooks, novelBooks.targetWords);
+      }
+      if (from < 11) {
+        // M19：镜头与角色结构化字段、下游失效标记、提示词覆盖表。
+        // 镜头从「一段自由正文」升级为可量化字段，分镜图与视频提示词按字段
+        // 引用；角色补身高 / 体型 / 服装套，多人同框比例失控的根因之一是
+        // 只有提示词文本、缺可量化身体参数。
+        await m.addColumn(shots, shots.composition);
+        await m.addColumn(shots, shots.lens);
+        await m.addColumn(shots, shots.cameraPosition);
+        await m.addColumn(shots, shots.eyeline);
+        await m.addColumn(shots, shots.focus);
+        await m.addColumn(shots, shots.stability);
+        await m.addColumn(shots, shots.blocking);
+        await m.addColumn(shots, shots.dialogueStartRatio);
+        await m.addColumn(shots, shots.dialogueEndRatio);
+        await m.addColumn(assets, assets.heightCm);
+        await m.addColumn(assets, assets.bodyType);
+        await m.addColumn(assets, assets.costumeSets);
+        // 上游变更后标记下游产物失效；存量产物不回填，视为有效。
+        await m.addColumn(scripts, scripts.scriptHash);
+        await m.addColumn(assets, assets.isStale);
+        await m.addColumn(shots, shots.isStale);
+        // 提示词三级覆盖：项目级 > 全局级 > 代码默认。
+        await m.createTable(promptOverrides);
       }
     },
     beforeOpen: (details) async {

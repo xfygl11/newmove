@@ -13,6 +13,7 @@ import 'features/novel/novel_shelf_page.dart';
 import 'features/novel/setting_workshop_page.dart';
 import 'features/project/project_page.dart';
 import 'features/provider_config/provider_config_page.dart';
+import 'features/provider_config/prompt_override_page.dart';
 import 'features/script/scene_edit_page.dart';
 import 'features/script/script_detail_page.dart';
 import 'features/script/script_page.dart';
@@ -67,6 +68,12 @@ final GoRouter appRouter = GoRouter(
       ],
     ),
     GoRoute(path: '/bad-route', builder: (_, _) => const BadRoutePage()),
+    // 提示词三级覆盖编辑器（M19 T21.11）。
+    GoRoute(
+      path: '/settings/prompts/:projectId',
+      redirect: (_, state) => requireIntParams(state, ['projectId']),
+      builder: (_, state) => PromptOverridePage(projectId: pathId(state, 'projectId')),
+    ),
     // 生成台账：任务中心入口，只读展示历次生成尝试（M17 T19.4）。
     GoRoute(path: '/tasks/attempts', builder: (_, _) => const AttemptLogPage()),
     // 小说模块：进入后全屏覆盖底部 TabBar（对齐 docs/05 3.2 流程即导航）。

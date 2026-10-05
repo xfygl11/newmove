@@ -131,6 +131,21 @@ class AssetDao extends DatabaseAccessor<AppDatabase> with _$AssetDaoMixin {
     return (delete(assets)..where((t) => t.scriptId.equals(scriptId))).go();
   }
 
+  /// 上游剧本场次变更后标记本剧本全部资产失效（M19 T21.14）。
+  /// 只动未失效的行，重复调用幂等。
+  Future<int> markStaleByScript(int scriptId) {
+    return (update(assets)
+          ..where((t) => t.scriptId.equals(scriptId) & t.isStale.equals(0)))
+        .write(const AssetsCompanion(isStale: Value(1)));
+  }
+
+  /// 本资产重新出图后清除失效标记。
+  Future<int> clearStaleById(int id) {
+    return (update(assets)
+          ..where((t) => t.id.equals(id) & t.isStale.equals(1)))
+        .write(const AssetsCompanion(isStale: Value(0)));
+  }
+
   /// 跨剧本查询：进行中的资产任务（任务中心用）。
   /// 状态取「生成中 / 待验收」。
   Stream<List<Asset>> watchActive() {

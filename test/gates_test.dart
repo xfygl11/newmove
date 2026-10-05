@@ -41,6 +41,10 @@ Asset asset({
   String? appearanceAnchor,
   String boardLayout = '四视图',
   String status = '待生成',
+  int? heightCm,
+  String? bodyType,
+  String? costumeSets,
+  int isStale = 0,
 }) =>
     Asset(
       id: id,
@@ -49,9 +53,13 @@ Asset asset({
       name: name,
       stableId: 'stable-$id',
       appearanceAnchor: appearanceAnchor,
+      heightCm: heightCm,
+      bodyType: bodyType,
+      costumeSets: costumeSets,
       boardLayout: boardLayout,
       prompt: prompt,
       status: status,
+      isStale: isStale,
     );
 
 Scene scene({int id = 1, int scriptId = 1, int seq = 1, String dialogue = '[]'}) =>

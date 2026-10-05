@@ -5,17 +5,20 @@ import 'package:drift/drift.dart' show Value;
 import '../../agent/active_llm.dart';
 import '../../core/json_values.dart';
 import '../../data/app_database.dart';
+import '../../data/daos/asset_dao.dart';
 import '../../data/daos/cascade_dao.dart';
 import '../../data/daos/generation_attempt_dao.dart';
 import '../../data/daos/novel_dao.dart';
 import '../../data/daos/scene_dao.dart';
 import '../../data/daos/script_dao.dart';
 import '../../data/daos/script_revision_dao.dart';
+import '../../data/daos/shot_dao.dart';
 import '../../data/daos/truth_file_dao.dart';
 import '../novel/context_budget.dart';
 import '../novel/novel_service.dart';
 import '../novel/truth_file_store.dart';
 import 'script_agents.dart';
+import 'script_fingerprint.dart';
 import 'script_models.dart';
 
 /// 小说→剧本的业务编排：构建改编上下文、调用 Agent、落库与版本管理。
@@ -29,6 +32,8 @@ class ScriptService {
     required this.truthDao,
     required this.cascadeDao,
     required this.agents,
+    required this.assetDao,
+    required this.shotDao,
     required GenerationAttemptDao attemptDao,
   }) : _attempts = AttemptRecorder(attemptDao);
 
@@ -39,6 +44,10 @@ class ScriptService {
   final NovelDao novelDao;
   final TruthFileDao truthDao;
   final CascadeDao cascadeDao;
+
+  /// 下游产物（资产 / 镜头）失效标记用，M19 T21.14。
+  final AssetDao assetDao;
+  final ShotDao shotDao;
 
   /// 生成尝试台账（M18 T20.1 起必填，见 [AttemptRecorder]）。
   final AttemptRecorder _attempts;
@@ -208,16 +217,17 @@ class ScriptService {
         );
         await cascadeDao.deleteScenesCascade(existing.id);
         await _insertScenes(existing.id, result.scenes);
-        await scriptDao.updateRow(
-          existing.copyWith(
-            version: existing.version + 1,
-            fidelityMode: fidelityMode,
-            status: '草案',
-            content: newContent,
-          ),
-        );
-      });
-      final updated = (await scriptDao.find(existing.id))!;
+          await scriptDao.updateRow(
+            existing.copyWith(
+              version: existing.version + 1,
+              fidelityMode: fidelityMode,
+              status: '草案',
+              content: newContent,
+            ),
+          );
+        });
+        await applyUpstreamChange(existing.id);
+        final updated = (await scriptDao.find(existing.id))!;
       await _finish(
         attempt,
         AttemptStatuses.succeeded,
@@ -267,7 +277,29 @@ class ScriptService {
   // ---- 场次编辑 ----
 
   Future<void> updateScene(int sceneId, ScenesCompanion data) async {
+    final before = await sceneDao.find(sceneId);
     await sceneDao.updateById(sceneId, data);
+    if (before != null) {
+      await applyUpstreamChange(before.scriptId);
+    }
+  }
+
+  /// 场次内容变更后检测指纹漂移，漂移则标记下游产物失效（M19 T21.14）。
+  ///
+  /// 首次算指纹时只写入、不标记失效：没有旧指纹可比，说明这些产物在本次
+  /// 升级之前就已生成，按「存量视为有效」处理。
+  ///
+  /// 指纹不漂移则整段跳过，包括不更新剧本行——避免空写制造无意义变更。
+  Future<void> applyUpstreamChange(int scriptId) async {
+    final script = await scriptDao.find(scriptId);
+    if (script == null) return;
+    final hash = ScriptFingerprint.hashOf(await sceneDao.listByScript(scriptId));
+    if (hash == script.scriptHash) return;
+    if (script.scriptHash != null) {
+      await assetDao.markStaleByScript(scriptId);
+      await shotDao.markStaleByScript(scriptId);
+    }
+    await scriptDao.updateRow(script.copyWith(scriptHash: Value(hash)));
   }
 
   Future<List<ScriptRevision>> listVersions(int scriptId) {

@@ -72,6 +72,8 @@ void main() {
       truthDao: db.truthFileDao,
       cascadeDao: db.cascadeDao,
       agents: ScriptAgents(adapter: _FakeAdapter(_cannedJson)),
+      assetDao: db.assetDao,
+      shotDao: db.shotDao,
       attemptDao: db.generationAttemptDao,
     );
     final projectId = await db.projectDao.insertProject(

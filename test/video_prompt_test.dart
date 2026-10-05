@@ -15,6 +15,7 @@ void main() {
       assetStates: '{}',
       prompt: '本段目标事件',
       status: '已确认',
+      isStale: 0,
       outputType: 'image',
     );
   }

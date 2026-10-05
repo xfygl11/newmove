@@ -52,6 +52,21 @@ class ShotDao extends DatabaseAccessor<AppDatabase> with _$ShotDaoMixin {
     return (delete(shots)..where((t) => t.scriptId.equals(scriptId))).go();
   }
 
+  /// 上游剧本场次变更后标记本剧本全部镜头失效（M19 T21.14）。
+  /// 只动未失效的行，重复调用幂等。
+  Future<int> markStaleByScript(int scriptId) {
+    return (update(shots)
+          ..where((t) => t.scriptId.equals(scriptId) & t.isStale.equals(0)))
+        .write(const ShotsCompanion(isStale: Value(1)));
+  }
+
+  /// 本镜头重新出图 / 出视频后清除失效标记。
+  Future<int> clearStaleById(int id) {
+    return (update(shots)
+          ..where((t) => t.id.equals(id) & t.isStale.equals(1)))
+        .write(const ShotsCompanion(isStale: Value(0)));
+  }
+
   /// 跨剧本查询：进行中的镜头任务（任务中心用）。
   /// 状态取「生成中 / 待分镜图 / 待验收」。
   Stream<List<Shot>> watchActive() {

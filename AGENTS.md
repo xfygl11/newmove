@@ -371,9 +371,33 @@ lib/
        `prop_has_hand`（error，道具提示词无手部排除标记）、
        `scene_named_character`（warn，场景提示词出现角色名）、
        `style_conflict`（warn，同批资产跨画风族）。
-     - 统一结果类型 `GateIssue` / `GateSeverity` 在 `lib/core/gate_issue.dart`，
-       `noteLine` 给确认框 `note` 用；与 `SegmentBudgetIssue` 同型但字段语义不同，
-       不合并。
+      - 统一结果类型 `GateIssue` / `GateSeverity` 在 `lib/core/gate_issue.dart`，
+        `noteLine` 给确认框 `note` 用；与 `SegmentBudgetIssue` 同型但字段语义不同，
+        不合并。
+    - **下游产物失效标记必须覆盖 `Scenes` 表行，不能覆盖 `Scripts.content`**：
+      场次编辑走 `updateScene` 只写 `Scenes` 表，而提案确认只改 `content` 里的
+      `proposals`、不重写场次行，不该让下游失效。指纹按 `seq` 升序参与、剔除
+      行 id 与 `scriptId`，所以「内容未变但重插一遍」不会误报失效。
+      首次写指纹只落值不标记——没有旧指纹可比，说明这些产物在本次升级之前
+      就已生成，按「存量视为有效」处理。指纹不漂移时整段跳过，包括不更新剧本行，
+      避免空写制造无意义变更。
+      `isStale` 用 `integer().withDefault(0)` 而不是 `boolean()`，与代码库既有
+      风格一致；非 0 即失效。清除点只有三处：`AssetService.generate` 出图成功、
+      `ShotService` 出图成功、`ShotService` 视频轮询完成。`confirmVideo` 只是
+      确认动作、不是生成，不清标记。
+    - **drift 2.35.1 不能用 `key` / `text` 做列 getter 名**：`ColumnParser` 会抛
+      `FunctionExpressionInvocationImpl is not a subtype of MethodInvocation`，
+      并把整个 `app_database.g.dart` 退化成空 schema（20661 行变成 19 行）。
+      `PromptOverrides` 因此用 `slotKey` / `body`。改列名后必须确认生成文件
+      行数恢复，再跑 analyze。
+    - **`PromptOverrides` 覆盖按整段替换，不做局部合并**：局部合并需要插槽解析，
+      语义太脆。三级顺序 项目级 > 全局级 > 内置 skill 原文，由
+      `lib/agent/prompt_resolver.dart` 的 `PromptResolver.resolve` 统一解析，
+      `allSlots` 常量与 `assets/skills/` 目录一一对应（12 个）。
+      覆盖列为空串时视为未覆盖、继续回落。
+      表不加 unique key：`projectId` 在 `scope='global'` 时为 null，SQLite 里
+      NULL 互不相等会让 unique 约束形同虚设，所以 DAO 走显式查再插/改的 upsert。
+
 
 ---
 

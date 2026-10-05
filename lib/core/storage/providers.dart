@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../agent/prompt_resolver.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/asset_dao.dart';
 import '../../data/daos/asset_ref_dao.dart';
@@ -9,6 +10,7 @@ import '../../data/daos/chapter_revision_dao.dart';
 import '../../data/daos/novel_dao.dart';
 import '../../data/daos/project_dao.dart';
 import '../../data/daos/provider_dao.dart';
+import '../../data/daos/prompt_override_dao.dart';
 import '../../data/daos/revision_dao.dart';
 import '../../data/daos/generation_attempt_dao.dart';
 import '../../data/daos/scene_dao.dart';
@@ -102,6 +104,14 @@ final generationAttemptDaoProvider = Provider<GenerationAttemptDao>(
 /// 生成尝试与本地质量门校验的统一登记助手。
 final attemptRecorderProvider = Provider<AttemptRecorder>(
   (ref) => AttemptRecorder(ref.watch(generationAttemptDaoProvider)),
+);
+
+final promptOverrideDaoProvider = Provider<PromptOverrideDao>(
+  (ref) => ref.watch(databaseProvider).promptOverrideDao,
+);
+
+final promptResolverProvider = Provider<PromptResolver>(
+  (ref) => PromptResolver(ref.watch(promptOverrideDaoProvider)),
 );
 
 final secureKeyStoreProvider = Provider<SecureKeyStore>(

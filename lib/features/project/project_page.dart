@@ -246,6 +246,12 @@ class _ProjectCard extends ConsumerWidget {
             onTap: () => Navigator.of(ctx).pop('edit'),
           ),
           ListTile(
+            leading: const Icon(Icons.edit_note_outlined),
+            title: const Text('提示词'),
+            subtitle: const Text('项目级提示词覆盖'),
+            onTap: () => Navigator.of(ctx).pop('prompts'),
+          ),
+          ListTile(
             leading: const Icon(Icons.backup_outlined),
             title: const Text('导出备份'),
             onTap: () => Navigator.of(ctx).pop('export'),
@@ -263,6 +269,8 @@ class _ProjectCard extends ConsumerWidget {
     switch (action) {
       case 'edit':
         await _showEditDialog(context, ref);
+      case 'prompts':
+        context.push('/settings/prompts/${project.id}');
       case 'export':
         await _exportBackup(context, ref);
       case 'delete':

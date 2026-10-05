@@ -325,6 +325,8 @@ class AssetService {
         AssetsCompanion(
           imagePath: Value(path),
           status: const Value(AssetStatuses.reviewing),
+          // 刚按当前提示词出过图，失效标记清除（M19 T21.14）。
+          isStale: const Value(0),
         ),
       );
       await _saveSnapshot(asset, kind: 'image', summary: '资产图已生成');

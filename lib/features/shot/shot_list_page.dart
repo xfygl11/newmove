@@ -479,6 +479,10 @@ class _ShotCard extends ConsumerWidget {
                       ),
                       const Spacer(),
                       StatusBadge(status: shot.status),
+                      if (shot.isStale != 0) ...[
+                        const SizedBox(width: 6),
+                        StaleBadge(isStale: shot.isStale),
+                      ],
                       if (selectable) ...[
                         const SizedBox(width: 4),
                         Checkbox(value: selected, onChanged: (_) => onToggle()),

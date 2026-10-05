@@ -20,6 +20,8 @@ final scriptServiceProvider = Provider<ScriptService>(
     truthDao: ref.watch(truthFileDaoProvider),
     cascadeDao: ref.watch(cascadeDaoProvider),
     agents: ref.watch(scriptAgentsProvider),
+    assetDao: ref.watch(assetDaoProvider),
+    shotDao: ref.watch(shotDaoProvider),
     attemptDao: ref.watch(generationAttemptDaoProvider),
   ),
 );

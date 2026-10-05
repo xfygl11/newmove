@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newmove/data/app_database.dart';
+import 'package:newmove/data/daos/prompt_override_dao.dart';
 import 'package:newmove/features/provider_config/provider_models.dart';
 
 void main() {
@@ -130,9 +131,9 @@ void main() {
     });
   });
 
-  group('schema v10 结构', () {
+  group('schema v11 结构', () {
     test('剧本表已删除 aspect_ratio 与 language 死字段', () async {
-      expect(db.schemaVersion, 10);
+      expect(db.schemaVersion, 11);
 
       final rows = await db.customSelect('PRAGMA table_info(scripts)').get();
       final columns = rows.map((row) => row.data['name'] as String).toSet();
@@ -179,6 +180,59 @@ void main() {
       );
       final book = await db.novelDao.findBook(id);
       expect(book?.targetWords, 2000);
+    });
+
+    test('M19 镜头结构化字段九列与失效标记', () async {
+      final rows = await db.customSelect('PRAGMA table_info(shots)').get();
+      final columns = rows.map((row) => row.data['name'] as String).toSet();
+      expect(
+        columns,
+        containsAll([
+          'composition',
+          'lens',
+          'camera_position',
+          'eyeline',
+          'focus',
+          'stability',
+          'blocking',
+          'dialogue_start_ratio',
+          'dialogue_end_ratio',
+          'is_stale',
+        ]),
+      );
+    });
+
+    test('M19 剧本指纹与资产结构化字段、失效标记', () async {
+      final scripts = await db.customSelect('PRAGMA table_info(scripts)').get();
+      expect(
+        scripts.map((r) => r.data['name']).toSet(),
+        contains('script_hash'),
+      );
+
+      final assets = await db.customSelect('PRAGMA table_info(assets)').get();
+      expect(
+        assets.map((r) => r.data['name']).toSet(),
+        containsAll(['height_cm', 'body_type', 'costume_sets', 'is_stale']),
+      );
+    });
+
+    test('M19 提示词覆盖表列集与作用域常量', () async {
+      final rows = await db
+          .customSelect('PRAGMA table_info(prompt_overrides)')
+          .get();
+      expect(
+        rows.map((r) => r.data['name']).toSet(),
+        containsAll([
+          'id',
+          'scope',
+          'project_id',
+          'slot_key',
+          'body',
+          'updated_at',
+        ]),
+      );
+      expect(PromptOverrideScopes.global, 'global');
+      expect(PromptOverrideScopes.project, 'project');
     });
   });
 }
