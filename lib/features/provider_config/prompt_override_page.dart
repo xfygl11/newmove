@@ -339,15 +339,18 @@ class _EditorSheetState extends State<_EditorSheet> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.slot),
+      // Dialog 会把键盘 inset 加到外边距上，8 行 minLines 的高度可能超出可用高度。
       content: SizedBox(
         width: double.maxFinite,
-        child: TextField(
-          controller: _controller,
-          maxLines: 12,
-          minLines: 8,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            hintText: '粘贴完整提示词，整段替换内置原文',
+        child: SingleChildScrollView(
+          child: TextField(
+            controller: _controller,
+            maxLines: 12,
+            minLines: 8,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: '粘贴完整提示词，整段替换内置原文',
+            ),
           ),
         ),
       ),

@@ -312,7 +312,7 @@ class _CharacterListState extends ConsumerState<_CharacterList> {
         title: Text('为 ${character.name} 生成音色'),
         content: SizedBox(
           width: double.maxFinite,
-          child: SelectableText(text.trim()),
+          child: SingleChildScrollView(child: SelectableText(text.trim())),
         ),
         actions: [
           TextButton(

@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/update_checker.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/storage/providers.dart';
+import '../../core/theme/app_themes.dart';
 import '../../data/app_database.dart';
 import '../project/project_providers.dart';
 import 'agnes_presets.dart';
@@ -27,6 +28,7 @@ class ProviderConfigPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
         children: [
+          const _ThemeSection(),
           const _GeneralSection(),
           const _BackupSection(),
           const SizedBox(height: 8),
@@ -60,6 +62,132 @@ class ProviderConfigPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// 外观主题区块：横向主题卡，点选即切换并持久化（见 AppThemeCatalog）。
+class _ThemeSection extends ConsumerWidget {
+  const _ThemeSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeId = ref.watch(appSettingsProvider).themeId;
+    final current = AppThemeCatalog.resolve(themeId);
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.palette_outlined),
+            title: const Text('外观主题'),
+            subtitle: Text('${current.name} · ${current.description}'),
+          ),
+          SizedBox(
+            height: 108,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              itemCount: AppThemeCatalog.all.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final theme = AppThemeCatalog.all[index];
+                return _ThemeSwatch(
+                  theme: theme,
+                  selected: theme.id == current.id,
+                  onTap: () => ref
+                      .read(appSettingsProvider.notifier)
+                      .update(
+                        ref
+                            .read(appSettingsProvider)
+                            .copyWith(themeId: theme.id),
+                      ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 单张主题预览卡：用主题自身配色渲染缩略图，选中加描边与对勾。
+class _ThemeSwatch extends StatelessWidget {
+  const _ThemeSwatch({
+    required this.theme,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final AppTheme theme;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final border = selected
+        ? Border.all(color: theme.primary, width: 2)
+        : Border.all(color: Theme.of(context).colorScheme.outlineVariant);
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 136,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: theme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: border,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _dot(theme.primary),
+                const SizedBox(width: 6),
+                _dot(theme.secondary),
+                const SizedBox(width: 6),
+                _dot(theme.tertiary),
+                const Spacer(),
+                if (selected)
+                  Icon(Icons.check_circle, size: 16, color: theme.primary),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _bar(theme.surfaceContainerHigh, double.infinity),
+            const SizedBox(height: 6),
+            _bar(theme.secondary, 56),
+            const Spacer(),
+            Text(
+              theme.name,
+              style: TextStyle(
+                color: theme.onSurface,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dot(Color color) => Container(
+    width: 12,
+    height: 12,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
+
+  Widget _bar(Color color, double width) => Container(
+    width: width,
+    height: 6,
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(3),
+    ),
+  );
 }
 
 /// 通用设置区块（借鉴 Toonflow general 面板：开关型偏好，本地有实效项）。

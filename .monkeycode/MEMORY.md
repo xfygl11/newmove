@@ -32,8 +32,8 @@ Entries discovered by the Agent during task execution should follow this format:
 ## Entries
 
 [全部回答与思考使用中文]
-- Date: 2026-10-04
-- Context: 用户在本项目协作中明确要求
+- Date: 2026-10-06
+- Context: 用户在本项目协作中明确要求（2026-10-06 再次强调思考过程、正文与代码注释必须中文）
 - Instructions:
   - 所有回答、思考过程、工具调用标题、代码注释、文档一律使用中文
   - 技术术语可保留英文
@@ -84,7 +84,8 @@ Entries discovered by the Agent during task execution should follow this format:
        - **drift `currentDateAndTime()` 只有秒级精度**：同一秒内的多条插入需要主键兜底排序（`createdAt desc, id desc`），否则列表顺序在并发写入下不稳定
        - **`@DataClassName('X')` 的行类在 `app_database.g.dart`（不是 `tables.g.dart`）**，要用就得 import `package:newmove/data/app_database.dart`；直接用表名 `PromptOverrideVersions` / `CharacterRelation` 作类型会得到带 `Column<String>` getter 的表对象，比较与传参全报错。**用 edit 工具做 `replaceAll` 改类型名时要防 `PromptOverrideVersionsCompanion` 被连带改成 `PromptOverrideVersionssCompanion`**
        - **`ReviewIssue._locateQuote` 有前缀降级**（从 `len-1` 缩到 4 字为止），所以写「长引文未命中」类测试时选一个前 4 字都不在正文里的长串，否则会被降级匹配命中、门不响
-       - **当前基线（M24 后）**：schema v15，门码 34 个（`GateCodes.all`），全量 **581 例**全通过（M23 基线 542 + M24 新增 39），`flutter analyze` 零问题
+        - **当前基线（M27 后）**：schema v15，门码 34 个（`GateCodes.all`），全量 **601 例**全通过（M24 基线 581 + M26 键盘溢出 12 + 章节编辑器 pump 修复 + M27 主题 8），`flutter analyze` 零问题
+        - **M26 / M27（2026-10-06，零 schema）**：弹窗包 `SingleChildScrollView`；章节工具栏 `multiRowsDisplay: false`；顶层 GoRoute 入口用 `context.push`；外观主题词表 `AppThemeCatalog` 六款深色，`AppSettings.themeId` 走 shared_preferences
   - **`flutter analyze` 与 `flutter test` 不要放在两个后台终端里并发跑**：本环境内存紧张，并发时会把 analyze 顶到 OOM（exit code -1 + `killed_by_timeout`，且输出 0 字节）。串行跑，先 analyze（约 25 秒）再 test
   - 单文件 test 加 `| tail -N` 会等到进程结束才输出，运行期间日志一直是 0 字节；要观察进度就别加 tail
   - 全量测试偶发 `<某文件>: loading <该文件>` 失败而其余 480+ 例全绿（2026-10-06 实测：`backup_service_test.dart`）——是该文件的编译 isolate 被内存顶掉，不是代码问题。判定方式：单独重跑该文件，通过即为环境抖动，无需改代码

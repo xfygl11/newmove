@@ -148,12 +148,12 @@ class _TaskPageState extends ConsumerState<TaskPage>
           IconButton(
             tooltip: '生成台账',
             icon: const Icon(Icons.receipt_long),
-            onPressed: () => context.go('/tasks/attempts'),
+            onPressed: () => context.push('/tasks/attempts'),
           ),
           IconButton(
             tooltip: '质量门报表',
             icon: const Icon(Icons.checklist_rtl),
-            onPressed: () => context.go('/tasks/gates'),
+            onPressed: () => context.push('/tasks/gates'),
           ),
         ],
       ),

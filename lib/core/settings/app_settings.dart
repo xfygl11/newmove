@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../theme/app_themes.dart';
+
 /// 通用设置（借鉴 Toonflow general 面板，只做本地有实效的项，docs/04 T9.3）。
 ///
 /// 存 shared_preferences（非敏感本地配置，不进数据库、不进备份包）。
@@ -8,6 +10,7 @@ class AppSettings {
   const AppSettings({
     this.pollIntervalSec = 10,
     this.confirmBeforeGenerate = true,
+    this.themeId = AppThemeCatalog.defaultId,
   });
 
   /// 视频任务轮询间隔（秒）。10 / 30 / 60 三档。
@@ -16,11 +19,19 @@ class AppSettings {
   /// 生成前是否弹确认框（关闭后点生成直接提交）。
   final bool confirmBeforeGenerate;
 
-  AppSettings copyWith({int? pollIntervalSec, bool? confirmBeforeGenerate}) {
+  /// 外观主题 id，词表见 [AppThemeCatalog]。未知值解析时回落默认主题。
+  final String themeId;
+
+  AppSettings copyWith({
+    int? pollIntervalSec,
+    bool? confirmBeforeGenerate,
+    String? themeId,
+  }) {
     return AppSettings(
       pollIntervalSec: pollIntervalSec ?? this.pollIntervalSec,
       confirmBeforeGenerate:
           confirmBeforeGenerate ?? this.confirmBeforeGenerate,
+      themeId: themeId ?? this.themeId,
     );
   }
 }
@@ -33,17 +44,20 @@ class AppSettingsStore {
 
   static const _kPollInterval = 'settings.pollIntervalSec';
   static const _kConfirm = 'settings.confirmBeforeGenerate';
+  static const _kThemeId = 'settings.themeId';
 
   AppSettings read() {
     return AppSettings(
       pollIntervalSec: _prefs.getInt(_kPollInterval) ?? 10,
       confirmBeforeGenerate: _prefs.getBool(_kConfirm) ?? true,
+      themeId: _prefs.getString(_kThemeId) ?? AppThemeCatalog.defaultId,
     );
   }
 
   Future<void> save(AppSettings s) async {
     await _prefs.setInt(_kPollInterval, s.pollIntervalSec);
     await _prefs.setBool(_kConfirm, s.confirmBeforeGenerate);
+    await _prefs.setString(_kThemeId, s.themeId);
   }
 }
 

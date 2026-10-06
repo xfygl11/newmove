@@ -82,6 +82,8 @@ lib/
   core/                         # 通用：网络、存储、工具、常量
     network/                    # Dio 封装、SSE 流式解析
     storage/                    # 数据库、文件、安全存储
+    settings/                   # AppSettings（轮询间隔 / 确认开关 / 主题 id）
+    theme/                      # AppThemeCatalog 外观主题词表
   features/                     # 按业务域分包
     project/                    # 项目列表
     novel/                      # AI 写小说（章节/设定工坊/TruthFiles）
@@ -104,7 +106,9 @@ lib/
 
 - 页面清单、线框与导航按 `docs/05` 落地；三 Tab 全局导航，项目内以五阶段步骤条为流程导航。
 - 全局组件复用 `widgets/`：生成确认 Sheet（固定方案 → 授权 → 临执行复核）、AI 提案卡、状态徽章、空/载/错三态。
-- 深色主题优先（Material 3 seed），主操作沉底；页面细节以 `docs/05` 为准。
+- 深色主题优先，词表见 `AppThemeCatalog`（`lib/core/theme/app_themes.dart`），设置页「外观主题」切换，默认霓虹蓝；主操作沉底；页面细节以 `docs/05` 为准。
+- Dialog 多字段内容包 `SingleChildScrollView`（Flutter 3.47 把 `viewInsets` 加到 Dialog 外边距）；章节编辑器工具栏 `multiRowsDisplay: false`。
+- 顶层 GoRoute（`/tasks/attempts`、`/tasks/gates`）入口用 `context.push`，用 `go` 会替换栈顶导致无返回。
 
 ---
 
@@ -513,8 +517,8 @@ lib/
     - **`PromptOverrides` 覆盖按整段替换，不做局部合并**：局部合并需要插槽解析，
       语义太脆。三级顺序 项目级 > 全局级 > 内置 skill 原文，由
       `lib/agent/prompt_resolver.dart` 的 `PromptResolver.resolve` 统一解析，
-      `allSlots` 常量与 `assets/skills/` 目录一一对应（13 个；M19 建立时为
-      12 个，`novel/setup_fields.md` 是后补的插槽）。
+       `allSlots` 常量与 `assets/skills/` 目录一一对应（M23 起 14 个；M19 建立时为
+       12 个，后补 `novel/setup_fields.md` 与 `novel/voice_design.md`）。
       覆盖列为空串时视为未覆盖、继续回落。项目删除时
       `CascadeDao.deleteProjectCascade` 按 `projectId` 清项目级覆盖，
       `scope='global'` 的行 `projectId` 为 null 天然被谓词排除、不误删。

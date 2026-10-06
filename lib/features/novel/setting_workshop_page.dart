@@ -190,12 +190,15 @@ class _EditRow extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('编辑$label'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: multiline ? 10 : 5,
-          minLines: multiline ? 4 : 1,
-          decoration: const InputDecoration(border: OutlineInputBorder()),
+        // Dialog 会把键盘 inset 加到外边距上，可用高度可能小于 minLines 撑开的高度。
+        content: SingleChildScrollView(
+          child: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLines: multiline ? 10 : 5,
+            minLines: multiline ? 4 : 1,
+            decoration: const InputDecoration(border: OutlineInputBorder()),
+          ),
         ),
         actions: [
           TextButton(

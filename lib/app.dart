@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart'
     show FlutterQuillLocalizations;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/settings/app_settings.dart';
+import 'core/theme/app_themes.dart';
 import 'features/asset/asset_detail_page.dart';
 import 'features/asset/asset_gallery_page.dart';
 import 'features/novel/character_manager_page.dart';
@@ -259,26 +262,24 @@ class BadRoutePage extends StatelessWidget {
   }
 }
 
-/// 应用根 Widget：深色主题 + 底部导航壳。
-class NewmoveApp extends StatelessWidget {
+/// 应用根 Widget：可切换深色主题 + 底部导航壳。
+class NewmoveApp extends ConsumerWidget {
   const NewmoveApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    const seed = Color(0xFF5B6CFF);
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 主题词表见 AppThemeCatalog：用户选择经 shared_preferences 持久化，
+    // 启动时由 initAppSettings 注入后此处重建生效。
+    final theme = AppThemeCatalog.resolve(
+      ref.watch(appSettingsProvider).themeId,
+    );
     return MaterialApp.router(
       title: '小说动漫工坊',
       debugShowCheckedModeBanner: false,
       // flutter_quill 工具栏按钮的 tooltip 依赖 FlutterQuillLocalizations，
       // 未注册 delegate 时 QuillSimpleToolbar 构建即抛 MissingFlutterQuillLocalizationException。
       localizationsDelegates: FlutterQuillLocalizations.localizationsDelegates,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: seed,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: theme.build(),
       themeMode: ThemeMode.dark,
       routerConfig: appRouter,
     );

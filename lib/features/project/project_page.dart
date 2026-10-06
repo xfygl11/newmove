@@ -487,29 +487,32 @@ class _CreateProjectDialogState extends ConsumerState<_CreateProjectDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('新建项目'),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _name,
-              autofocus: true,
-              decoration: const InputDecoration(labelText: '项目名称'),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? '请填写项目名称' : null,
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _genre,
-              decoration: const InputDecoration(labelText: '题材（可选）'),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _description,
-              decoration: const InputDecoration(labelText: '描述（可选）'),
-            ),
-          ],
+      // Dialog 会把键盘 inset 加到外边距上，可用高度变小；非滚动 Column 会溢出。
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _name,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: '项目名称'),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? '请填写项目名称' : null,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _genre,
+                decoration: const InputDecoration(labelText: '题材（可选）'),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _description,
+                decoration: const InputDecoration(labelText: '描述（可选）'),
+              ),
+            ],
+          ),
         ),
       ),
       actions: [

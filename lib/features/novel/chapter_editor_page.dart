@@ -110,27 +110,30 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('每章目标字数'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: input,
-                keyboardType: TextInputType.number,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  isDense: true,
-                  border: OutlineInputBorder(),
-                  hintText: '0 表示不设门槛',
+          // Dialog 会把键盘 inset 加到外边距上，可用高度变小；非滚动 Column 会溢出。
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: input,
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                    hintText: '0 表示不设门槛',
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '定稿时会按目标的 '
-                '${(ChapterWordGate.minRatio * 100).round()}% ~ '
-                '${(ChapterWordGate.maxRatio * 100).round()}% 提示。',
-                style: Theme.of(ctx).textTheme.bodySmall,
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  '定稿时会按目标的 '
+                  '${(ChapterWordGate.minRatio * 100).round()}% ~ '
+                  '${(ChapterWordGate.maxRatio * 100).round()}% 提示。',
+                  style: Theme.of(ctx).textTheme.bodySmall,
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -213,7 +216,12 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
                   children: [
                     QuillSimpleToolbar(
                       controller: controller,
-                      config: const QuillSimpleToolbarConfig(),
+                      // 多行模式用 Wrap 会自动折行，窄屏 + 键盘弹起时工具栏
+                      // 会占满可用高度，把编辑器挤成负数而溢出；单行模式固定
+                      // 高度并给出左右翻页按钮。
+                      config: const QuillSimpleToolbarConfig(
+                        multiRowsDisplay: false,
+                      ),
                     ),
                     const Divider(height: 1),
                     Expanded(

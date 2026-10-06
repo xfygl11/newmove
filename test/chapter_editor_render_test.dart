@@ -68,7 +68,10 @@ Future<void> _showEditor(WidgetTester tester, {int keyboardInset = 0}) async {
 
   await tester.pumpWidget(_harness(_chapter()));
   await tester.pump();
-  await tester.pump();
+  // 单行工具栏走 QuillToolbarArrowIndicatedButtonList，其 initState 里
+  // `Timer.run(_handleScroll)` 的零时长 timer 只在 elapse 后触发；无参 pump
+  // 仅 flush 微任务，会让 timer 挂到测试结束触发 pending timer 断言。
+  await tester.pump(const Duration(milliseconds: 1));
 }
 
 void main() {
