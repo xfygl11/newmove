@@ -225,6 +225,11 @@ abstract final class PromptGate {
   }
 
   /// 画风族：互斥族同时出现说明风格没确认。
+  ///
+  /// 关键词必须覆盖 `ArtStyleCatalog` 每条风格的提示词（含其中夹带的英文
+  /// style token）：画风提示词会被注入每条资产 / 分镜 / 视频提示词，
+  /// 负向分句里的跨族词也会命中（族判定不看否定语境），所以风格提示词
+  /// 只能出现本族的关键词。
   static const Map<String, List<String>> styleFamilies = {
     '写实': [
       'photorealistic', 'realistic', 'photograph', 'cinematic', 'live-action',
@@ -233,8 +238,12 @@ abstract final class PromptGate {
     '动漫': [
       'anime', 'cel-shading', 'watercolor', 'manga', 'clean line art',
       'soft cel', '手绘', '水彩', '日式 2d 动画', '干净线稿', '柔和上色',
+      '国漫', '水墨', '工笔',
     ],
-    '三维': ['3d render', 'octane', 'blender', '三维渲染', '数字绘画'],
+    '三维': [
+      '3d render', 'octane', 'blender', '三维渲染', '数字绘画',
+      'claymation', '黏土', 'low poly', '低多边形',
+    ],
   };
 
   /// 画风互斥门：同一批提示词里 A 含写实族、B 含动漫族即报警。
@@ -244,7 +253,7 @@ abstract final class PromptGate {
   static List<GateIssue> styleConflicts(List<Asset> assets) {
     final byFamily = <String, List<String>>{};
     for (final asset in assets) {
-      final family = _styleFamilyOf(asset.prompt);
+      final family = styleFamilyOf(asset.prompt);
       if (family.isEmpty) continue;
       byFamily.putIfAbsent(family, () => []).add(asset.name);
     }
@@ -265,7 +274,9 @@ abstract final class PromptGate {
   }
 
   /// 返回 [prompt] 命中的画风族名，未命中返回空串。
-  static String _styleFamilyOf(String prompt) {
+  ///
+  /// 公开以便词表测试逐条校验画风提示词命中自己声明的族。
+  static String styleFamilyOf(String prompt) {
     final lowered = prompt.toLowerCase();
     for (final entry in styleFamilies.entries) {
       if (entry.value.any((term) => _containsAny(lowered, [term]))) {

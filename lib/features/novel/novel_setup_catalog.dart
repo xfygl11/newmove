@@ -8,6 +8,11 @@ library;
 class NovelSetupCatalog {
   NovelSetupCatalog._();
 
+  /// 作品形式（与题材类型区分）：决定结构与篇幅的组织方式。
+  static const List<String> workForms = ['长篇', '短篇', '剧本', '影游'];
+
+  static const String defaultWorkForm = '长篇';
+
   /// 核心受众。
   static const List<String> audiences = ['男频', '女频', '全性别'];
 

@@ -25,6 +25,7 @@ enum SetupField {
 
 class NovelSetupDraft {
   const NovelSetupDraft({
+    this.workType = NovelSetupCatalog.defaultWorkForm,
     this.audience = '',
     this.workTypes = const [],
     this.personaTags = const [],
@@ -37,6 +38,9 @@ class NovelSetupDraft {
     this.characters = '',
     this.protagonistAbility = '',
   });
+
+  /// 作品形式（长篇 / 短篇 / 剧本 / 影游），与题材 [workTypes] 区分。
+  final String workType;
 
   final String audience;
   final List<String> workTypes;
@@ -57,6 +61,7 @@ class NovelSetupDraft {
   bool get isComplete => audience.isNotEmpty && workTypes.isNotEmpty;
 
   NovelSetupDraft copyWith({
+    String? workType,
     String? audience,
     List<String>? workTypes,
     List<String>? personaTags,
@@ -70,6 +75,7 @@ class NovelSetupDraft {
     String? protagonistAbility,
   }) {
     return NovelSetupDraft(
+      workType: workType ?? this.workType,
       audience: audience ?? this.audience,
       workTypes: workTypes ?? this.workTypes,
       personaTags: personaTags ?? this.personaTags,
@@ -99,6 +105,7 @@ class NovelSetupDraft {
   /// 生成某字段时的当前内容，供 ConfirmSheet 展示上下文。
   String briefText({SetupField? omit}) {
     final rows = <String>[
+      '【作品形式】$workType',
       if (audience.isNotEmpty) '【核心受众】$audience',
       if (workTypes.isNotEmpty) '【作品类型】${workTypes.join(' / ')}',
       if (personaTags.isNotEmpty) '【人设标签】${personaTags.join('、')}',
@@ -147,6 +154,7 @@ class NovelSetupDraft {
     return NovelBooksCompanion.insert(
       projectId: projectId,
       title: title.trim().isEmpty ? '未命名作品' : title.trim(),
+      workType: Value(workType),
       audience: audience,
       workGenre: workGenre,
       tags: tags,

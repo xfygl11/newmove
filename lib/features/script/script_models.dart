@@ -3,16 +3,30 @@ library;
 
 import 'package:newmove/core/json_values.dart';
 
-/// 画面风格缺省值。
+import 'art_styles.dart';
+
+/// 画面风格缺省值（完整提示词）。
 ///
 /// 剧本未设置画面风格时，资产 prompt、分镜 prompt、视频 prompt 三条链路共用
 /// 这一句文案；各链路各自硬编码会让默认画风在不同阶段漂移。
-const String defaultArtStyle = '日式 2D 动画，干净线稿，柔和上色';
+const String defaultArtStyle = ArtStyleCatalog.defaultPrompt;
 
-/// 取出剧本画面风格；空串与纯空白回落到 [defaultArtStyle]。
+/// 取出剧本画面风格（完整提示词）。
+///
+/// 库里存的是风格短名，这里按名解析成完整提示词：改词表即自动影响存量剧本。
+/// 兼容旧数据——历史上该列存的是自由文本，命中不上词表时按原样透传，
+/// 不静默丢弃用户写过的内容。
 String effectiveArtStyle(String? raw) {
-  final trimmed = raw?.trim() ?? '';
-  return trimmed.isEmpty ? defaultArtStyle : trimmed;
+  if (ArtStyleCatalog.isDefaultOrEmpty(raw)) return defaultArtStyle;
+  final trimmed = raw!.trim();
+  return ArtStyleCatalog.promptOf(trimmed) ?? trimmed;
+}
+
+/// 取出剧本画面风格的短名（UI 展示用）。
+///
+/// 空值与未登记的历史自由文本都返回默认短名，保证选择器始终有一个选中项。
+String effectiveArtStyleName(String? raw) {
+  return ArtStyleCatalog.byName(raw)?.name ?? ArtStyleCatalog.defaultName;
 }
 
 /// 一句对白 / 画外音。

@@ -11,6 +11,8 @@ void main() {
   group('NovelSetupCatalog', () {
     test('词表与边界常量符合规格', () {
       expect(NovelSetupCatalog.audiences, ['男频', '女频', '全性别']);
+      expect(NovelSetupCatalog.workForms, ['长篇', '短篇', '剧本', '影游']);
+      expect(NovelSetupCatalog.defaultWorkForm, '长篇');
       expect(NovelSetupCatalog.workGenreGroups.length, 10);
       expect(NovelSetupCatalog.workGenreAll.length, 79);
       expect(NovelSetupCatalog.personaTags.length, 9);
@@ -49,6 +51,7 @@ void main() {
 
     test('输出全部已填项', () {
       final text = full().briefText();
+      expect(text, contains('【作品形式】长篇'));
       expect(text, contains('【核心受众】男频'));
       expect(text, contains('【作品类型】东方玄幻 / 都市重生'));
       expect(text, contains('【人设标签】热血少年'));
@@ -80,6 +83,21 @@ void main() {
       expect(text, isNot(contains('【背景标签】')));
       expect(text, contains('预计 500 章'));
       expect(text, isNot(contains('【作品简介】')));
+    });
+
+    test('作品形式为必填项，始终出现且非默认形式正常输出', () {
+      expect(
+        const NovelSetupDraft(audience: '女频').briefText(),
+        contains('【作品形式】长篇'),
+      );
+      for (final form in NovelSetupCatalog.workForms) {
+        expect(
+          const NovelSetupDraft(audience: '男频')
+              .copyWith(workType: form)
+              .briefText(),
+          contains('【作品形式】$form'),
+        );
+      }
     });
 
     test('纯空白字段视为未填', () {
@@ -139,6 +157,7 @@ void main() {
         const NovelSetupDraft(
           audience: '男频',
           workTypes: ['东方玄幻', '热血'],
+          workType: '剧本',
           personaTags: ['热血少年', '天才'],
           backgroundTags: ['修仙'],
           volumeCount: 12,
@@ -151,6 +170,7 @@ void main() {
       final row = await db.novelDao.findBook(bookId);
       expect(row, isNotNull);
       expect(row!.title, '觉醒之日');
+      expect(row.workType, '剧本');
       expect(row.audience, '男频');
       expect(row.workGenre, '["东方玄幻","热血"]');
       expect(
@@ -177,6 +197,7 @@ void main() {
       final row = await db.novelDao.findBook(bookId);
       expect(row, isNotNull);
       expect(row!.title, '未命名作品');
+      expect(row.workType, NovelSetupCatalog.defaultWorkForm);
       expect(row.tags, isNull);
       expect(row.synopsis, isNull);
       expect(row.protagonistAbility, isNull);
@@ -239,6 +260,12 @@ void main() {
       expect(context, contains('【人设标签】热血少年'));
       expect(context, contains('【背景标签】废土末世'));
       expect(context, contains('预计 500 章'));
+      // 长篇是默认形式，不重复标注；非默认形式进入基调上下文。
+      expect(context, isNot(contains('【作品形式】')));
+      expect(
+        NovelService.genreContext(book.copyWith(workType: '剧本')),
+        contains('【作品形式】剧本'),
+      );
     });
 
     test('超出上下文上限的类型与标签被截断', () {

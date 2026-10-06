@@ -13,6 +13,7 @@ import '../../data/daos/truth_file_dao.dart';
 import 'novel_agents.dart';
 import 'context_budget.dart';
 import 'novel_models.dart';
+import 'novel_setup_catalog.dart';
 import 'novel_setup_draft.dart';
 import 'truth_file_kinds.dart';
 import 'truth_file_store.dart';
@@ -86,7 +87,7 @@ class NovelService {
     required String idea,
     required String genre,
     required ActiveLlm llm,
-    String workType = '长篇',
+    String workType = NovelSetupCatalog.defaultWorkForm,
     String brief = '',
   }) async {
     final params = _paramsOf(llm);
@@ -103,7 +104,6 @@ class NovelService {
         idea: idea,
         genre: genre,
         llm: llm,
-        workType: workType,
         bookId: bookId,
         brief: brief,
       );
@@ -197,6 +197,8 @@ class NovelService {
       for (final t in jsonList(tags['backgrounds'])) t.toString(),
     ].take(maxContextTags).toList();
     final rows = <String>[
+      if (book.workType.trim() != NovelSetupCatalog.defaultWorkForm)
+        '【作品形式】${book.workType.trim()}',
       if ((book.audience ?? '').trim().isNotEmpty)
         '【核心受众】${book.audience!.trim()}',
       if (workGenres.isNotEmpty) '【作品类型】${workGenres.join(' / ')}',
@@ -420,11 +422,9 @@ class NovelService {
   }) async {
     final book = await novelDao.findBook(bookId);
     final legacyGenre = book?.genre ?? '';
-    final workType = book?.workType ?? '';
     final context = genreContext(book);
     final head = StringBuffer()
-      ..writeln('【正文】$content')
-      ..writeln('【作品类型】${workType.isEmpty ? '未设定' : workType}');
+      ..writeln('【正文】$content');
     if (legacyGenre.trim().isNotEmpty) {
       head.writeln('【题材】${legacyGenre.trim()}');
     }

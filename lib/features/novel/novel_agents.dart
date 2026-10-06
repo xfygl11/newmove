@@ -26,11 +26,9 @@ class NovelAgents {
     required String genre,
     required ActiveLlm llm,
     required int bookId,
-    String workType = '长篇',
     String brief = '',
   }) async {
     final system = await resolver.resolveByBook(_planning, bookId: bookId);
-    final typeNote = workType != '长篇' ? '\n【作品类型】$workType' : '';
     final briefNote = brief.trim().isEmpty ? '' : '\n$brief';
     final reply = await adapter.chat(
       baseUrl: llm.baseUrl,
@@ -41,7 +39,7 @@ class NovelAgents {
         (
           role: ChatRole.user,
           content:
-              '【创意】$idea\n【题材】$genre$typeNote$briefNote\n'
+              '【创意】$idea\n【题材】$genre$briefNote\n'
               '请按规则产出设定 JSON。',
         ),
       ],

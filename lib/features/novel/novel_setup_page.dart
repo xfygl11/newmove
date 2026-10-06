@@ -198,6 +198,7 @@ class NovelSetupPageState extends ConsumerState<NovelSetupPage> {
       params: [
         '供应商：${llm.provider.label}',
         '模型：${llm.modelId}',
+        '作品形式：${_draft.workType}',
         '核心受众：${_draft.audience}',
         '作品类型：${_draft.workTypes.join(' / ')}',
         if (_draft.personaTags.isNotEmpty)
@@ -224,7 +225,7 @@ class NovelSetupPageState extends ConsumerState<NovelSetupPage> {
             idea: idea,
             genre: _draft.workTypes.join(' / '),
             llm: llm,
-            workType: '长篇',
+            workType: _draft.workType,
             brief: _draft.briefText(),
           );
       if (!mounted) return;
@@ -252,6 +253,7 @@ class NovelSetupPageState extends ConsumerState<NovelSetupPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _section('基础设置'),
+                    _workForm(),
                     _coreAudience(),
                     _workGenre(),
                     _workTags(),
@@ -282,6 +284,24 @@ class NovelSetupPageState extends ConsumerState<NovelSetupPage> {
   );
 
   // ---- 基础设置 ----
+
+  Widget _workForm() => _Card(
+    label: '作品形式',
+    required: true,
+    hint: '决定结构与篇幅的组织方式，题材类型在下面单独选择',
+    child: Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final form in NovelSetupCatalog.workForms)
+          ChoiceChip(
+            label: Text(form),
+            selected: _draft.workType == form,
+            onSelected: (_) => _set(_draft.copyWith(workType: form)),
+          ),
+      ],
+    ),
+  );
 
   Widget _coreAudience() => _Card(
     label: '核心受众',
@@ -367,6 +387,17 @@ class NovelSetupPageState extends ConsumerState<NovelSetupPage> {
 
   // ---- 章节规划 ----
 
+  /// 卷数与每卷章节数按作品形式给出读法，避免「短篇 10 卷」这种误解。
+  String _chapterPlanNote(String workType) {
+    const note = '章节规划仅记录作品体感规模，不会生成章节占位行。';
+    return switch (workType) {
+      '短篇' => '短篇通常 1 卷成型，这里只表示篇幅规模。$note',
+      '剧本' => '剧本按分集组读卷数、按场次数读每卷章节。$note',
+      '影游' => '影游按章节组读卷数、按关卡数读每卷章节。$note',
+      _ => note,
+    };
+  }
+
   Widget _chapterPlan() => _Card(
     label: '章节规划',
     child: Column(
@@ -395,7 +426,7 @@ class NovelSetupPageState extends ConsumerState<NovelSetupPage> {
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         Text(
-          '章节规划仅记录作品体感规模，不会生成章节占位行。',
+          _chapterPlanNote(_draft.workType),
           style: Theme.of(context).textTheme.bodySmall
               ?.copyWith(color: Colors.grey),
         ),

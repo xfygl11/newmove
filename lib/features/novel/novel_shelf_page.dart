@@ -10,6 +10,7 @@ import '../../core/storage/providers.dart';
 import '../../core/text/chapter_import.dart';
 import '../../data/app_database.dart';
 import 'novel_providers.dart';
+import 'novel_setup_catalog.dart';
 
 /// 小说书架：某项目的章节列表 + 设定入口 + AI 写作入口。
 class NovelShelfPage extends ConsumerWidget {
@@ -209,7 +210,7 @@ class _BookHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final workType = book.workType;
-    final isDefault = workType == '长篇';
+    final isDefault = workType == NovelSetupCatalog.defaultWorkForm;
     return ListTile(
       title: Row(
         children: [

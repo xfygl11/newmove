@@ -12,6 +12,7 @@ import '../../widgets/gate_issue_list.dart';
 import '../novel/novel_providers.dart';
 import '../shot/shot_compose_service.dart';
 import '../shot/shot_providers.dart';
+import 'art_styles.dart';
 import 'duration_gate.dart';
 import 'script_adapt_sheet.dart';
 import 'script_models.dart';
@@ -267,23 +268,25 @@ class _ArtStyleEditor extends StatefulWidget {
 }
 
 class _ArtStyleEditorState extends State<_ArtStyleEditor> {
-  /// 图片与视频共用同一份风格描述；空值回落 [defaultArtStyle]。
-  late final TextEditingController _controller = TextEditingController(
-    text: effectiveArtStyle(widget.script.artStyle),
-  );
+  /// 已入库的画风短名；未设置或历史自由文本都落到默认名。
+  late String _currentName = effectiveArtStyleName(widget.script.artStyle);
 
-  String get _current => effectiveArtStyle(widget.script.artStyle);
+  late String _selectedName = _currentName;
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  /// 库里存的是未登记的历史自由文本，选中画风会覆盖它。
+  bool get _hasCustomText {
+    final raw = widget.script.artStyle;
+    return !ArtStyleCatalog.isDefaultOrEmpty(raw) &&
+        ArtStyleCatalog.promptOf(raw) == null;
   }
+
+  bool get _dirty => _selectedName != _currentName;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dirty = _controller.text.trim() != _current;
+    final selected = ArtStyleCatalog.byName(_selectedName);
+    final prompt = selected?.prompt ?? defaultArtStyle;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -298,23 +301,48 @@ class _ArtStyleEditorState extends State<_ArtStyleEditor> {
             Text('画面风格', style: theme.textTheme.labelMedium),
             const Spacer(),
             TextButton(
-              onPressed: _current == defaultArtStyle
+              onPressed: _selectedName == ArtStyleCatalog.defaultName
                   ? null
-                  : () => _controller.text = defaultArtStyle,
+                  : () => setState(() {
+                        _selectedName = ArtStyleCatalog.defaultName;
+                      }),
               child: const Text('恢复默认'),
             ),
           ],
         ),
-        TextField(
-          controller: _controller,
-          maxLines: 2,
-          decoration: const InputDecoration(
-            hintText: '例如：日式 2D 动画，干净线稿，柔和上色',
-            border: OutlineInputBorder(),
+        if (_hasCustomText)
+          Text(
+            '当前风格是自定义文案，选择下面的画风会覆盖它。',
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.error),
           ),
-          onChanged: (_) => setState(() {}),
+        const SizedBox(height: 8),
+        ...ArtStyleCatalog.grouped.entries.expand(
+          (entry) => [
+            Text(
+              '${entry.key}族',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final style in entry.value)
+                  ChoiceChip(
+                    label: Text(style.name),
+                    selected: _selectedName == style.name,
+                    onSelected: (_) =>
+                        setState(() => _selectedName = style.name),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
-        if (dirty) ...[
+        SelectableText(prompt, style: theme.textTheme.bodySmall),
+        if (_dirty) ...[
           const SizedBox(height: 8),
           Row(
             children: [
@@ -324,7 +352,10 @@ class _ArtStyleEditorState extends State<_ArtStyleEditor> {
                   style: theme.textTheme.bodySmall,
                 ),
               ),
-              FilledButton(onPressed: _save, child: const Text('保存风格')),
+              FilledButton(
+                onPressed: _save,
+                child: const Text('保存风格'),
+              ),
             ],
           ),
         ],
@@ -333,13 +364,22 @@ class _ArtStyleEditorState extends State<_ArtStyleEditor> {
   }
 
   Future<void> _save() async {
-    final text = _controller.text.trim();
+    final name = _selectedName;
     await widget.scriptDao.updateRow(
-      widget.script.copyWith(artStyle: Value(text.isEmpty ? null : text)),
+      widget.script.copyWith(
+        artStyle: Value(name == ArtStyleCatalog.defaultName ? null : name),
+      ),
     );
     if (!mounted) return;
+    setState(() => _currentName = name);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(text.isEmpty ? '已清除风格，按默认值执行' : '已保存风格')),
+      SnackBar(
+        content: Text(
+          name == ArtStyleCatalog.defaultName
+              ? '已恢复默认画风'
+              : '已保存画风：$name',
+        ),
+      ),
     );
   }
 }
