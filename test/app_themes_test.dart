@@ -40,11 +40,21 @@ void main() {
         // 关键角色已按主题填充，不会回落种子生成的默认色。
         expect(data.colorScheme.primary, t.primary);
         expect(data.colorScheme.surface, t.surface);
+        expect(data.scaffoldBackgroundColor, t.surface);
         // onPrimary 与 primary 有对比度（不相等即视为可读的粗校验）。
         expect(data.colorScheme.onPrimary, isNot(t.primary));
+        expect(data.cardTheme.elevation, 0);
+        expect(data.splashFactory, InkSparkle.splashFactory);
         primaries.add(t.primary.toARGB32());
       }
       expect(primaries.length, AppThemeCatalog.all.length);
+    });
+
+    test('霓虹蓝默认主题用电光青作次强调', () {
+      final neon = AppThemeCatalog.defaultTheme;
+      expect(neon.id, 'neon_blue');
+      expect(neon.secondary, const Color(0xFF00F0FF));
+      expect(neon.surface, const Color(0xFF050814));
     });
   });
 

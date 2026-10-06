@@ -54,14 +54,21 @@ class AppTheme {
   /// 底色上的正文前景色，供主题预览等直接取用。
   Color get onSurface => _on(surface);
 
-  /// 生成 Material 3 深色 `ThemeData`。
+  /// 生成 Material 3 深色 `ThemeData`：色板 + 科技感组件底盘。
+  ///
+  /// 组件样式（卡片描边、无阴影、指示器、主按钮）由本方法统一给出，
+  /// 业务页只读 `Theme.of(context)`，不散落颜色字面量。
   ThemeData build() {
     final base = ColorScheme.fromSeed(
       seedColor: seed,
       brightness: Brightness.dark,
     );
-    final primaryContainer = _tint(primary);
-    final secondaryContainer = _tint(secondary);
+    final primaryContainer = _tint(primary, 0.22);
+    final secondaryContainer = _tint(secondary, 0.22);
+    final outline = Color.alphaBlend(
+      primary.withValues(alpha: 0.28),
+      surfaceContainerHigh,
+    );
     final scheme = base.copyWith(
       primary: primary,
       onPrimary: _on(primary),
@@ -74,18 +81,151 @@ class AppTheme {
       tertiary: tertiary,
       onTertiary: _on(tertiary),
       surface: surface,
+      onSurface: _on(surface),
+      onSurfaceVariant: Color.alphaBlend(
+        _on(surface).withValues(alpha: 0.72),
+        surface,
+      ),
       surfaceContainerLowest: surface,
-      surfaceContainerLow: surface,
+      surfaceContainerLow: surfaceContainer,
       surfaceContainer: surfaceContainer,
       surfaceContainerHigh: surfaceContainerHigh,
       surfaceContainerHighest: surfaceContainerHigh,
+      outline: outline,
+      outlineVariant: Color.alphaBlend(
+        primary.withValues(alpha: 0.14),
+        surfaceContainer,
+      ),
+      shadow: Colors.transparent,
+      scrim: Colors.black,
     );
-    return ThemeData(useMaterial3: true, colorScheme: scheme);
+    final radius = BorderRadius.circular(14);
+    final shape = RoundedRectangleBorder(
+      borderRadius: radius,
+      side: BorderSide(color: scheme.outlineVariant),
+    );
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: surface,
+      canvasColor: surface,
+      splashFactory: InkSparkle.splashFactory,
+      appBarTheme: AppBarThemeData(
+        backgroundColor: surface,
+        foregroundColor: scheme.onSurface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+      ),
+      cardTheme: CardThemeData(
+        color: surfaceContainer,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: shape,
+        clipBehavior: Clip.antiAlias,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: surfaceContainerHigh,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: outline),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: surfaceContainer,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        indicatorColor: primaryContainer,
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return IconThemeData(
+            color: selected ? primary : scheme.onSurfaceVariant,
+          );
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return TextStyle(
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            color: selected ? primary : scheme.onSurfaceVariant,
+          );
+        }),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: scheme.onPrimary,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: primary,
+          side: BorderSide(color: outline),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: primary,
+        foregroundColor: scheme.onPrimary,
+        elevation: 0,
+        focusElevation: 0,
+        hoverElevation: 0,
+        highlightElevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: surfaceContainerHigh,
+        border: OutlineInputBorder(borderRadius: radius),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(color: scheme.outlineVariant),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(color: primary, width: 1.4),
+        ),
+      ),
+      dividerTheme: DividerThemeData(
+        color: scheme.outlineVariant,
+        space: 1,
+        thickness: 1,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: surfaceContainerHigh,
+        contentTextStyle: TextStyle(color: scheme.onSurface),
+        actionTextColor: secondary,
+        behavior: SnackBarBehavior.floating,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: outline),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: primaryContainer,
+        selectedColor: _tint(primary, 0.45),
+        side: BorderSide(color: scheme.outlineVariant),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   /// 把强调色压暗后混进底色，作为容器色，保持深色面板基调。
-  Color _tint(Color accent) =>
-      Color.alphaBlend(accent.withValues(alpha: 0.24), surface);
+  Color _tint(Color accent, [double alpha = 0.24]) =>
+      Color.alphaBlend(accent.withValues(alpha: alpha), surface);
 
   /// 依亮度选前景色，保证文字/图标可读。
   static Color _on(Color background) =>
@@ -105,14 +245,14 @@ class AppThemeCatalog {
     AppTheme(
       id: 'neon_blue',
       name: '霓虹蓝',
-      description: '深空蓝底 · 青蓝荧光，默认科技主题',
-      seed: Color(0xFF2E6BFF),
-      primary: Color(0xFF4DA3FF),
-      secondary: Color(0xFF39E6FF),
-      tertiary: Color(0xFF8B7BFF),
-      surface: Color(0xFF070B18),
-      surfaceContainer: Color(0xFF0E1530),
-      surfaceContainerHigh: Color(0xFF16203F),
+      description: '深空蓝底 · 电光青蓝，默认科技主题',
+      seed: Color(0xFF1A6CFF),
+      primary: Color(0xFF3D9BFF),
+      secondary: Color(0xFF00F0FF),
+      tertiary: Color(0xFF7A6BFF),
+      surface: Color(0xFF050814),
+      surfaceContainer: Color(0xFF0A1228),
+      surfaceContainerHigh: Color(0xFF121C3A),
     ),
     AppTheme(
       id: 'cyber_purple',

@@ -531,7 +531,10 @@ class _AgnesPresetRow extends ConsumerWidget {
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: ListTile(
-        leading: const Icon(Icons.cloud_upload_outlined, color: Colors.blue),
+        leading: Icon(
+          Icons.cloud_upload_outlined,
+          color: Theme.of(context).colorScheme.primary,
+        ),
         title: const Text('一键添加 Agnes 预设'),
         subtitle: const Text('Agnes LLM / 图片 / 视频 3 个供应商（中国服务）'),
         trailing: const Icon(Icons.add),
