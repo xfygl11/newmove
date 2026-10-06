@@ -188,37 +188,26 @@ class _SkeletonBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final beatsAsync = ref.watch(beatsByScriptProvider(script.id));
     final shotsAsync = ref.watch(shotsByScriptProvider(script.id));
-    final issuesAsync = ref.watch(skeletonIssuesProvider(script.id));
+    final coverageAsync = ref.watch(skeletonCoverageProvider(script.id));
 
     return Column(
       children: [
-        issuesAsync.maybeWhen(
-          data: (issues) {
-            if (issues.isEmpty) return const SizedBox.shrink();
-            return Card(
-              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              color: Colors.red.shade900.withValues(alpha: 0.25),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '源剧情账本校验（${issues.length}）',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 4),
-                    for (final issue in issues)
-                      Text(
-                        '⚠ ${issue.message}',
-                        style: TextStyle(color: Colors.red.shade200),
-                      ),
-                  ],
-                ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: coverageAsync.maybeWhen(
+            data: (issues) => GateIssueList(
+              title: '认领覆盖体检',
+              issues: issues,
+              onRecord: () => ref.read(attemptRecorderProvider)
+                  .recordValidation(
+                subjectLabel: '剧本 ${script.title} 认领覆盖体检',
+                gates: const ['认领覆盖门'],
+                issues: issues,
+                projectId: projectId,
               ),
-            );
-          },
-          orElse: () => const SizedBox.shrink(),
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.all(16),

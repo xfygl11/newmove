@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
 
 import '../../agent/active_llm.dart';
+import '../../core/gate_issue.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/beat_dao.dart';
 import '../../data/daos/generation_attempt_dao.dart';
@@ -13,7 +14,7 @@ import '../../data/daos/shot_dao.dart';
 import '../provider_config/provider_models.dart';
 import '../shot/segment_budget.dart';
 import 'skeleton_agents.dart';
-import 'skeleton_models.dart';
+import 'skeleton_gate.dart';
 
 /// 剧本骨架的业务编排：构建导演上下文、调用 Agent、落库与完整性校验。
 class SkeletonService {
@@ -202,43 +203,17 @@ class SkeletonService {
     }
   }
 
-  // ---- 源剧情账本 E## 映射校验（T3.3） ----
+  // ---- 源剧情账本 E## 认领覆盖校验（T3.3 / M22 T23.2） ----
 
-  Future<List<SkeletonIssue>> listIssues(int scriptId) async {
+  /// 认领覆盖体检：编号唯一、每拍恰好认领一次、段内顺序不倒流、无未知引用。
+  /// 纯校验，只提示不改数据。
+  Future<List<GateIssue>> listCoverageIssues(int scriptId) async {
     final beats = await beatDao.listByScript(scriptId);
     final shots = await shotDao.listByScript(scriptId);
-
-    final knownRefs = <String>{for (final b in beats) b.sourceRef};
-    final usedRefs = <String>{};
-    final issues = <SkeletonIssue>[];
-
-    for (final s in shots) {
-      for (final ref in _decodeStringList(s.beatRefs)) {
-        usedRefs.add(ref);
-        if (!knownRefs.contains(ref)) {
-          issues.add(
-            SkeletonIssue(
-              kind: 'unknown_ref',
-              ref: ref,
-              message: '${s.globalSeq} 引用了不存在的节拍 $ref',
-            ),
-          );
-        }
-      }
-    }
-
-    for (final b in beats) {
-      if (!usedRefs.contains(b.sourceRef)) {
-        issues.add(
-          SkeletonIssue(
-            kind: 'unmapped_beat',
-            ref: b.sourceRef,
-            message: '${b.sourceRef} 未映射到任何段',
-          ),
-        );
-      }
-    }
-    return issues;
+    return SkeletonGate.coverage(
+      beats: SkeletonGate.beatOrder(beats),
+      shots: shots,
+    );
   }
 
   // ---- 内部辅助 ----

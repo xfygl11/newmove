@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/gate_issue.dart';
 import '../../core/network/providers.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
 import 'skeleton_agents.dart';
-import 'skeleton_models.dart';
 import 'skeleton_service.dart';
 
 final skeletonAgentsProvider = Provider<SkeletonAgents>(
@@ -37,7 +37,8 @@ final shotsByScriptProvider = StreamProvider.family<List<Shot>, int>(
   (ref, scriptId) => ref.watch(shotDaoProvider).watchByScript(scriptId),
 );
 
-/// 某剧本的源剧情账本 E## 映射校验结果。
-final skeletonIssuesProvider = FutureProvider.family<List<SkeletonIssue>, int>(
-  (ref, scriptId) => ref.watch(skeletonServiceProvider).listIssues(scriptId),
+/// 某剧本的源剧情账本 E## 认领覆盖体检结果。
+final skeletonCoverageProvider =
+    FutureProvider.family<List<GateIssue>, int>(
+  (ref, scriptId) => ref.watch(skeletonServiceProvider).listCoverageIssues(scriptId),
 );

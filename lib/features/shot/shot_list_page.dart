@@ -153,6 +153,25 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
                 orElse: () => const SizedBox.shrink(),
               ),
 
+          // 镜头侧体检（M22 T23.2）：同框人数、段号、分镜图提示词非空、
+          // 景别运镜词回查。只提示，不阻塞生成。
+          ref
+              .watch(shotGateIssuesProvider(widget.scriptId))
+              .maybeWhen(
+                data: (issues) {
+                  if (issues.isEmpty) return const SizedBox.shrink();
+                  return _issueCard(
+                    context: context,
+                    title: '镜头体检（${issues.length}）',
+                    message: '提示级：出图与视频前建议先修正',
+                    entries: [for (final issue in issues) issue.noteLine],
+                    color: Colors.amber.shade900,
+                    tint: Colors.amber.shade100,
+                  );
+                },
+                orElse: () => const SizedBox.shrink(),
+              ),
+
           Expanded(
             child: shotsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),

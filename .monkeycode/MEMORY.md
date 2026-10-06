@@ -76,9 +76,11 @@ Entries discovered by the Agent during task execution should follow this format:
   - 单文件快速迭代（约 1–2 分钟）：`/opt/flutter/bin/flutter test test/gates_test.dart --no-pub --concurrency=1`
    - 当前基线：M14 + M15 + M18-B + M19 全量落地（含 T21.6 校验留痕、T21.11 提示词三级覆盖与五个 Agent 接入 resolver、T21.12/T21.13 结构化字段含镜头级服装覆盖、T21.14 下游失效、T21.15 章节维护提醒），schema v12，全量 379 例全通过，`/opt/flutter/bin/flutter analyze` 零问题（`flutter` 需用绝对路径 `/opt/flutter/bin/flutter`）
     - M20 技术债轮已落地：T20.22（`StatusKinds` 完备性守卫测试 + 补登章节「审校中」与伏笔五个标签 + 新增 `contains`/`all` 只读接口）、T20.24（`SkillLoader` 集成测试，正向遍历 `allSlots` + 反向守卫 `assets/skills` 无孤立文件）、T20.29（启用 `prefer_const_constructors` 等三条 lint，`dart fix` 自动修 105 处 + 7 处 `unnecessary_const`）、T20.30（docs/02 §3.1/§3.2 回填 19 表拓扑与缺失字段，docs/05 新增 §13 实现状态对照，AGENTS.md「15 处」改 16）；早期里程碑 T0–T8 勾选补齐（T7.4 / T8.2 附落地修正），T16.9.4 勾选（`Scripts.aspectRatio`/`language` schema v8 已删，`version` 并非死字段）
-    - **M21 已落地（2026-10-06）**：T22.1–T22.9 画风词表化（`ArtStyleCatalog` 16 条三族 + 存短名）与作品形式进基础设置（`workForms` 必填 + `genreContext` 非默认才输出），无 schema 变更；全量 **442 例**全通过（基线 428 + 13 画风 + 1 作品形式），`flutter analyze` 零问题
+     - **M21 已落地（2026-10-06）**：T22.1–T22.9 画风词表化（`ArtStyleCatalog` 16 条三族 + 存短名）与作品形式进基础设置（`workForms` 必填 + `genreContext` 非默认才输出），无 schema 变更；全量 **442 例**全通过（基线 428 + 13 画风 + 1 作品形式），`flutter analyze` 零问题
+     - **M22 已落地（2026-10-06）**：T23.1–T23.7 质量门加固，新增 3 个门文件（`shot_gate.dart` / `skeleton_gate.dart` / `script_gate.dart`）+ `PromptGate` 五门 + `SegmentBudget.under_limit`，共 15 个新校验码；删除 `SkeletonIssue`，骨架体检统一走 `GateIssue`；无 schema 变更；全量 **487 例**全通过，`flutter analyze` 零问题
   - **`flutter analyze` 与 `flutter test` 不要放在两个后台终端里并发跑**：本环境内存紧张，并发时会把 analyze 顶到 OOM（exit code -1 + `killed_by_timeout`，且输出 0 字节）。串行跑，先 analyze（约 25 秒）再 test
   - 单文件 test 加 `| tail -N` 会等到进程结束才输出，运行期间日志一直是 0 字节；要观察进度就别加 tail
+  - 全量测试偶发 `<某文件>: loading <该文件>` 失败而其余 480+ 例全绿（2026-10-06 实测：`backup_service_test.dart`）——是该文件的编译 isolate 被内存顶掉，不是代码问题。判定方式：单独重跑该文件，通过即为环境抖动，无需改代码
 
 [Flutter 3.47 Dialog / widget test 踩坑记录]
 - Date: 2026-10-05

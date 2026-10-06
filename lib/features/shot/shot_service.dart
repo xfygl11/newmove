@@ -36,6 +36,7 @@ import '../provider_config/provider_models.dart';
 import '../script/script_models.dart';
 import 'costume_gate.dart';
 import 'shot_agents.dart';
+import 'shot_gate.dart';
 import 'shot_models.dart';
 import 'segment_budget.dart';
 import 'video_prompt.dart';
@@ -921,6 +922,55 @@ class ShotService {
       issues.addAll(CostumeGate.validate(shot, refs, assetById));
     }
     return issues;
+  }
+
+  /// 某剧本的镜头侧体检（M22 T23.2）：同框人数、段号、分镜图提示词非空、
+  /// 景别运镜词回查。纯校验，只提示不改数据。
+  Future<List<GateIssue>> listShotGateIssues(int scriptId) async {
+    final shots = await shotDao.listByScript(scriptId);
+    if (shots.isEmpty) return const [];
+    final frames = <ShotFrame>[];
+    for (final shot in shots) {
+      frames.addAll(await shotFrameDao.listByShot(shot.id));
+    }
+    final names = await characterNamesOf(scriptId);
+    return ShotGate.validate(shots: shots, frames: frames, characterNames: names);
+  }
+
+  /// 视频提示词（A9）角色名检查（M22 T23.2）；只提示不阻塞。
+  ///
+  /// 视频侧引用角色必须走 `{{ref N}}`，直呼其名会让模型去找字面实体。
+  /// 输入与 [submitVideo] 同源，[durationSec] 需传确认框里选中的值，
+  /// 保证检查的提示词与将要提交的提示词一致。
+  Future<List<GateIssue>> listVideoPromptIssues(
+    int shotId, {
+    int durationSec = 5,
+  }) async {
+    final shot = await shotDao.find(shotId);
+    if (shot == null) return const [];
+    final frames = await shotFrameDao.listByShot(shotId);
+    final refs = await assetRefDao.listByShot(shotId);
+    final assets = await assetDao.listByScript(shot.scriptId);
+    final script = await scriptDao.find(shot.scriptId);
+    final prompt = const VideoPromptBuilder().build(
+      shot: shot,
+      frames: frames,
+      refs: refs,
+      assetById: {for (final a in assets) a.id: a},
+      artStyle: effectiveArtStyle(script?.artStyle),
+      durationSec: durationSec,
+    );
+    return ShotGate.videoNoNames(
+      locator: shot.globalSeq,
+      prompt: prompt,
+      characterNames: [for (final a in assets) if (a.type == '角色') a.name],
+    );
+  }
+
+  /// 某剧本的角色资产名（门与提示词共用）。
+  Future<List<String>> characterNamesOf(int scriptId) async {
+    final assets = await assetDao.listByScript(scriptId);
+    return [for (final a in assets) if (a.type == '角色') a.name];
   }
 
   // ---- 视频生成（M6：T7.1–T7.4） ----

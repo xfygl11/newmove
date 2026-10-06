@@ -174,6 +174,19 @@ void main() {
       expect(issues.single.seq, 'G01');
     });
 
+    test('段时长低于下限 → under_limit(warn)；0 表示未填，跳过', () async {
+      final s = await emptyScript(modelVersion: '2.0');
+      final segs = await insertSegments(s, {'G01': 2000, 'G02': 0, 'G03': 3000});
+      final issues = validate(s, segs, const []);
+      expect(codesOf(issues), {'under_limit'});
+      expect(
+        issues.map((i) => i.seq).toList(),
+        ['G01'],
+        reason: 'G02 未填（0）应跳过，G03 恰好在下限应通过',
+      );
+      expect(issues.single.severity, SegmentBudgetSeverity.warn);
+    });
+
     test('引用节拍时长求和超段时长 → dialogue_overflow(error)', () async {
       final s = await emptyScript(modelVersion: '2.0');
       final beats = await insertBeats(s, {'E1': 6000, 'E2': 10000});

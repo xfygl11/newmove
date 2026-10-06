@@ -15,6 +15,7 @@ import '../shot/shot_providers.dart';
 import 'art_styles.dart';
 import 'duration_gate.dart';
 import 'script_adapt_sheet.dart';
+import 'script_gate.dart';
 import 'script_models.dart';
 import 'script_providers.dart';
 
@@ -90,6 +91,26 @@ class ScriptDetailPage extends ConsumerWidget {
                         .recordValidation(
                       subjectLabel: '剧本 ${script.title} 台词体检',
                       gates: const ['台词门'],
+                      issues: issues,
+                      projectId: projectId,
+                    ),
+                  );
+                },
+                orElse: () => const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 8),
+              // 场次侧体检（M22 T23.2）：画面动作缺失、动作夹对话、说话人越界。
+              scenesAsync.maybeWhen(
+                data: (scenes) {
+                  final issues = ScriptGate.validate(scenes: scenes);
+                  if (issues.isEmpty) return const SizedBox.shrink();
+                  return GateIssueList(
+                    title: '剧本体检',
+                    issues: issues,
+                    onRecord: () => ref.read(attemptRecorderProvider)
+                        .recordValidation(
+                      subjectLabel: '剧本 ${script.title} 剧本体检',
+                      gates: const ['剧本门'],
                       issues: issues,
                       projectId: projectId,
                     ),

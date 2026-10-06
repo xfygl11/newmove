@@ -188,10 +188,10 @@ void main() {
       expect(shots.first.globalSeq, 'G01');
       expect(shots.first.beatRefs, contains('E01'));
 
-      expect(await service.listIssues(scriptId), isEmpty);
+      expect(await service.listCoverageIssues(scriptId), isEmpty);
     });
 
-    test('listIssues 识别未知引用与未映射节拍', () async {
+    test('listCoverageIssues 识别未知引用、重复认领与顺序倒流', () async {
       await db.beatDao.insert(
         BeatsCompanion.insert(
           sceneId: sceneId,
@@ -229,12 +229,26 @@ void main() {
           assetStates: const Value('{}'),
         ),
       );
+      // 重复认领 E01，且段内引用顺序倒流（E02 在 E01 之前）。
+      await db.shotDao.insert(
+        ShotsCompanion.insert(
+          scriptId: scriptId,
+          globalSeq: 'G02',
+          batch: const Value(1),
+          durationMs: const Value(6000),
+          globalTimeRange: '00:08-00:14',
+          beatRefs: Value(jsonEncode(['E02', 'E01'])),
+          assetStates: const Value('{}'),
+        ),
+      );
 
-      final issues = await service.listIssues(scriptId);
+      final issues = await service.listCoverageIssues(scriptId);
+      final locators = {for (final i in issues) i.locator};
 
-      expect(issues.map((i) => i.kind).toSet(), {'unknown_ref', 'unmapped_beat'});
-      expect(issues.any((i) => i.kind == 'unknown_ref' && i.ref == 'E03'), isTrue);
-      expect(issues.any((i) => i.kind == 'unmapped_beat' && i.ref == 'E02'), isTrue);
+      expect(issues.length, 3);
+      expect(issues.every((i) => i.code == 'coverage'), isTrue);
+      expect(issues.where((i) => i.isError).length, 1);
+      expect(locators, {'G01', 'E01', 'G02'});
     });
   });
 }

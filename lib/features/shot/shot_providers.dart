@@ -106,6 +106,11 @@ final shotCostumeIssuesProvider = FutureProvider.family<List<GateIssue>, int>(
   (ref, scriptId) => ref.watch(shotServiceProvider).listCostumeIssues(scriptId),
 );
 
+/// 某剧本的镜头侧体检结果（M22 T23.2）：同框人数、段号、提示词非空、词回查。
+final shotGateIssuesProvider = FutureProvider.family<List<GateIssue>, int>(
+  (ref, scriptId) => ref.watch(shotServiceProvider).listShotGateIssues(scriptId),
+);
+
 /// 某镜头的视频任务列表（最新在前）。
 final videoTasksByShotProvider = StreamProvider.family<List<VideoTask>, int>(
   (ref, shotId) => ref.watch(videoTaskDaoProvider).watchByShot(shotId),

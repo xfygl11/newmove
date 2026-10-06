@@ -23,7 +23,8 @@ class SegmentBudgetIssue {
 
   final String seq;
 
-  /// over_limit / dialogue_overflow / total_mismatch / too_few_segments / batch_too_large。
+  /// over_limit / under_limit / dialogue_overflow / total_mismatch /
+  /// too_few_segments / batch_too_large。
   final String code;
   final SegmentBudgetSeverity severity;
   final String message;
@@ -57,6 +58,11 @@ class SegmentBudget {
   static const int version25MaxSegmentMs = 30000;
   static const int version20MaxBatchSegments = 6;
   static const int version25MaxBatchSegments = 3;
+
+  /// 单段时长下限：低于这个值内容撑不满一个镜头，模型会重复动作或硬拉长。
+  ///
+  /// 固定常量、不随 modelVersion 变：下界是内容约束，上界才是能力约束。
+  static const int minSegmentMs = 3000;
 
   /// 呼吸余量：段预算在节拍求和基础上乘 1.1，避免自然朗读时间被压缩。
   static const double breathingMargin = 1.1;
@@ -113,6 +119,19 @@ class SegmentBudget {
             code: 'over_limit',
             severity: SegmentBudgetSeverity.error,
             message: '时长 ${_fmt(seg.durationMs)} 超出单段上限 ${_fmt(maxSegmentMs)}',
+          ),
+        );
+      }
+
+      // durationMs == 0 表示未填，按「缺字段照常通过」跳过。
+      if (seg.durationMs > 0 && seg.durationMs < minSegmentMs) {
+        issues.add(
+          SegmentBudgetIssue(
+            seq: seg.globalSeq,
+            code: 'under_limit',
+            severity: SegmentBudgetSeverity.warn,
+            message: '时长 ${_fmt(seg.durationMs)} 低于单段下限 ${_fmt(minSegmentMs)}，'
+                '内容撑不满一个镜头，模型会重复动作或硬拉长',
           ),
         );
       }

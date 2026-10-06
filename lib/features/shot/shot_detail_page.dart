@@ -510,12 +510,20 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
       widget.shot.scriptId,
       videoModel: selectedModel,
     );
+    final videoIssues = await svc.listVideoPromptIssues(
+      widget.shot.id,
+      durationSec: params.durationSec,
+    );
     if (!mounted) return;
     final budgetErrors = svc.errorIssuesOf(budgetIssues);
-    final note = budgetErrors.isEmpty
-        ? ''
-        : '时长约束冲突（确认后仍会提交）：\n'
-              '${budgetErrors.map((e) => '· ${e.noteLine}').join('\n')}';
+    final noteLines = <String>[
+      if (budgetErrors.isNotEmpty)
+        '时长约束冲突（确认后仍会提交）：\n'
+            '${budgetErrors.map((e) => '· ${e.noteLine}').join('\n')}',
+      if (videoIssues.isNotEmpty)
+        '视频提示词提示：\n${videoIssues.map((e) => '· ${e.noteLine}').join('\n')}',
+    ];
+    final note = noteLines.join('\n');
     if (!await ConfirmSheet.confirm(
       context,
       objectName: '镜头视频 · ${widget.shot.globalSeq}',

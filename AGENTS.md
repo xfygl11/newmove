@@ -367,27 +367,63 @@ lib/
       **禁止自动落库**——否则每次重绘写一条，台账被刷爆；只允许经
       `GateIssueList` 的「记一次」按钮显式触发。写入失败只
       `appLog('gate_record', …)` 并返回 false，不阻塞。
-    - **M19 校验码登记表**（新增校验码先登记再实现，对齐既有五条 `SegmentBudget`
-     校验码约定）：
-     - `DurationGate`（`lib/features/script/duration_gate.dart`）：
-       `line_too_long`（error，单句台词 > 35 字，一口说不完）、
-       `total_over_budget` / `total_under_budget`（warn，节拍自然时长与
-       `Scripts.targetDurationMs` 偏差 > 15%；目标为 0 时跳过）。
-     - `PromptGate`（`lib/features/asset/prompt_gate.dart`）：
-       `prompt_similar`（warn，两个角色外观锚点 Jaccard >= 0.75）、
-       `scene_not_empty`（error，场景 / 道具提示词无空景标记）、
-       `prop_has_hand`（error，道具提示词无手部排除标记）、
-       `scene_named_character`（warn，场景提示词出现角色名）、
-       `style_conflict`（warn，同批资产跨画风族）。
-     - `CostumeGate`（`lib/features/shot/costume_gate.dart`，镜头级服装覆盖）：
-       `costume_unknown`（warn，覆盖套名不在该资产 `costumeSets` 清单里，
-       模型自创套名会让分镜图画出资产图里没有的第四套衣服）、
-       `costume_orphan`（warn，覆盖的角色不在本镜头 `AssetRefs` 里，条目无效）、
-       `costume_duplicate`（warn，同一镜头同一角色给了多套服装，无法判定穿哪套）。
-       三条全 warn：门能指出问题所在，但改数据要用户显式动作（改覆盖或重导）。
-      - 统一结果类型 `GateIssue` / `GateSeverity` 在 `lib/core/gate_issue.dart`，
-        `noteLine` 给确认框 `note` 用；与 `SegmentBudgetIssue` 同型但字段语义不同，
-        不合并。
+     - **M19 / M22 校验码登记表**（新增校验码先登记再实现，对齐既有五条
+      `SegmentBudget` 校验码约定）：
+      - `DurationGate`（`lib/features/script/duration_gate.dart`）：
+        `line_too_long`（error，单句台词 > 35 字，一口说不完）、
+        `total_over_budget` / `total_under_budget`（warn，节拍自然时长与
+        `Scripts.targetDurationMs` 偏差 > 15%；目标为 0 时跳过）。
+      - `PromptGate`（`lib/features/asset/prompt_gate.dart`）：
+        `prompt_similar`（warn，两个角色外观锚点 Jaccard >= 0.75）、
+        `anchor_count`（warn，外观锚点字段数不在 3–5；角色 / 场景 / 道具都查，
+        空锚点与坏 JSON 跳过）、
+        `lighting_missing`（warn，提示词与外观锚点均无光照词，三类资产都查）、
+        `scene_not_empty`（error，场景 / 道具提示词无空景标记）、
+        `prop_has_hand`（error，道具提示词无手部排除标记）、
+        `prop_states`（warn，道具提示词与锚点均无状态词）、
+        `prop_scale`（warn，道具提示词与锚点均无尺度词）、
+        `prop_white_bg`（warn，道具提示词无白底 / 孤立表述）、
+        `scene_named_character`（warn，场景提示词出现角色名）、
+        `style_conflict`（warn，同批资产跨画风族）。
+        「必须有」型标记（光照 / 状态 / 尺度 / 白底）不做否定语境豁免：写
+        「不要强光」也是在描述光，门的目的只是确认提示词提到了这件事。
+      - `CostumeGate`（`lib/features/shot/costume_gate.dart`，镜头级服装覆盖）：
+        `costume_unknown`（warn，覆盖套名不在该资产 `costumeSets` 清单里，
+        模型自创套名会让分镜图画出资产图里没有的第四套衣服）、
+        `costume_orphan`（warn，覆盖的角色不在本镜头 `AssetRefs` 里，条目无效）、
+        `costume_duplicate`（warn，同一镜头同一角色给了多套服装，无法判定穿哪套）。
+        三条全 warn：门能指出问题所在，但改数据要用户显式动作（改覆盖或重导）。
+      - `ShotGate`（`lib/features/shot/shot_gate.dart`，镜头侧）：
+        `crowd_check`（warn，同框角色数 > `ShotGate.maxOnScreen`（3），参考图锁
+        的是单人造型，第 4 个人物没有锚点）、
+        `segment_seq`（warn，段号不符 `G\d{2}` 或批内不连号）、
+        `frame_empty`（error，分镜图提示词去空白后不足 20 字或无中文正文，
+        出图会是随机画面）、
+        `phrase_missing`（warn，景别 / 运镜词没落进分镜图提示词，结构化字段填了
+        但模型看不到；`camera == '固定'` 不查）、
+        `video_no_names`（warn，视频提示词叙述正文出现角色名，视频侧必须走
+        `{{ref N}}`）。`video_no_names` 先经 `ShotGate.narrativeOnly` 剥掉
+        `Reference binding:` 与 `Costume overrides:` 两个区块再判——这两个区块
+        必须出现角色名（靠名字把 `{{ref N}}` 映射到资产），扫全量会 100% 误报。
+        区块标题必须逐行精确匹配，正文里出现 `Timeline:` 字样不会被误判为区块头。
+      - `SkeletonGate`（`lib/features/skeleton/skeleton_gate.dart`）：
+        `coverage`（唯一一条码，locator 区分对象）四项子检查——`sourceRef` 重复
+        （error）、引用不存在的节拍（error）、被多段认领（warn）、段内引用顺序
+        倒流（warn）、未被任何段认领（warn）。共用一个门码因为修法是同一个
+        动作（改段落的 `beatRefs`）。节拍顺序走 `SkeletonGate.beatOrder`
+        （按 `E##` 数字升序，无法解析的排在后面）。
+      - `ScriptGate`（`lib/features/script/script_gate.dart`，场次侧）：
+        `has_action`（warn，`Scenes.action` 为空，纯对话场次让下游分镜图只剩人物
+        与台词）、
+        `action_prose`（warn，动作字段里出现对话引号，台词必须进 `dialogue`）、
+        `speaker_unknown`（warn，说话人不在本场 `characters` 里；VO / OS 豁免，
+        出场名单为空时跳过）。
+       - 统一结果类型 `GateIssue` / `GateSeverity` 在 `lib/core/gate_issue.dart`，
+         `noteLine` 给确认框 `note` 用；与 `SegmentBudgetIssue` 同型但字段语义不同，
+         不合并。
+        - `SegmentBudget` 新增 `under_limit`（warn，段时长 < `minSegmentMs`（3000ms））。
+          下界是固定常量、不随 `modelVersion` 变：下界是内容约束，上界才是能力约束。
+          `durationMs == 0` 表示未填，按「缺字段照常通过」跳过。
     - **下游产物失效标记必须覆盖 `Scenes` 表行，不能覆盖 `Scripts.content`**：
       场次编辑走 `updateScene` 只写 `Scenes` 表，而提案确认只改 `content` 里的
       `proposals`、不重写场次行，不该让下游失效。指纹按 `seq` 升序参与、剔除
@@ -407,22 +443,22 @@ lib/
     - **`PromptOverrides` 覆盖按整段替换，不做局部合并**：局部合并需要插槽解析，
       语义太脆。三级顺序 项目级 > 全局级 > 内置 skill 原文，由
       `lib/agent/prompt_resolver.dart` 的 `PromptResolver.resolve` 统一解析，
-        `allSlots` 常量与 `assets/skills/` 目录一一对应（13 个；M19 建立时为
-        12 个，`novel/setup_fields.md` 是后补的插槽）。
-       覆盖列为空串时视为未覆盖、继续回落。项目删除时
-       `CascadeDao.deleteProjectCascade` 按 `projectId` 清项目级覆盖，
-       `scope='global'` 的行 `projectId` 为 null 天然被谓词排除、不误删。
-        表不加 unique key：`projectId` 在 `scope='global'` 时为 null，SQLite 里
-        NULL 互不相等会让 unique 约束形同虚设，所以 DAO 走显式查再插/改的 upsert。
-     - **Agent 提示词一律经 `PromptResolver`，项目归属统一走 `bookId`**：五个 Agent
-       类（`ShotAgents` / `AssetAgents` / `SkeletonAgents` / `NovelAgents` /
-       `ScriptAgents`）禁止直接 `SkillLoader.load`，必须经构造器注入的
-       `PromptResolver`（`required this.resolver`，不留可选短路）。项目归属统一由
-       `resolveByBook(relativePath, {bookId})` → `PromptOverrideDao.projectOfBook`
-       解析，调用点不自拼 `bookId → projectId`。中转键用 `bookId` 而不是
-       `scriptId`：五个 service 的调用点都直接持有 `bookId`，而
-       `adaptChapters` 首次改编时剧本尚未落库、没有可用 `scriptId`；走 `bookId`
-       全链路可用且省一次查询。`bookId` 为空时跳过项目级，只走全局与内置。
+      `allSlots` 常量与 `assets/skills/` 目录一一对应（13 个；M19 建立时为
+      12 个，`novel/setup_fields.md` 是后补的插槽）。
+      覆盖列为空串时视为未覆盖、继续回落。项目删除时
+      `CascadeDao.deleteProjectCascade` 按 `projectId` 清项目级覆盖，
+      `scope='global'` 的行 `projectId` 为 null 天然被谓词排除、不误删。
+      表不加 unique key：`projectId` 在 `scope='global'` 时为 null，SQLite 里
+      NULL 互不相等会让 unique 约束形同虚设，所以 DAO 走显式查再插/改的 upsert。
+    - **Agent 提示词一律经 `PromptResolver`，项目归属统一走 `bookId`**：五个 Agent
+      类（`ShotAgents` / `AssetAgents` / `SkeletonAgents` / `NovelAgents` /
+      `ScriptAgents`）禁止直接 `SkillLoader.load`，必须经构造器注入的
+      `PromptResolver`（`required this.resolver`，不留可选短路）。项目归属统一由
+      `resolveByBook(relativePath, {bookId})` → `PromptOverrideDao.projectOfBook`
+      解析，调用点不自拼 `bookId → projectId`。中转键用 `bookId` 而不是
+      `scriptId`：五个 service 的调用点都直接持有 `bookId`，而
+      `adaptChapters` 首次改编时剧本尚未落库、没有可用 `scriptId`；走 `bookId`
+      全链路可用且省一次查询。`bookId` 为空时跳过项目级，只走全局与内置。
     - **结构化字段是段级不是帧级，且必须显式写回**：`Shots` 表的九个摄影字段
       （`composition` / `lens` / `cameraPosition` / `eyeline` / `focus` / `stability`
       / `blocking` / `dialogueStartRatio` / `dialogueEndRatio`）落在
@@ -446,8 +482,10 @@ lib/
       「已全部核对」，未勾完显示「稍后再核对」——两种情况都能关闭，只提示不阻塞。
       相似度比较对象是「新写内容」与「续写前的既有正文」；词元数不足时返回
       **null 而不是 0**——0 会被误判为「完全无关」而错误触发全量重写建议；首次
-       写作无既有正文时跳过相似度检查、只做清单提示。阈值 0.35 与 `PromptGate`
-       的 0.75（查雷同）是同一量尺上的反向用法。
+      写作无既有正文时跳过相似度检查、只做清单提示。阈值 0.35 与 `PromptGate`
+      的 0.75（查雷同）是同一量尺上的反向用法。
+
+
 
 ### 画面风格词表与作品形式约定（M21）
 

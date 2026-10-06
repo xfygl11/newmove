@@ -174,20 +174,6 @@ class SkeletonSegment {
   }
 }
 
-/// 骨架完整性检查发现的问题。
-class SkeletonIssue {
-  const SkeletonIssue({
-    required this.kind,
-    required this.ref,
-    required this.message,
-  });
-
-  // unmapped_beat：节拍未映射到任何段；unknown_ref：段引用了不存在的节拍。
-  final String kind;
-  final String ref;
-  final String message;
-}
-
 /// 一次骨架提取的完整产物。
 class SkeletonResult {
   const SkeletonResult({
