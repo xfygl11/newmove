@@ -132,7 +132,7 @@ void main() {
       expect(rows.map((r) => r.id), {'agnes-llm', 'agnes-image', 'agnes-video'});
       expect(rows.map((r) => r.protocol), {
         Protocols.openaiChat,
-        Protocols.openaiImages,
+        Protocols.openaiImagesInline,
         Protocols.openaiVideos,
       });
       expect(rows.every((r) => r.baseUrl == AgnesPresets.baseUrl), isTrue);

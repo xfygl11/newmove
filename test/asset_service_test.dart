@@ -301,6 +301,39 @@ void main() {
       expect(File(updated.imagePath!).existsSync(), isTrue);
     });
 
+    test('生成后快照记录新图片路径，而不是生成前的旧值', () async {
+      await service.extractAndSave(scriptId: scriptId, llm: await fakeLlm());
+      final base = (await db.assetDao.listByStableId(scriptId, 'qing')).single;
+
+      await service.generate(assetId: base.id, image: await fakeImage());
+
+      final revisions = await db.revisionDao.listAssets(base.id);
+      expect(revisions, hasLength(1));
+      final snapshot = jsonDecode(revisions.single.snapshot);
+      expect(snapshot['imagePath'], isNotNull);
+      expect(File(snapshot['imagePath'] as String).existsSync(), isTrue);
+    });
+
+    test('重复生成累积多条快照，每条指向各自的文件', () async {
+      await service.extractAndSave(scriptId: scriptId, llm: await fakeLlm());
+      final base = (await db.assetDao.listByStableId(scriptId, 'qing')).single;
+
+      await service.generate(assetId: base.id, image: await fakeImage());
+      await service.generate(assetId: base.id, image: await fakeImage());
+
+      final revisions = await db.revisionDao.listAssets(base.id);
+      expect(revisions, hasLength(2));
+      final paths = revisions
+          .map((r) => (jsonDecode(r.snapshot)['imagePath'] as String?))
+          .toList();
+      expect(paths, everyElement(isNotNull));
+      expect(
+        paths.toSet().length,
+        paths.length,
+        reason: '两次生成各写独立文件，路径不得重复',
+      );
+    });
+
     test('createVariant 图生图并生成待验收变体', () async {
       await service.extractAndSave(scriptId: scriptId, llm: await fakeLlm());
       final base = (await db.assetDao.listByStableId(scriptId, 'qing')).single;

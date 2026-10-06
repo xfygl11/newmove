@@ -13,8 +13,16 @@ abstract final class Protocols {
   /// LLM：Anthropic Messages 协议（仅用于模型列表拉取探测）。
   static const anthropicMessages = 'anthropic-messages';
 
-  /// 图片：OpenAI Images 兼容协议（`/images/generations`、`/images/edits`）。
+  /// 图片：OpenAI Images 兼容协议（文生图 `/images/generations`、
+  /// 图生图 `/images/edits` + multipart 文件）。
   static const openaiImages = 'openai-images';
+
+  /// 图片：OpenAI Images 内联参考图协议。
+  ///
+  /// Agnes 等供应商没有 `/images/edits` 端点：图生图与多图合成仍走
+  /// `/images/generations`（JSON），参考图以 URL 或 Data URI 数组内联在
+  /// 请求体里。用它替代 [openaiImages] 时文生图行为不变，只有图生图改道。
+  static const openaiImagesInline = 'openai-images-inline';
 
   /// 视频/图片：异步任务协议（提交 + 轮询查询）。
   static const asyncTask = 'async-task';
@@ -24,7 +32,7 @@ abstract final class Protocols {
 
   static const llm = <String>[openaiCompletions, openaiChat];
 
-  static const image = <String>[openaiImages];
+  static const image = <String>[openaiImages, openaiImagesInline];
 
   static const video = <String>[asyncTask, openaiVideos];
 

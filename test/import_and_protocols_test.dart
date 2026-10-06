@@ -130,7 +130,10 @@ void main() {
         'openai-completions',
         'openai-chat',
       ]);
-      expect(Protocols.optionsFor('image'), ['openai-images']);
+      expect(Protocols.optionsFor('image'), [
+        'openai-images',
+        'openai-images-inline',
+      ]);
       expect(Protocols.optionsFor('video'), ['async-task', 'openai-videos']);
       expect(Protocols.optionsFor('nope'), isEmpty);
     });

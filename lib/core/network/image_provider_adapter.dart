@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -33,7 +34,8 @@ class ImageGenerationException implements Exception {
 /// OpenAI Images 兼容适配器：文生图 + 图生图（参考图）。
 ///
 /// 不感知业务语义，仅做协议适配；供应商配置由调用方传入。
-/// 协议：`openai-images`（同步返回 b64/URL）。异步任务协议在 M6 视频阶段实现。
+/// `openai-images` 走 `/images/generations` + `/images/edits`（multipart）；
+/// `openai-images-inline` 走 `/images/generations`，参考图以 Data URI 内联。
 class ImageProviderAdapter {
   ImageProviderAdapter({Dio? dio, int maxRetries = 2})
     : _dio = dio ?? createDio(),
@@ -49,6 +51,9 @@ class ImageProviderAdapter {
   static const Set<int> _retryableStatus = {408, 429, 500, 502, 503, 504};
 
   static const int _backoffSeconds = 2;
+
+  /// 参考图张数上限：内联协议把每张图整体编码进请求体，张数直接决定体积。
+  static const int maxReferences = 16;
 
   static String _strip(String baseUrl) => baseUrl.replaceAll(RegExp(r'/$'), '');
 
@@ -67,6 +72,9 @@ class ImageProviderAdapter {
   }
 
   /// 文生图。
+  ///
+  /// [Protocols.openaiImagesInline] 供应商要求 `response_format` 只放
+  /// `extra_body` 内，写顶层会被判为参数错误，所以这里按协议分叉。
   Future<ImageGenerationResult> textToImage({
     required String baseUrl,
     required String apiKey,
@@ -77,18 +85,23 @@ class ImageProviderAdapter {
     CancelToken? cancelToken,
   }) async {
     Protocols.require('image', protocol);
+    final body = <String, Object?>{
+      'model': model,
+      'prompt': prompt,
+      'n': 1,
+      'size': size,
+    };
+    if (protocol == Protocols.openaiImagesInline) {
+      body['extra_body'] = <String, Object?>{'response_format': 'b64_json'};
+    } else {
+      body['response_format'] = 'b64_json';
+    }
     return _withRetry(
       cancelToken: cancelToken,
       attempt: () => _dio
           .post<Map<String, dynamic>>(
             generationsEndpoint(baseUrl),
-            data: {
-              'model': model,
-              'prompt': prompt,
-              'n': 1,
-              'size': size,
-              'response_format': 'b64_json',
-            },
+            data: body,
             options: _options(apiKey),
             cancelToken: cancelToken,
           )
@@ -106,36 +119,20 @@ class ImageProviderAdapter {
     String size = '1024x1024',
     String protocol = Protocols.openaiImages,
     CancelToken? cancelToken,
-  }) async {
-    Protocols.require('image', protocol);
-    return _withRetry(
+  }) {
+    return _imageToImage(
+      baseUrl: baseUrl,
+      apiKey: apiKey,
+      model: model,
+      prompt: prompt,
+      referencePaths: [referencePath],
+      size: size,
+      protocol: protocol,
       cancelToken: cancelToken,
-      attempt: () async {
-        final form = FormData.fromMap({
-          'model': model,
-          'prompt': prompt,
-          'n': 1,
-          'size': size,
-          'response_format': 'b64_json',
-          'image': await MultipartFile.fromFile(
-            referencePath,
-            filename: 'reference.png',
-          ),
-        });
-        final response = await _dio.post<Map<String, dynamic>>(
-          editsEndpoint(baseUrl),
-          data: form,
-          options: _options(apiKey),
-          cancelToken: cancelToken,
-        );
-        return _parse(response.data ?? const {});
-      },
     );
   }
 
   /// 多参考图图生图：按顺序传入多张参考图，用于「角色+场景」混合一致性。
-  ///
-  /// 兼容只收单张 `image` 字段的供应商：超过 1 张时只取第一张。
   Future<ImageGenerationResult> imageToImageMulti({
     required String baseUrl,
     required String apiKey,
@@ -145,8 +142,34 @@ class ImageProviderAdapter {
     String size = '1024x1024',
     String protocol = Protocols.openaiImages,
     CancelToken? cancelToken,
+  }) {
+    return _imageToImage(
+      baseUrl: baseUrl,
+      apiKey: apiKey,
+      model: model,
+      prompt: prompt,
+      referencePaths: referencePaths,
+      size: size,
+      protocol: protocol,
+      cancelToken: cancelToken,
+    );
+  }
+
+  /// 图生图统一入口：按协议选通道。
+  ///
+  /// [Protocols.openaiImages] 走 `/images/edits` + multipart；
+  /// [Protocols.openaiImagesInline] 走 `/images/generations` + JSON 内联参考图。
+  /// 重试只包一层，两种通道共用同一套临时故障重发策略。
+  Future<ImageGenerationResult> _imageToImage({
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+    required String prompt,
+    required List<String> referencePaths,
+    required String size,
+    required String protocol,
+    CancelToken? cancelToken,
   }) async {
-    Protocols.require('image', protocol);
     if (referencePaths.isEmpty) {
       throw ArgumentError.value(
         referencePaths,
@@ -154,35 +177,132 @@ class ImageProviderAdapter {
         '至少需要 1 张参考图',
       );
     }
-    final paths = referencePaths.take(16).toList();
+    final paths = referencePaths.take(maxReferences).toList();
+    Protocols.require('image', protocol);
     return _withRetry(
       cancelToken: cancelToken,
-      attempt: () async {
-        final form = FormData.fromMap({
-          'model': model,
-          'prompt': prompt,
-          'n': 1,
-          'size': size,
-          'response_format': 'b64_json',
-          'image': await MultipartFile.fromFile(
-            paths.first,
-            filename: 'reference.png',
-          ),
-          for (var i = 1; i < paths.length; i++)
-            'image': await MultipartFile.fromFile(
-              paths[i],
-              filename: 'ref_${i + 1}.png',
-            ),
-        });
-        final response = await _dio.post<Map<String, dynamic>>(
-          editsEndpoint(baseUrl),
-          data: form,
-          options: _options(apiKey),
+      attempt: () {
+        if (protocol == Protocols.openaiImagesInline) {
+          return _imageToImageInline(
+            baseUrl: baseUrl,
+            apiKey: apiKey,
+            model: model,
+            prompt: prompt,
+            paths: paths,
+            size: size,
+            cancelToken: cancelToken,
+          );
+        }
+        return _imageToImageMultipart(
+          baseUrl: baseUrl,
+          apiKey: apiKey,
+          model: model,
+          prompt: prompt,
+          paths: paths,
+          size: size,
           cancelToken: cancelToken,
         );
-        return _parse(response.data ?? const {});
       },
     );
+  }
+
+  /// OpenAI Images 通道：`/images/edits` + multipart 文件。
+  ///
+  /// 多张参考图用同一个字段名重复追加；`FormData.fromMap` 做不到——Dart 的
+  /// Map 字面量不允许重复键，后者会静默覆盖前者，最终只上传最后一张。
+  Future<ImageGenerationResult> _imageToImageMultipart({
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+    required String prompt,
+    required List<String> paths,
+    required String size,
+    CancelToken? cancelToken,
+  }) async {
+    final form = FormData();
+    form.fields.addAll(
+      [
+        MapEntry('model', model),
+        MapEntry('prompt', prompt),
+        const MapEntry('n', '1'),
+        MapEntry('size', size),
+        const MapEntry('response_format', 'b64_json'),
+      ],
+    );
+    for (var i = 0; i < paths.length; i++) {
+      form.files.add(
+        MapEntry(
+          'image',
+          await MultipartFile.fromFile(
+            paths[i],
+            filename: 'reference_${i + 1}.png',
+          ),
+        ),
+      );
+    }
+    final response = await _dio.post<Map<String, dynamic>>(
+      editsEndpoint(baseUrl),
+      data: form,
+      options: _options(apiKey),
+      cancelToken: cancelToken,
+    );
+    return _parse(response.data ?? const {});
+  }
+
+  /// 内联参考图通道：`/images/generations` + JSON。
+  ///
+  /// Agnes 等供应商没有 `/images/edits` 端点，图生图与多图合成统一走
+  /// generations；参考图不能是本地路径（服务器拉不到应用私有目录），
+  /// 一律转 Data URI。`response_format` 只放 `extra_body` 内，
+  /// 放顶层会被该供应商判为参数错误。
+  ///
+  /// 顶层与 `extra_body` 各写一份 `image`：协议文档参数表列为顶层字段，
+  /// 示例与排错章节要求放 `extra_body`，两处都写时两种解析方式都能取到。
+  Future<ImageGenerationResult> _imageToImageInline({
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+    required String prompt,
+    required List<String> paths,
+    required String size,
+    CancelToken? cancelToken,
+  }) async {
+    final references = <String>[
+      for (final path in paths) await _dataUriOf(path),
+    ];
+    final body = <String, Object?>{
+      'model': model,
+      'prompt': prompt,
+      'size': size,
+      'image': references,
+      'extra_body': {
+        'image': references,
+        'response_format': 'b64_json',
+      },
+    };
+    final response = await _dio.post<Map<String, dynamic>>(
+      generationsEndpoint(baseUrl),
+      data: body,
+      options: _options(apiKey),
+      cancelToken: cancelToken,
+    );
+    return _parse(response.data ?? const {});
+  }
+
+  /// 读本地图片为 Data URI：`data:<mime>;base64,<payload>`。
+  static Future<String> _dataUriOf(String path) async {
+    final bytes = await File(path).readAsBytes();
+    final lower = path.toLowerCase();
+    final mime = lower.endsWith('.jpg') || lower.endsWith('.jpeg')
+        ? 'image/jpeg'
+        : lower.endsWith('.webp')
+            ? 'image/webp'
+            : lower.endsWith('.gif')
+                ? 'image/gif'
+                : lower.endsWith('.bmp')
+                    ? 'image/bmp'
+                    : 'image/png';
+    return 'data:$mime;base64,${base64Encode(bytes)}';
   }
 
   /// 下载远程图片为本地字节（同样走临时故障重试）。

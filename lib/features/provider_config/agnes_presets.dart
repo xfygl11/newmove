@@ -5,7 +5,8 @@ import '../../data/app_database.dart';
 import '../../data/daos/provider_dao.dart';
 import 'provider_models.dart';
 
-/// Agnes AI 供应商一键预设（文本 + 图片 + 视频 3 条，协议：openai-chat / openai-images / openai-videos）。
+/// Agnes AI 供应商一键预设（文本 + 图片 + 视频 3 条，
+/// 协议：openai-chat / openai-images-inline / openai-videos）。
 ///
 /// 用户在设置页点「添加 Agnes 预设」，填 API Key 后即创建 3 个供应商条目；
 /// 不创建时 Base URL 固定中国服务 `https://apihub.agnes-ai.cn/v1`。
@@ -45,7 +46,9 @@ class AgnesPresets {
         id: 'agnes-image',
         group: 'image',
         label: 'Agnes 图片',
-        protocol: Protocols.openaiImages,
+        // Agnes 没有 /images/edits 端点：图生图与多图合成走
+        // /images/generations，参考图以 Data URI 数组内联在请求体里。
+        protocol: Protocols.openaiImagesInline,
         models: [
           ProviderModel(
             id: 'agnes-image-2.5-flash',
@@ -63,7 +66,7 @@ class AgnesPresets {
             ],
           ),
         ],
-        readme: 'Agnes AI 图片生成/编辑（OpenAI Images 协议）',
+        readme: 'Agnes AI 图片生成/图生图/多图合成（内联参考图协议）',
       ),
       const _Spec(
         id: 'agnes-video',

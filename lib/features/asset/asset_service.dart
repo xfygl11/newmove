@@ -227,14 +227,19 @@ class AssetService {
     });
   }
 
-  Future<void> _saveSnapshot(
-    Asset asset, {
+  /// 保存一次产物快照。快照必须取自落库后的最新行——
+  /// 生成流程先写 `imagePath` 再存快照，用生成前读到的对象会把旧路径
+  /// （首次生成为 null）写进快照，历史版本面板里就看不到新出的图。
+  Future<void> _saveSnapshot({
+    required int assetId,
     required String kind,
     required String summary,
   }) async {
+    final asset = await assetDao.find(assetId);
+    if (asset == null) return;
     try {
       await revisionDao.saveAsset(
-        assetId: asset.id,
+        assetId: assetId,
         kind: kind,
         snapshot: _snapshotOf(asset),
         summary: summary,
@@ -242,7 +247,7 @@ class AssetService {
     } catch (e, st) {
       appLog(
         'asset_snapshot',
-        'asset=${asset.id} kind=$kind',
+        'asset=$assetId kind=$kind',
         error: e,
         stackTrace: st,
       );
@@ -344,7 +349,11 @@ class AssetService {
           isStale: const Value(0),
         ),
       );
-      await _saveSnapshot(asset, kind: 'image', summary: '资产图已生成');
+      await _saveSnapshot(
+        assetId: assetId,
+        kind: 'image',
+        summary: '资产图已生成',
+      );
       await _finishAttempt(
         id: attemptId,
         status: AttemptStatuses.succeeded,
@@ -402,7 +411,11 @@ class AssetService {
       ),
     );
     final updated = (await assetDao.find(assetId))!;
-    await _saveSnapshot(updated, kind: 'image', summary: '切换到历史版本');
+    await _saveSnapshot(
+      assetId: assetId,
+      kind: 'image',
+      summary: '切换到历史版本',
+    );
     return updated;
   }
 
@@ -429,7 +442,11 @@ class AssetService {
       ),
     );
     final updated = (await assetDao.find(assetId))!;
-    await _saveSnapshot(updated, kind: 'image', summary: '手动替换图片');
+    await _saveSnapshot(
+      assetId: assetId,
+      kind: 'image',
+      summary: '手动替换图片',
+    );
     return updated;
   }
 

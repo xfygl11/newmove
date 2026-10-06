@@ -117,7 +117,8 @@ lib/
   - `openai-videos`（Agnes AI）：`POST {base}/videos` + `GET {host}/agnesapi?video_id=&model_name=`（轮询端点在 host 根路径，去掉 `/v1` 前缀）。
   - 新增协议时在 `VideoProviderAdapter` 按 protocol 分支实现，`ShotService` 透传 `protocol` + `model`。
 - 供应商配置（Base URL / API Key / 模型）由用户配置，存安全存储，**API Key 严禁落明文 DB、严禁打印日志**。
-- 一键预设：`AgnesPresets`（`lib/features/provider_config/agnes_presets.dart`）可一键创建 Agnes AI 的 LLM/图片/视频 3 个供应商条目（协议分别为 `openai-chat` / `openai-images` / `openai-videos`），Base URL 固定 `https://apihub.agnes-ai.cn/v1`。
+- 一键预设：`AgnesPresets`（`lib/features/provider_config/agnes_presets.dart`）可一键创建 Agnes AI 的 LLM/图片/视频 3 个供应商条目（协议分别为 `openai-chat` / `openai-images-inline` / `openai-videos`），Base URL 固定 `https://apihub.agnes-ai.cn/v1`。
+  - **图片协议两条**：`openai-images`（文生图 `/images/generations`、图生图 `/images/edits` + multipart 文件）与 `openai-images-inline`（Agnes 等没有 `/images/edits` 端点的供应商：图生图与多图合成仍走 `/images/generations` JSON，参考图以 URL / Data URI 数组内联在请求体，本地文件先经 `ImageProviderAdapter._dataUriOf` 转 Data URI）。`response_format` 只允许放 `extra_body` 内，写顶层会被判参数错误；`image` 顶层与 `extra_body` 各写一份，兼容两种解析方式。Agnes 预设固定走 `openai-images-inline`。
 - Agent 系统提示词从 `skills/` 资源加载，与业务代码分离；修改 Prompt 不触碰业务逻辑。
 
 ### 图片生成与风格约定（M15）
