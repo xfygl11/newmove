@@ -12390,6 +12390,1051 @@ class PromptOverrideVersionsCompanion
   }
 }
 
+class $CharacterRelationsTable extends CharacterRelations
+    with TableInfo<$CharacterRelationsTable, CharacterRelation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CharacterRelationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
+  @override
+  late final GeneratedColumn<int> bookId = GeneratedColumn<int>(
+    'book_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetMeta = const VerificationMeta('target');
+  @override
+  late final GeneratedColumn<String> target = GeneratedColumn<String>(
+    'target',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _chapterSeqMeta = const VerificationMeta(
+    'chapterSeq',
+  );
+  @override
+  late final GeneratedColumn<int> chapterSeq = GeneratedColumn<int>(
+    'chapter_seq',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isCurrentMeta = const VerificationMeta(
+    'isCurrent',
+  );
+  @override
+  late final GeneratedColumn<int> isCurrent = GeneratedColumn<int>(
+    'is_current',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    bookId,
+    source,
+    target,
+    description,
+    chapterSeq,
+    isCurrent,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'character_relations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CharacterRelation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('book_id')) {
+      context.handle(
+        _bookIdMeta,
+        bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bookIdMeta);
+    }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
+    }
+    if (data.containsKey('target')) {
+      context.handle(
+        _targetMeta,
+        target.isAcceptableOrUnknown(data['target']!, _targetMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_targetMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('chapter_seq')) {
+      context.handle(
+        _chapterSeqMeta,
+        chapterSeq.isAcceptableOrUnknown(data['chapter_seq']!, _chapterSeqMeta),
+      );
+    }
+    if (data.containsKey('is_current')) {
+      context.handle(
+        _isCurrentMeta,
+        isCurrent.isAcceptableOrUnknown(data['is_current']!, _isCurrentMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CharacterRelation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CharacterRelation(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      bookId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}book_id'],
+      )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+      target: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}target'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      )!,
+      chapterSeq: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}chapter_seq'],
+      ),
+      isCurrent: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}is_current'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CharacterRelationsTable createAlias(String alias) {
+    return $CharacterRelationsTable(attachedDatabase, alias);
+  }
+}
+
+class CharacterRelation extends DataClass
+    implements Insertable<CharacterRelation> {
+  final int id;
+  final int bookId;
+  final String source;
+  final String target;
+  final String description;
+  final int? chapterSeq;
+  final int isCurrent;
+  final DateTime createdAt;
+  const CharacterRelation({
+    required this.id,
+    required this.bookId,
+    required this.source,
+    required this.target,
+    required this.description,
+    this.chapterSeq,
+    required this.isCurrent,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['book_id'] = Variable<int>(bookId);
+    map['source'] = Variable<String>(source);
+    map['target'] = Variable<String>(target);
+    map['description'] = Variable<String>(description);
+    if (!nullToAbsent || chapterSeq != null) {
+      map['chapter_seq'] = Variable<int>(chapterSeq);
+    }
+    map['is_current'] = Variable<int>(isCurrent);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CharacterRelationsCompanion toCompanion(bool nullToAbsent) {
+    return CharacterRelationsCompanion(
+      id: Value(id),
+      bookId: Value(bookId),
+      source: Value(source),
+      target: Value(target),
+      description: Value(description),
+      chapterSeq: chapterSeq == null && nullToAbsent
+          ? const Value.absent()
+          : Value(chapterSeq),
+      isCurrent: Value(isCurrent),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory CharacterRelation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CharacterRelation(
+      id: serializer.fromJson<int>(json['id']),
+      bookId: serializer.fromJson<int>(json['bookId']),
+      source: serializer.fromJson<String>(json['source']),
+      target: serializer.fromJson<String>(json['target']),
+      description: serializer.fromJson<String>(json['description']),
+      chapterSeq: serializer.fromJson<int?>(json['chapterSeq']),
+      isCurrent: serializer.fromJson<int>(json['isCurrent']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'bookId': serializer.toJson<int>(bookId),
+      'source': serializer.toJson<String>(source),
+      'target': serializer.toJson<String>(target),
+      'description': serializer.toJson<String>(description),
+      'chapterSeq': serializer.toJson<int?>(chapterSeq),
+      'isCurrent': serializer.toJson<int>(isCurrent),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  CharacterRelation copyWith({
+    int? id,
+    int? bookId,
+    String? source,
+    String? target,
+    String? description,
+    Value<int?> chapterSeq = const Value.absent(),
+    int? isCurrent,
+    DateTime? createdAt,
+  }) => CharacterRelation(
+    id: id ?? this.id,
+    bookId: bookId ?? this.bookId,
+    source: source ?? this.source,
+    target: target ?? this.target,
+    description: description ?? this.description,
+    chapterSeq: chapterSeq.present ? chapterSeq.value : this.chapterSeq,
+    isCurrent: isCurrent ?? this.isCurrent,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  CharacterRelation copyWithCompanion(CharacterRelationsCompanion data) {
+    return CharacterRelation(
+      id: data.id.present ? data.id.value : this.id,
+      bookId: data.bookId.present ? data.bookId.value : this.bookId,
+      source: data.source.present ? data.source.value : this.source,
+      target: data.target.present ? data.target.value : this.target,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      chapterSeq: data.chapterSeq.present
+          ? data.chapterSeq.value
+          : this.chapterSeq,
+      isCurrent: data.isCurrent.present ? data.isCurrent.value : this.isCurrent,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterRelation(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('source: $source, ')
+          ..write('target: $target, ')
+          ..write('description: $description, ')
+          ..write('chapterSeq: $chapterSeq, ')
+          ..write('isCurrent: $isCurrent, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    bookId,
+    source,
+    target,
+    description,
+    chapterSeq,
+    isCurrent,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CharacterRelation &&
+          other.id == this.id &&
+          other.bookId == this.bookId &&
+          other.source == this.source &&
+          other.target == this.target &&
+          other.description == this.description &&
+          other.chapterSeq == this.chapterSeq &&
+          other.isCurrent == this.isCurrent &&
+          other.createdAt == this.createdAt);
+}
+
+class CharacterRelationsCompanion extends UpdateCompanion<CharacterRelation> {
+  final Value<int> id;
+  final Value<int> bookId;
+  final Value<String> source;
+  final Value<String> target;
+  final Value<String> description;
+  final Value<int?> chapterSeq;
+  final Value<int> isCurrent;
+  final Value<DateTime> createdAt;
+  const CharacterRelationsCompanion({
+    this.id = const Value.absent(),
+    this.bookId = const Value.absent(),
+    this.source = const Value.absent(),
+    this.target = const Value.absent(),
+    this.description = const Value.absent(),
+    this.chapterSeq = const Value.absent(),
+    this.isCurrent = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  CharacterRelationsCompanion.insert({
+    this.id = const Value.absent(),
+    required int bookId,
+    required String source,
+    required String target,
+    this.description = const Value.absent(),
+    this.chapterSeq = const Value.absent(),
+    this.isCurrent = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : bookId = Value(bookId),
+       source = Value(source),
+       target = Value(target);
+  static Insertable<CharacterRelation> custom({
+    Expression<int>? id,
+    Expression<int>? bookId,
+    Expression<String>? source,
+    Expression<String>? target,
+    Expression<String>? description,
+    Expression<int>? chapterSeq,
+    Expression<int>? isCurrent,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (bookId != null) 'book_id': bookId,
+      if (source != null) 'source': source,
+      if (target != null) 'target': target,
+      if (description != null) 'description': description,
+      if (chapterSeq != null) 'chapter_seq': chapterSeq,
+      if (isCurrent != null) 'is_current': isCurrent,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  CharacterRelationsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? bookId,
+    Value<String>? source,
+    Value<String>? target,
+    Value<String>? description,
+    Value<int?>? chapterSeq,
+    Value<int>? isCurrent,
+    Value<DateTime>? createdAt,
+  }) {
+    return CharacterRelationsCompanion(
+      id: id ?? this.id,
+      bookId: bookId ?? this.bookId,
+      source: source ?? this.source,
+      target: target ?? this.target,
+      description: description ?? this.description,
+      chapterSeq: chapterSeq ?? this.chapterSeq,
+      isCurrent: isCurrent ?? this.isCurrent,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (bookId.present) {
+      map['book_id'] = Variable<int>(bookId.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (target.present) {
+      map['target'] = Variable<String>(target.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (chapterSeq.present) {
+      map['chapter_seq'] = Variable<int>(chapterSeq.value);
+    }
+    if (isCurrent.present) {
+      map['is_current'] = Variable<int>(isCurrent.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterRelationsCompanion(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('source: $source, ')
+          ..write('target: $target, ')
+          ..write('description: $description, ')
+          ..write('chapterSeq: $chapterSeq, ')
+          ..write('isCurrent: $isCurrent, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GateLogsTable extends GateLogs with TableInfo<$GateLogsTable, GateLog> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GateLogsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _subjectTypeMeta = const VerificationMeta(
+    'subjectType',
+  );
+  @override
+  late final GeneratedColumn<String> subjectType = GeneratedColumn<String>(
+    'subject_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _subjectIdMeta = const VerificationMeta(
+    'subjectId',
+  );
+  @override
+  late final GeneratedColumn<String> subjectId = GeneratedColumn<String>(
+    'subject_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _subjectLabelMeta = const VerificationMeta(
+    'subjectLabel',
+  );
+  @override
+  late final GeneratedColumn<String> subjectLabel = GeneratedColumn<String>(
+    'subject_label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _gateIdMeta = const VerificationMeta('gateId');
+  @override
+  late final GeneratedColumn<String> gateId = GeneratedColumn<String>(
+    'gate_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _okMeta = const VerificationMeta('ok');
+  @override
+  late final GeneratedColumn<int> ok = GeneratedColumn<int>(
+    'ok',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _detailMeta = const VerificationMeta('detail');
+  @override
+  late final GeneratedColumn<String> detail = GeneratedColumn<String>(
+    'detail',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _projectIdMeta = const VerificationMeta(
+    'projectId',
+  );
+  @override
+  late final GeneratedColumn<int> projectId = GeneratedColumn<int>(
+    'project_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    subjectType,
+    subjectId,
+    subjectLabel,
+    gateId,
+    ok,
+    detail,
+    projectId,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'gate_logs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GateLog> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('subject_type')) {
+      context.handle(
+        _subjectTypeMeta,
+        subjectType.isAcceptableOrUnknown(
+          data['subject_type']!,
+          _subjectTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_subjectTypeMeta);
+    }
+    if (data.containsKey('subject_id')) {
+      context.handle(
+        _subjectIdMeta,
+        subjectId.isAcceptableOrUnknown(data['subject_id']!, _subjectIdMeta),
+      );
+    }
+    if (data.containsKey('subject_label')) {
+      context.handle(
+        _subjectLabelMeta,
+        subjectLabel.isAcceptableOrUnknown(
+          data['subject_label']!,
+          _subjectLabelMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_subjectLabelMeta);
+    }
+    if (data.containsKey('gate_id')) {
+      context.handle(
+        _gateIdMeta,
+        gateId.isAcceptableOrUnknown(data['gate_id']!, _gateIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_gateIdMeta);
+    }
+    if (data.containsKey('ok')) {
+      context.handle(_okMeta, ok.isAcceptableOrUnknown(data['ok']!, _okMeta));
+    }
+    if (data.containsKey('detail')) {
+      context.handle(
+        _detailMeta,
+        detail.isAcceptableOrUnknown(data['detail']!, _detailMeta),
+      );
+    }
+    if (data.containsKey('project_id')) {
+      context.handle(
+        _projectIdMeta,
+        projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GateLog map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GateLog(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      subjectType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject_type'],
+      )!,
+      subjectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject_id'],
+      ),
+      subjectLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject_label'],
+      )!,
+      gateId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}gate_id'],
+      )!,
+      ok: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ok'],
+      )!,
+      detail: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}detail'],
+      )!,
+      projectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}project_id'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $GateLogsTable createAlias(String alias) {
+    return $GateLogsTable(attachedDatabase, alias);
+  }
+}
+
+class GateLog extends DataClass implements Insertable<GateLog> {
+  final int id;
+  final String subjectType;
+  final String? subjectId;
+  final String subjectLabel;
+  final String gateId;
+  final int ok;
+  final String detail;
+  final int? projectId;
+  final DateTime createdAt;
+  const GateLog({
+    required this.id,
+    required this.subjectType,
+    this.subjectId,
+    required this.subjectLabel,
+    required this.gateId,
+    required this.ok,
+    required this.detail,
+    this.projectId,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['subject_type'] = Variable<String>(subjectType);
+    if (!nullToAbsent || subjectId != null) {
+      map['subject_id'] = Variable<String>(subjectId);
+    }
+    map['subject_label'] = Variable<String>(subjectLabel);
+    map['gate_id'] = Variable<String>(gateId);
+    map['ok'] = Variable<int>(ok);
+    map['detail'] = Variable<String>(detail);
+    if (!nullToAbsent || projectId != null) {
+      map['project_id'] = Variable<int>(projectId);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  GateLogsCompanion toCompanion(bool nullToAbsent) {
+    return GateLogsCompanion(
+      id: Value(id),
+      subjectType: Value(subjectType),
+      subjectId: subjectId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(subjectId),
+      subjectLabel: Value(subjectLabel),
+      gateId: Value(gateId),
+      ok: Value(ok),
+      detail: Value(detail),
+      projectId: projectId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(projectId),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory GateLog.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GateLog(
+      id: serializer.fromJson<int>(json['id']),
+      subjectType: serializer.fromJson<String>(json['subjectType']),
+      subjectId: serializer.fromJson<String?>(json['subjectId']),
+      subjectLabel: serializer.fromJson<String>(json['subjectLabel']),
+      gateId: serializer.fromJson<String>(json['gateId']),
+      ok: serializer.fromJson<int>(json['ok']),
+      detail: serializer.fromJson<String>(json['detail']),
+      projectId: serializer.fromJson<int?>(json['projectId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'subjectType': serializer.toJson<String>(subjectType),
+      'subjectId': serializer.toJson<String?>(subjectId),
+      'subjectLabel': serializer.toJson<String>(subjectLabel),
+      'gateId': serializer.toJson<String>(gateId),
+      'ok': serializer.toJson<int>(ok),
+      'detail': serializer.toJson<String>(detail),
+      'projectId': serializer.toJson<int?>(projectId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  GateLog copyWith({
+    int? id,
+    String? subjectType,
+    Value<String?> subjectId = const Value.absent(),
+    String? subjectLabel,
+    String? gateId,
+    int? ok,
+    String? detail,
+    Value<int?> projectId = const Value.absent(),
+    DateTime? createdAt,
+  }) => GateLog(
+    id: id ?? this.id,
+    subjectType: subjectType ?? this.subjectType,
+    subjectId: subjectId.present ? subjectId.value : this.subjectId,
+    subjectLabel: subjectLabel ?? this.subjectLabel,
+    gateId: gateId ?? this.gateId,
+    ok: ok ?? this.ok,
+    detail: detail ?? this.detail,
+    projectId: projectId.present ? projectId.value : this.projectId,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  GateLog copyWithCompanion(GateLogsCompanion data) {
+    return GateLog(
+      id: data.id.present ? data.id.value : this.id,
+      subjectType: data.subjectType.present
+          ? data.subjectType.value
+          : this.subjectType,
+      subjectId: data.subjectId.present ? data.subjectId.value : this.subjectId,
+      subjectLabel: data.subjectLabel.present
+          ? data.subjectLabel.value
+          : this.subjectLabel,
+      gateId: data.gateId.present ? data.gateId.value : this.gateId,
+      ok: data.ok.present ? data.ok.value : this.ok,
+      detail: data.detail.present ? data.detail.value : this.detail,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GateLog(')
+          ..write('id: $id, ')
+          ..write('subjectType: $subjectType, ')
+          ..write('subjectId: $subjectId, ')
+          ..write('subjectLabel: $subjectLabel, ')
+          ..write('gateId: $gateId, ')
+          ..write('ok: $ok, ')
+          ..write('detail: $detail, ')
+          ..write('projectId: $projectId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    subjectType,
+    subjectId,
+    subjectLabel,
+    gateId,
+    ok,
+    detail,
+    projectId,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GateLog &&
+          other.id == this.id &&
+          other.subjectType == this.subjectType &&
+          other.subjectId == this.subjectId &&
+          other.subjectLabel == this.subjectLabel &&
+          other.gateId == this.gateId &&
+          other.ok == this.ok &&
+          other.detail == this.detail &&
+          other.projectId == this.projectId &&
+          other.createdAt == this.createdAt);
+}
+
+class GateLogsCompanion extends UpdateCompanion<GateLog> {
+  final Value<int> id;
+  final Value<String> subjectType;
+  final Value<String?> subjectId;
+  final Value<String> subjectLabel;
+  final Value<String> gateId;
+  final Value<int> ok;
+  final Value<String> detail;
+  final Value<int?> projectId;
+  final Value<DateTime> createdAt;
+  const GateLogsCompanion({
+    this.id = const Value.absent(),
+    this.subjectType = const Value.absent(),
+    this.subjectId = const Value.absent(),
+    this.subjectLabel = const Value.absent(),
+    this.gateId = const Value.absent(),
+    this.ok = const Value.absent(),
+    this.detail = const Value.absent(),
+    this.projectId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  GateLogsCompanion.insert({
+    this.id = const Value.absent(),
+    required String subjectType,
+    this.subjectId = const Value.absent(),
+    required String subjectLabel,
+    required String gateId,
+    this.ok = const Value.absent(),
+    this.detail = const Value.absent(),
+    this.projectId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : subjectType = Value(subjectType),
+       subjectLabel = Value(subjectLabel),
+       gateId = Value(gateId);
+  static Insertable<GateLog> custom({
+    Expression<int>? id,
+    Expression<String>? subjectType,
+    Expression<String>? subjectId,
+    Expression<String>? subjectLabel,
+    Expression<String>? gateId,
+    Expression<int>? ok,
+    Expression<String>? detail,
+    Expression<int>? projectId,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (subjectType != null) 'subject_type': subjectType,
+      if (subjectId != null) 'subject_id': subjectId,
+      if (subjectLabel != null) 'subject_label': subjectLabel,
+      if (gateId != null) 'gate_id': gateId,
+      if (ok != null) 'ok': ok,
+      if (detail != null) 'detail': detail,
+      if (projectId != null) 'project_id': projectId,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  GateLogsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? subjectType,
+    Value<String?>? subjectId,
+    Value<String>? subjectLabel,
+    Value<String>? gateId,
+    Value<int>? ok,
+    Value<String>? detail,
+    Value<int?>? projectId,
+    Value<DateTime>? createdAt,
+  }) {
+    return GateLogsCompanion(
+      id: id ?? this.id,
+      subjectType: subjectType ?? this.subjectType,
+      subjectId: subjectId ?? this.subjectId,
+      subjectLabel: subjectLabel ?? this.subjectLabel,
+      gateId: gateId ?? this.gateId,
+      ok: ok ?? this.ok,
+      detail: detail ?? this.detail,
+      projectId: projectId ?? this.projectId,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (subjectType.present) {
+      map['subject_type'] = Variable<String>(subjectType.value);
+    }
+    if (subjectId.present) {
+      map['subject_id'] = Variable<String>(subjectId.value);
+    }
+    if (subjectLabel.present) {
+      map['subject_label'] = Variable<String>(subjectLabel.value);
+    }
+    if (gateId.present) {
+      map['gate_id'] = Variable<String>(gateId.value);
+    }
+    if (ok.present) {
+      map['ok'] = Variable<int>(ok.value);
+    }
+    if (detail.present) {
+      map['detail'] = Variable<String>(detail.value);
+    }
+    if (projectId.present) {
+      map['project_id'] = Variable<int>(projectId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GateLogsCompanion(')
+          ..write('id: $id, ')
+          ..write('subjectType: $subjectType, ')
+          ..write('subjectId: $subjectId, ')
+          ..write('subjectLabel: $subjectLabel, ')
+          ..write('gateId: $gateId, ')
+          ..write('ok: $ok, ')
+          ..write('detail: $detail, ')
+          ..write('projectId: $projectId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -12423,6 +13468,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $PromptOverrideVersionsTable promptOverrideVersions =
       $PromptOverrideVersionsTable(this);
+  late final $CharacterRelationsTable characterRelations =
+      $CharacterRelationsTable(this);
+  late final $GateLogsTable gateLogs = $GateLogsTable(this);
   late final ProjectDao projectDao = ProjectDao(this as AppDatabase);
   late final NovelDao novelDao = NovelDao(this as AppDatabase);
   late final CascadeDao cascadeDao = CascadeDao(this as AppDatabase);
@@ -12449,6 +13497,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final PromptOverrideDao promptOverrideDao = PromptOverrideDao(
     this as AppDatabase,
   );
+  late final CharacterRelationDao characterRelationDao = CharacterRelationDao(
+    this as AppDatabase,
+  );
+  late final GateLogDao gateLogDao = GateLogDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -12474,6 +13526,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     generationAttempts,
     promptOverrides,
     promptOverrideVersions,
+    characterRelations,
+    gateLogs,
   ];
 }
 
@@ -21907,6 +22961,560 @@ typedef $$PromptOverrideVersionsTableProcessedTableManager =
       PromptOverrideVersion,
       PrefetchHooks Function()
     >;
+typedef $$CharacterRelationsTableCreateCompanionBuilder =
+    CharacterRelationsCompanion Function({
+      Value<int> id,
+      required int bookId,
+      required String source,
+      required String target,
+      Value<String> description,
+      Value<int?> chapterSeq,
+      Value<int> isCurrent,
+      Value<DateTime> createdAt,
+    });
+typedef $$CharacterRelationsTableUpdateCompanionBuilder =
+    CharacterRelationsCompanion Function({
+      Value<int> id,
+      Value<int> bookId,
+      Value<String> source,
+      Value<String> target,
+      Value<String> description,
+      Value<int?> chapterSeq,
+      Value<int> isCurrent,
+      Value<DateTime> createdAt,
+    });
+
+class $$CharacterRelationsTableFilterComposer
+    extends Composer<_$AppDatabase, $CharacterRelationsTable> {
+  $$CharacterRelationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get bookId => $composableBuilder(
+    column: $table.bookId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get target => $composableBuilder(
+    column: $table.target,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get chapterSeq => $composableBuilder(
+    column: $table.chapterSeq,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get isCurrent => $composableBuilder(
+    column: $table.isCurrent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CharacterRelationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CharacterRelationsTable> {
+  $$CharacterRelationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get bookId => $composableBuilder(
+    column: $table.bookId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get target => $composableBuilder(
+    column: $table.target,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get chapterSeq => $composableBuilder(
+    column: $table.chapterSeq,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get isCurrent => $composableBuilder(
+    column: $table.isCurrent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CharacterRelationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CharacterRelationsTable> {
+  $$CharacterRelationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get bookId =>
+      $composableBuilder(column: $table.bookId, builder: (column) => column);
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<String> get target =>
+      $composableBuilder(column: $table.target, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get chapterSeq => $composableBuilder(
+    column: $table.chapterSeq,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get isCurrent =>
+      $composableBuilder(column: $table.isCurrent, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$CharacterRelationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CharacterRelationsTable,
+          CharacterRelation,
+          $$CharacterRelationsTableFilterComposer,
+          $$CharacterRelationsTableOrderingComposer,
+          $$CharacterRelationsTableAnnotationComposer,
+          $$CharacterRelationsTableCreateCompanionBuilder,
+          $$CharacterRelationsTableUpdateCompanionBuilder,
+          (
+            CharacterRelation,
+            BaseReferences<
+              _$AppDatabase,
+              $CharacterRelationsTable,
+              CharacterRelation
+            >,
+          ),
+          CharacterRelation,
+          PrefetchHooks Function()
+        > {
+  $$CharacterRelationsTableTableManager(
+    _$AppDatabase db,
+    $CharacterRelationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CharacterRelationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CharacterRelationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CharacterRelationsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> bookId = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<String> target = const Value.absent(),
+                Value<String> description = const Value.absent(),
+                Value<int?> chapterSeq = const Value.absent(),
+                Value<int> isCurrent = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => CharacterRelationsCompanion(
+                id: id,
+                bookId: bookId,
+                source: source,
+                target: target,
+                description: description,
+                chapterSeq: chapterSeq,
+                isCurrent: isCurrent,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int bookId,
+                required String source,
+                required String target,
+                Value<String> description = const Value.absent(),
+                Value<int?> chapterSeq = const Value.absent(),
+                Value<int> isCurrent = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => CharacterRelationsCompanion.insert(
+                id: id,
+                bookId: bookId,
+                source: source,
+                target: target,
+                description: description,
+                chapterSeq: chapterSeq,
+                isCurrent: isCurrent,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CharacterRelationsTable, CharacterRelation>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $CharacterRelationsTable,
+                    CharacterRelation
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CharacterRelationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CharacterRelationsTable,
+      CharacterRelation,
+      $$CharacterRelationsTableFilterComposer,
+      $$CharacterRelationsTableOrderingComposer,
+      $$CharacterRelationsTableAnnotationComposer,
+      $$CharacterRelationsTableCreateCompanionBuilder,
+      $$CharacterRelationsTableUpdateCompanionBuilder,
+      (
+        CharacterRelation,
+        BaseReferences<
+          _$AppDatabase,
+          $CharacterRelationsTable,
+          CharacterRelation
+        >,
+      ),
+      CharacterRelation,
+      PrefetchHooks Function()
+    >;
+typedef $$GateLogsTableCreateCompanionBuilder = GateLogsCompanion Function({
+  Value<int> id,
+  required String subjectType,
+  Value<String?> subjectId,
+  required String subjectLabel,
+  required String gateId,
+  Value<int> ok,
+  Value<String> detail,
+  Value<int?> projectId,
+  Value<DateTime> createdAt,
+});
+typedef $$GateLogsTableUpdateCompanionBuilder = GateLogsCompanion Function({
+  Value<int> id,
+  Value<String> subjectType,
+  Value<String?> subjectId,
+  Value<String> subjectLabel,
+  Value<String> gateId,
+  Value<int> ok,
+  Value<String> detail,
+  Value<int?> projectId,
+  Value<DateTime> createdAt,
+});
+
+class $$GateLogsTableFilterComposer
+    extends Composer<_$AppDatabase, $GateLogsTable> {
+  $$GateLogsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subjectType => $composableBuilder(
+    column: $table.subjectType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subjectId => $composableBuilder(
+    column: $table.subjectId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subjectLabel => $composableBuilder(
+    column: $table.subjectLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get gateId => $composableBuilder(
+    column: $table.gateId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ok => $composableBuilder(
+    column: $table.ok,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get detail => $composableBuilder(
+    column: $table.detail,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get projectId => $composableBuilder(
+    column: $table.projectId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GateLogsTableOrderingComposer
+    extends Composer<_$AppDatabase, $GateLogsTable> {
+  $$GateLogsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subjectType => $composableBuilder(
+    column: $table.subjectType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subjectId => $composableBuilder(
+    column: $table.subjectId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subjectLabel => $composableBuilder(
+    column: $table.subjectLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get gateId => $composableBuilder(
+    column: $table.gateId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get ok => $composableBuilder(
+    column: $table.ok,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get detail => $composableBuilder(
+    column: $table.detail,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get projectId => $composableBuilder(
+    column: $table.projectId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GateLogsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GateLogsTable> {
+  $$GateLogsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get subjectType => $composableBuilder(
+    column: $table.subjectType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get subjectId =>
+      $composableBuilder(column: $table.subjectId, builder: (column) => column);
+
+  GeneratedColumn<String> get subjectLabel => $composableBuilder(
+    column: $table.subjectLabel,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get gateId =>
+      $composableBuilder(column: $table.gateId, builder: (column) => column);
+
+  GeneratedColumn<int> get ok =>
+      $composableBuilder(column: $table.ok, builder: (column) => column);
+
+  GeneratedColumn<String> get detail =>
+      $composableBuilder(column: $table.detail, builder: (column) => column);
+
+  GeneratedColumn<int> get projectId =>
+      $composableBuilder(column: $table.projectId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$GateLogsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GateLogsTable,
+          GateLog,
+          $$GateLogsTableFilterComposer,
+          $$GateLogsTableOrderingComposer,
+          $$GateLogsTableAnnotationComposer,
+          $$GateLogsTableCreateCompanionBuilder,
+          $$GateLogsTableUpdateCompanionBuilder,
+          (GateLog, BaseReferences<_$AppDatabase, $GateLogsTable, GateLog>),
+          GateLog,
+          PrefetchHooks Function()
+        > {
+  $$GateLogsTableTableManager(_$AppDatabase db, $GateLogsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GateLogsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GateLogsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GateLogsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> subjectType = const Value.absent(),
+                Value<String?> subjectId = const Value.absent(),
+                Value<String> subjectLabel = const Value.absent(),
+                Value<String> gateId = const Value.absent(),
+                Value<int> ok = const Value.absent(),
+                Value<String> detail = const Value.absent(),
+                Value<int?> projectId = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => GateLogsCompanion(
+                id: id,
+                subjectType: subjectType,
+                subjectId: subjectId,
+                subjectLabel: subjectLabel,
+                gateId: gateId,
+                ok: ok,
+                detail: detail,
+                projectId: projectId,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String subjectType,
+                Value<String?> subjectId = const Value.absent(),
+                required String subjectLabel,
+                required String gateId,
+                Value<int> ok = const Value.absent(),
+                Value<String> detail = const Value.absent(),
+                Value<int?> projectId = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => GateLogsCompanion.insert(
+                id: id,
+                subjectType: subjectType,
+                subjectId: subjectId,
+                subjectLabel: subjectLabel,
+                gateId: gateId,
+                ok: ok,
+                detail: detail,
+                projectId: projectId,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$GateLogsTable, GateLog>(table),
+                  BaseReferences<_$AppDatabase, $GateLogsTable, GateLog>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GateLogsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GateLogsTable,
+      GateLog,
+      $$GateLogsTableFilterComposer,
+      $$GateLogsTableOrderingComposer,
+      $$GateLogsTableAnnotationComposer,
+      $$GateLogsTableCreateCompanionBuilder,
+      $$GateLogsTableUpdateCompanionBuilder,
+      (GateLog, BaseReferences<_$AppDatabase, $GateLogsTable, GateLog>),
+      GateLog,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -21954,4 +23562,8 @@ class $AppDatabaseManager {
         _db,
         _db.promptOverrideVersions,
       );
+  $$CharacterRelationsTableTableManager get characterRelations =>
+      $$CharacterRelationsTableTableManager(_db, _db.characterRelations);
+  $$GateLogsTableTableManager get gateLogs =>
+      $$GateLogsTableTableManager(_db, _db.gateLogs);
 }

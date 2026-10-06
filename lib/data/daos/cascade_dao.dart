@@ -13,8 +13,9 @@ part 'cascade_dao.g.dart';
 ///   → VideoTasks → Beats → Scenes → Shots → Assets → AssetRevisions
 ///   → ScriptRevisions → Scripts → TruthFiles → Chapters → NovelBooks → Projects
 ///
-/// PromptOverrides / PromptOverrideVersions 与 GenerationAttempts 同层：两者只按
-/// projectId 归属项目、互不引用，谁先删都可以。
+/// PromptOverrides / PromptOverrideVersions / GateLogs 与 GenerationAttempts
+/// 同层：只按 projectId 归属项目、互不引用，谁先删都可以。
+/// CharacterRelations 按 bookId 归属作品，随 _deleteBookSubtree 一起清理。
 ///
 /// 业务层不得自行拼 `deleteByX` + 多次 `insert`，一律调用本 DAO 的复合方法；
 /// 复合方法内部开启事务，中间任一步失败整段回滚，不留中间态。
@@ -39,6 +40,8 @@ part 'cascade_dao.g.dart';
     GenerationAttempts,
     PromptOverrides,
     PromptOverrideVersions,
+    CharacterRelations,
+    GateLogs,
   ],
 )
 class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
@@ -65,6 +68,10 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
       // 覆盖的历史版本同一归属规则：清掉项目级的存档，全局级的保留。
       await (delete(
         promptOverrideVersions,
+      )..where((t) => t.projectId.equals(projectId))).go();
+      // 质量门日志同一归属规则：清掉项目级的记录，projectId 为空的全局记录保留。
+      await (delete(
+        gateLogs,
       )..where((t) => t.projectId.equals(projectId))).go();
       await (delete(projects)..where((t) => t.id.equals(projectId))).go();
     });
@@ -142,6 +149,10 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
       await _deleteScriptSubtree(script.id);
     }
     await (delete(truthFiles)..where((t) => t.bookId.equals(bookId))).go();
+    // 角色关系历史按 bookId 归属，随作品一起清理；当前快照在 TruthFiles 里已删。
+    await (delete(characterRelations)
+          ..where((t) => t.bookId.equals(bookId)))
+        .go();
     await _deleteChaptersOfBook(bookId);
     await (delete(novelBooks)..where((t) => t.id.equals(bookId))).go();
   }

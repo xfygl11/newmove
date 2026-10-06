@@ -131,9 +131,9 @@ void main() {
     });
   });
 
-  group('schema v14 结构', () {
+  group('schema v15 结构', () {
     test('剧本表已删除 aspect_ratio 与 language 死字段', () async {
-      expect(db.schemaVersion, 14);
+      expect(db.schemaVersion, 15);
 
       final rows = await db.customSelect('PRAGMA table_info(scripts)').get();
       final columns = rows.map((row) => row.data['name'] as String).toSet();
@@ -284,6 +284,78 @@ void main() {
         rows.map((r) => r.data['name'] as String),
         contains('prompt_override_versions'),
       );
+    });
+
+    test('M24 角色关系历史表列集，归属作品与章节序号可空', () async {
+      final rows = await db
+          .customSelect('PRAGMA table_info(character_relations)')
+          .get();
+      expect(
+        rows.map((r) => r.data['name']).toSet(),
+        containsAll([
+          'id',
+          'book_id',
+          'source',
+          'target',
+          'description',
+          'chapter_seq',
+          'is_current',
+          'created_at',
+        ]),
+      );
+      final chapterMeta = rows
+          .where((r) => r.data['name'] == 'chapter_seq')
+          .toList();
+      expect(chapterMeta.single.data['notnull'], 0);
+      final currentMeta = rows
+          .where((r) => r.data['name'] == 'is_current')
+          .toList();
+      expect(currentMeta.single.data['dflt_value'], '1');
+    });
+
+    test('M24 质量门日志表列集，归属项目可空且 ok 默认未命中记录', () async {
+      final rows = await db.customSelect('PRAGMA table_info(gate_logs)').get();
+      expect(
+        rows.map((r) => r.data['name']).toSet(),
+        containsAll([
+          'id',
+          'subject_type',
+          'subject_id',
+          'subject_label',
+          'gate_id',
+          'ok',
+          'detail',
+          'project_id',
+          'created_at',
+        ]),
+      );
+      final projectMeta = rows
+          .where((r) => r.data['name'] == 'project_id')
+          .toList();
+      expect(projectMeta.single.data['notnull'], 0);
+    });
+
+    test('M24 全表清单含两张新增历史表', () async {
+      final rows = await db.customSelect(
+        "SELECT name FROM sqlite_master WHERE type = 'table'",
+      ).get();
+      expect(
+        rows.map((r) => r.data['name'] as String),
+        containsAll(['character_relations', 'gate_logs']),
+      );
+    });
+
+    test('M24 两表不加外键，归属靠显式级联删除', () async {
+      for (final table in ['character_relations', 'gate_logs']) {
+        final rows = await db
+            .customSelect('PRAGMA foreign_key_list($table)')
+            .get();
+        expect(
+          rows,
+          isEmpty,
+          reason: '$table 不应声明外键',
+        );
+      }
     });
   });
 }

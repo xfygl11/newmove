@@ -5,8 +5,10 @@ import '../../data/app_database.dart';
 import '../../data/daos/asset_dao.dart';
 import '../../data/daos/asset_ref_dao.dart';
 import '../../data/daos/beat_dao.dart';
+import '../../data/daos/character_relation_dao.dart';
 import '../../data/daos/cascade_dao.dart';
 import '../../data/daos/chapter_revision_dao.dart';
+import '../../data/daos/gate_log_dao.dart';
 import '../../data/daos/novel_dao.dart';
 import '../../data/daos/project_dao.dart';
 import '../../data/daos/provider_dao.dart';
@@ -112,6 +114,14 @@ final promptOverrideDaoProvider = Provider<PromptOverrideDao>(
 
 final promptResolverProvider = Provider<PromptResolver>(
   (ref) => PromptResolver(ref.watch(promptOverrideDaoProvider)),
+);
+
+final characterRelationDaoProvider = Provider<CharacterRelationDao>(
+  (ref) => ref.watch(databaseProvider).characterRelationDao,
+);
+
+final gateLogDaoProvider = Provider<GateLogDao>(
+  (ref) => ref.watch(databaseProvider).gateLogDao,
 );
 
 final secureKeyStoreProvider = Provider<SecureKeyStore>(

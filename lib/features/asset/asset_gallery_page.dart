@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../agent/active_llm.dart';
+import '../../core/gate_issue.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
@@ -101,8 +102,8 @@ class _AssetGalleryPageState extends ConsumerState<AssetGalleryPage> {
                       child: GateIssueList(
                         title: '提示词体检',
                         issues: issues,
-                        onRecord: () => ref.read(attemptRecorderProvider)
-                            .recordValidation(
+                        onRecord: () => ref.read(gateLogDaoProvider).recordValidation(
+                          subjectType: GateSubjects.assets,
                           subjectLabel: '资产提示词体检（${assets.length} 条）',
                           gates: const ['提示词门'],
                           issues: issues,

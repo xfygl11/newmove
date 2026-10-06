@@ -261,7 +261,7 @@ void main() {
       final ok = await AttemptRecorder(db.generationAttemptDao).recordValidation(
         subjectLabel: '资产提示词体检（2 条）',
         gates: const ['提示词门'],
-        issues: const [
+        issues: [
           GateIssue(
             code: 'scene_not_empty',
             severity: GateSeverity.error,
@@ -310,7 +310,7 @@ void main() {
       await recorder.recordValidation(
         subjectLabel: '剧本台词体检',
         gates: const ['台词门'],
-        issues: const [
+        issues: [
           GateIssue(
             code: 'line_too_long',
             severity: GateSeverity.warn,

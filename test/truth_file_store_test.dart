@@ -186,4 +186,85 @@ void main() {
       expect(focus['text'], '前往北城');
     });
   });
+
+  group('relationOps 固化（T25.3）', () {
+    test('追加关系行并带上章节序号，characters 为空不阻塞', () async {
+      final store = TruthFileStore(dao: db.truthFileDao, bookId: bookId);
+      await store.applyDelta(
+        SettleDelta.fromJson(const {
+          'relationOps': [
+            {
+              'source': '林昭',
+              'target': '苏婉',
+              'description': '青梅竹马',
+            },
+          ],
+        }),
+        5,
+      );
+
+      final edges = await db.characterRelationDao.currentEdges(bookId);
+      expect(edges, hasLength(1));
+      expect(edges.single.source, '林昭');
+      expect(edges.single.target, '苏婉');
+      expect(edges.single.description, '青梅竹马');
+      expect(edges.single.chapterSeq, 5);
+    });
+
+    test('同名关系二次固化追加新版本，旧版本 isCurrent 归零', () async {
+      final store = TruthFileStore(dao: db.truthFileDao, bookId: bookId);
+      const deltaJson = {
+        'relationOps': [
+          {'source': '林昭', 'target': '苏婉', 'description': '青梅'},
+        ],
+      };
+      await store.applyDelta(SettleDelta.fromJson(deltaJson), 2);
+      await store.applyDelta(
+        SettleDelta.fromJson({
+          'relationOps': [
+            {'source': '林昭', 'target': '苏婉', 'description': '宿敌'},
+          ],
+        }),
+        7,
+      );
+
+      final all = await db.characterRelationDao.listByBook(bookId);
+      expect(all, hasLength(2));
+      expect(
+        (await db.characterRelationDao.currentEdges(bookId)).single.chapterSeq,
+        7,
+      );
+    });
+
+    test('缺 source 或 target 的关系跳过，整轮固化不回滚', () async {
+      final store = TruthFileStore(dao: db.truthFileDao, bookId: bookId);
+      await store.applyDelta(
+        SettleDelta.fromJson(const {
+          'relationOps': [
+            {'target': '苏婉'},
+            {'source': '林昭', 'target': ''},
+            {'source': '林昭', 'target': '苏婉'},
+          ],
+        }),
+        1,
+      );
+
+      expect(await db.characterRelationDao.countByBook(bookId), 1);
+    });
+
+    test('relationOps 缺省为空列表，存量 SettleDelta 不需要改构造', () {
+      const delta = SettleDelta(
+        factUpsert: [],
+        factExpire: [],
+        characters: [],
+        resources: [],
+        hookUpsert: [],
+        hookResolve: [],
+        chapterSummary: null,
+        authorIntent: '',
+        currentFocus: '',
+      );
+      expect(delta.relationOps, isEmpty);
+    });
+  });
 }

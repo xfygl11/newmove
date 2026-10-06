@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../agent/active_llm.dart';
 import '../../agent/active_video.dart';
+import '../../core/gate_issue.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
@@ -198,8 +199,8 @@ class _SkeletonBody extends ConsumerWidget {
             data: (issues) => GateIssueList(
               title: '认领覆盖体检',
               issues: issues,
-              onRecord: () => ref.read(attemptRecorderProvider)
-                  .recordValidation(
+              onRecord: () => ref.read(gateLogDaoProvider).recordValidation(
+                subjectType: GateSubjects.skeleton,
                 subjectLabel: '剧本 ${script.title} 认领覆盖体检',
                 gates: const ['认领覆盖门'],
                 issues: issues,
@@ -220,8 +221,8 @@ class _SkeletonBody extends ConsumerWidget {
               return GateIssueList(
                 title: '时长体检',
                 issues: issues,
-                onRecord: () => ref.read(attemptRecorderProvider)
-                    .recordValidation(
+                onRecord: () => ref.read(gateLogDaoProvider).recordValidation(
+                  subjectType: GateSubjects.shots,
                   subjectLabel: '剧本 ${script.title} 时长体检',
                   gates: const ['时长门'],
                   issues: issues,

@@ -360,14 +360,16 @@ lib/
    - **体检模式一律只读不改**：`listTransitionIssues` / 骨架源剧情账本校验 /
      `GateIssueList` 面板都只提示，不自动修数据，不改库。修数据必须走
      显式用户动作 + `ConfirmSheet`。
-    - **本地校验失败要留痕，且留痕必须由用户显式触发**：走 `AttemptRecorder` +
-      `GenerationAttempts` 既有表结构，`subjectType = AttemptSubjects.validate`
-      （`data/daos/generation_attempt_dao.dart`），摘要写 `prompt`、门名与逐条
-      问题写 `params`，有 error 级问题时状态记 `failed`。门在 `build()` 里跑，
-      **禁止自动落库**——否则每次重绘写一条，台账被刷爆；只允许经
-      `GateIssueList` 的「记一次」按钮显式触发。写入失败只
-      `appLog('gate_record', …)` 并返回 false，不阻塞。
-      - **M19 / M22 / M23 校验码登记表**（新增校验码先登记再实现，对齐既有五条
+    - **本地校验失败要留痕，且留痕必须由用户显式触发**：M24 起走
+      `GateLogDao.recordValidation` + `GateLogs`（`lib/data/daos/gate_log_dao.dart`），
+      每道命中的门码写一行，`ok` 记该门是否未命中、`detail` 记门族名与命中 locator。
+      门在 `build()` 里跑，**禁止自动落库**——否则每次重绘写一条，日志被刷爆；
+      只允许经 `GateIssueList` 的「记一次」按钮显式触发。无问题时不落任何行。
+      写入失败只 `appLog('gate_log_record', …)` 并返回 false，不阻塞。
+      `AttemptRecorder.recordValidation`（`GenerationAttempts` 台账）保留但 UI 不再
+      调用——算力台账只记消耗算力的调用，本地校验混进去会稀释
+      「哪次生成花了钱」的可读性。
+      - **M19 / M22 / M23 / M24 校验码登记表**（新增校验码先登记再实现，对齐既有五条
       `SegmentBudget` 校验码约定）：
       - `DurationGate`（`lib/features/script/duration_gate.dart`）：
         `line_too_long`（error，单句台词 > 35 字，一口说不完）、
@@ -426,19 +428,58 @@ lib/
          由 `tier_missing` 单独提示；「其他」无上限）、
          `evidence_unverified`（warn，角色引文未在章节正文命中，无法定位证据；
          匹配复用 `ReviewIssue.verifyQuotes` 的三级降级，不采信 LLM 自报位置；
-         未命中条目保留并提示，不删除；正文去空白为空时整门跳过，按
-         「缺数据照常通过」处理）。
-         三条全 warn：分档上限与未标分档都不改库、不拦生成。
-         引文核对的正文定位入口是 `ReviewIssue.quoteInContent` 静态助手，
-         复用私有 `_locateQuote`，不为质量门另写一套匹配逻辑。
-        - 统一结果类型 `GateIssue` / `GateSeverity` 在 `lib/core/gate_issue.dart`，
-          `noteLine` 给确认框 `note` 用；与 `SegmentBudgetIssue` 同型但字段语义不同，
-          不合并。
-         - `SegmentBudget` 新增 `under_limit`（warn，段时长 < `minSegmentMs`（3000ms））。
-           下界是固定常量、不随 `modelVersion` 变：下界是内容约束，上界才是能力约束。
-           `durationMs == 0` 表示未填，按「缺字段照常通过」跳过。
-     - **提示词覆盖的版本历史（M23）**：`PromptOverrideVersions` 只追加不修改，
-       `PromptOverrideDao.upsert` 包在事务里，在改正文**之前**把旧 body 存一行；
+          未命中条目保留并提示，不删除；正文去空白为空时整门跳过，按
+          「缺数据照常通过」处理）、
+          `relation_self`（error，关系两端去空白后指向同一角色；自指关系不是
+          可讲的叙事，通常是关系抽取把「自己心里想」误读成「和谁有关」）、
+          `relation_orphan`（warn，关系的一端引用了角色画像里没有的名字，图谱上
+          会变成悬空节点）。
+          两条关系门读的是 `CharacterRelations` 的当前有效边（`currentEdges`），
+          不是 `CharacterSpec.relations` 的自由文本；关系数据为空时整门跳过。
+          引文核对的正文定位入口是 `ReviewIssue.quoteInContent` 静态助手，
+          复用私有 `_locateQuote`，不为质量门另写一套匹配逻辑。
+         - 统一结果类型 `GateIssue` / `GateSeverity` 在 `lib/core/gate_issue.dart`，
+           `noteLine` 给确认框 `note` 用；与 `SegmentBudgetIssue` 同型但字段语义不同，
+           不合并。
+           `GateIssue` 构造时校验 `code` 在 `GateCodes.all` 内，未登记的码抛
+           `ArgumentError`——登记表是 `GateLogs` 报表「从没响」榜单的对照面，
+           写错码会让该门从报表里消失。因此 `GateIssue` 不能是 const 构造。
+           校验对象类型常量 `GateSubjects` 也在这个文件，页面用它而不用
+           `gate_log_dao.dart`，避免 UI 层为门日志新增 data 层 import。
+         - **门码单一来源（M24）**：`lib/core/gate_codes.dart` 的 `GateCodes` 登记
+           全量门码（M24 起 34 码，含 `SegmentBudget` 的 6 码），`all` 是报表页
+           「从没响」差集的对照面。各门实现文件仍写字面量（纯机械替换会铺进
+           8 个门文件），登记表靠 `GateIssue` 构造校验兜住：新增门码只在门实现里
+           出现、忘了登记，测试与运行期都会抛 `ArgumentError`。
+           `test/gate_logs_test.dart` 额外断言 `all` 与常量表一一对应且无重复。
+           `SegmentBudgetIssue` 走独立类型、不经过 `GateIssue` 校验，但它的 6 码
+           仍在 `all` 里（报表按 `gateId` 聚合时需要它们）。
+          - `SegmentBudget` 新增 `under_limit`（warn，段时长 < `minSegmentMs`（3000ms））。
+            下界是固定常量、不随 `modelVersion` 变：下界是内容约束，上界才是能力约束。
+            `durationMs == 0` 表示未填，按「缺字段照常通过」跳过。
+      - **角色关系历史（M24）**：`CharacterRelations` 只追加不修改，
+        `CharacterRelationDao.appendRelation` 在事务里先把同
+        `(bookId, source, target)` 组的 `isCurrent = 1` 改为 0，再插新行——
+        只撤指针不写新行会短暂无当前关系，只写新行不撤旧指针会出现两行
+        `isCurrent = 1`。历史行正文永不 UPDATE，只有 `isCurrent` 指针位可变，
+        与 `ShotRevisions` 的两态 current / superseded 同语义。
+        `CharacterSpec.relations` 仍是当前快照的自由文本，两张表职责不同：
+        TruthFile 存「现在是什么」，这张表存「曾经是哪些」，避免双份真相源。
+        关系由 Settler 顶层 `relationOps`（`{source, target, description}`）落，
+        不放进 `CharacterSpec`；缺 `source` / `target` 的条目跳过不抛错，
+        不让 Settler 漏字段回滚整轮固化。图谱视图在 `lib/widgets/character_relation_graph.dart`
+        （圆形布局 + 有向边，数据源 `currentEdges`）。
+      - **质量门日志（M24）**：`GateLogs` 只有 INSERT，按 `projectId` 归属项目
+        （跨项目校验为空）。`GateLogDao.recordValidation` 命中才落行——通过的
+        运行不记录，所以「从没响」榜单同时包含「从没跑过」与「跑了但一直通过」，
+        对提示词调优是同一条信息，已在 DAO 头注释写明。`ok` 列保留 0/1 供后续
+        记录通过项。写失败只 `appLog('gate_log_record', …)` 不阻塞，与门本身
+        「只提示不阻塞」一致。报表页 `lib/features/task/gate_log_page.dart`
+        （路由 `/tasks/gates`，任务中心入口）出「最常响」「从未命中」两个榜单。
+        `GenerationAttempts` 仍记消耗算力的调用，本地校验混进去会稀释
+        「哪次生成花了钱」的可读性。
+      - **提示词覆盖的版本历史（M23）**：`PromptOverrideVersions` 只追加不修改，
+        `PromptOverrideDao.upsert` 包在事务里，在改正文**之前**把旧 body 存一行；
        新建覆盖不存版本（没有旧值可留），文本与旧值相同时也不存
        （无变化不制造版本）。版本行按 `scope + slotKey + projectId` 归组，
        与覆盖行同粒度，全局级行的 `projectId` 为 null。

@@ -11,24 +11,33 @@
 /// - `evidence_unverified`（warn）角色引文未在章节正文命中，无法定位证据。
 ///   匹配复用 `ReviewIssue.verifyQuotes` 的三级降级（原文精确 → 忽略空白 →
 ///   前缀降级），不采信 LLM 自报位置；未命中的条目保留并提示，不删除。
+/// - `relation_self`（error）关系两端指向同一角色。自指关系不是可讲的叙事，
+///   通常是关系抽取时把「自己心里想」误读成了「和谁有关」，应改数据。
+/// - `relation_orphan`（warn）关系的一端引用了角色画像里没有的名字。
+///   图谱上会变成悬空节点，且下游出镜名单按角色名对账时找不到这个人。
 library;
 
 import '../../core/gate_issue.dart';
+import '../../data/app_database.dart';
 import 'novel_models.dart';
 
 /// 角色画像门。
 class CharacterGate {
   CharacterGate._();
 
-  /// 三条门一起跑。[content] 是待核对引文的章节正文；为空时跳过引文门。
+  /// 五条门一起跑。[content] 是待核对引文的章节正文；为空时跳过引文门。
+  /// [relations] 是当前有效的角色关系；为空时跳过两条关系门。
   static List<GateIssue> validate({
     required List<CharacterSpec> characters,
     String content = '',
+    List<CharacterRelation> relations = const [],
   }) {
     return [
       ...tierMissing(characters),
       ...tierCap(characters),
       ...evidenceUnverified(characters, content),
+      ...relationSelf(relations),
+      ...relationOrphan(characters, relations),
     ];
   }
 
@@ -92,6 +101,59 @@ class CharacterGate {
       }
     }
     return issues;
+  }
+
+  /// 两端指向同一角色的关系。无关系数据时整门跳过。
+  static List<GateIssue> relationSelf(List<CharacterRelation> relations) {
+    return [
+      for (final r in relations)
+        if (_sameRelationEnds(r))
+          GateIssue(
+            code: 'relation_self',
+            severity: GateSeverity.error,
+            locator: r.source.trim(),
+            message: '关系两端指向同一角色：${r.description.trim()}',
+          ),
+    ];
+  }
+
+  /// 关系的一端引用了画像里没有的名字。无关系数据时整门跳过。
+  static List<GateIssue> relationOrphan(
+    List<CharacterSpec> characters,
+    List<CharacterRelation> relations,
+  ) {
+    if (relations.isEmpty) return const [];
+    final names = {
+      for (final c in characters)
+        if (c.name.trim().isNotEmpty) c.name.trim(),
+    };
+
+    final issues = <GateIssue>[];
+    for (final r in relations) {
+      if (_sameRelationEnds(r)) continue;
+      final missing = <String>[];
+      for (final end in [r.source.trim(), r.target.trim()]) {
+        if (end.isNotEmpty && !names.contains(end)) missing.add(end);
+      }
+      if (missing.isNotEmpty) {
+        issues.add(
+          GateIssue(
+            code: 'relation_orphan',
+            severity: GateSeverity.warn,
+            locator: r.source.trim(),
+            message: '关系引用了画像里没有的角色：${missing.join('、')}',
+          ),
+        );
+      }
+    }
+    return issues;
+  }
+
+  /// 两端名字去空白后相同即视为自指，避免大小写与空格差异漏检。
+  static bool _sameRelationEnds(CharacterRelation r) {
+    final left = r.source.trim();
+    final right = r.target.trim();
+    return left.isNotEmpty && left == right;
   }
 
   /// 解析角色的引文清单，多条用「；」或 `;` 分隔。

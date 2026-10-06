@@ -6,8 +6,7 @@ import '../core/gate_issue.dart';
 ///
 /// 与 [GateIssue] 的 `noteLine` 共用一套文案：门只提示、不改数据，所以这里
 /// 只负责把人读得懂的一行行问题铺开。传入 [onRecord] 时会多出「记一次」，
-/// 把当前结果写入生成台账（`subjectType == 'validate'`），
-/// 用户改完提示词还能回看到自己踩过哪些门。
+/// 把当前结果写入质量门日志表（`GateLogs`），报表页可以回看最常响的门。
 class GateIssueList extends StatelessWidget {
   const GateIssueList({
     super.key,
@@ -68,7 +67,7 @@ class GateIssueList extends StatelessWidget {
           ),
         const SizedBox(height: 4),
         Text(
-          '提示：只提示，不改数据；点「记一次」留痕，改完提示词可在生成台账回看。',
+          '提示：只提示，不改数据；点「记一次」留痕，改完提示词可在质量门报表回看。',
           style: theme.textTheme.bodySmall,
         ),
       ],

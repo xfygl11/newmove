@@ -460,3 +460,56 @@ class PromptOverrideVersions extends Table {
   TextColumn get body => text()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
+
+/// 角色关系的追加历史（M24 T25.1）。
+///
+/// `CharacterSpec.relations` 是一段自由文本的当前快照，Settler 每次固化直接覆盖，
+/// 关系反转无法回看。这张表把每一对关系按确立时间追加一行，全量历史按
+/// `createdAt` 升序读出来就是完整的演变过程。
+///
+/// 历史行的正文（`source` / `target` / `description` / `chapterId`）只追加、
+/// 不修改、不删除；唯一可变的是 `isCurrent` 指针位——同一 (bookId, source, target)
+/// 确立新版本时把旧行的 1 改为 0，与 [ShotRevisions] 的两态 current / superseded
+/// 同一语义。
+class CharacterRelations extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // 归属作品；不加 references()，删除走 CascadeDao 显式路径。
+  IntColumn get bookId => integer()();
+  // 关系起点角色名。
+  TextColumn get source => text()();
+  // 关系终点角色名。
+  TextColumn get target => text()();
+  // 关系描述，如「师徒」「宿敌」。
+  TextColumn get description => text().withDefault(const Constant(''))();
+  // 确立这版关系的章节序号（Chapters.seq）；跨章补录时为空。
+  IntColumn get chapterSeq => integer().nullable()();
+  // 当前有效关系：同一 (bookId, source, target) 至多一行 = 1。
+  IntColumn get isCurrent => integer().withDefault(const Constant(1))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// 质量门运行日志（M24 T25.1）。
+///
+/// `GenerationAttempts` 台账只记消耗算力的调用，未消耗算力的本地校验不落任何表，
+/// 「记一次」只能写进算力台账，稀释「哪次生成花了钱」的可读性。这张表把校验单独
+/// 记账，每道门一行，可以统计「哪条门最常响」「哪条门从没响」。
+///
+/// 只有 INSERT，没有 UPDATE 与 DELETE：日志是审计数据，不是可维护的状态。
+class GateLogs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // 校验对象类型，如 'characters' / 'shots' / 'script' / 'assets' / 'skeleton'。
+  TextColumn get subjectType => text()();
+  // 校验对象标识，无单一标识时为空。
+  TextColumn get subjectId => text().nullable()();
+  // 对象的人类可读名称，报表展示用它。
+  TextColumn get subjectLabel => text()();
+  // 门码，取值见 GateCodes。
+  TextColumn get gateId => text()();
+  // 该门本次是否未命中。
+  IntColumn get ok => integer().withDefault(const Constant(1))();
+  // 命中摘要：条数与首条 locator。
+  TextColumn get detail => text().withDefault(const Constant(''))();
+  // 归属项目；跨项目校验（全局提示词）为空。
+  IntColumn get projectId => integer().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}

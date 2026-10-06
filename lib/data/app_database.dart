@@ -5,7 +5,9 @@ import '../../core/status_constants.dart';
 import 'daos/asset_dao.dart';
 import 'daos/asset_ref_dao.dart';
 import 'daos/beat_dao.dart';
+import 'daos/character_relation_dao.dart';
 import 'daos/cascade_dao.dart';
+import 'daos/gate_log_dao.dart';
 import 'daos/generation_attempt_dao.dart';
 import 'daos/prompt_override_dao.dart';
 import 'daos/revision_dao.dart';
@@ -47,6 +49,8 @@ part 'app_database.g.dart';
     GenerationAttempts,
     PromptOverrides,
     PromptOverrideVersions,
+    CharacterRelations,
+    GateLogs,
   ],
   daos: [
     ProjectDao,
@@ -67,6 +71,8 @@ part 'app_database.g.dart';
     RevisionDao,
     GenerationAttemptDao,
     PromptOverrideDao,
+    CharacterRelationDao,
+    GateLogDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -77,7 +83,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -182,6 +188,14 @@ class AppDatabase extends _$AppDatabase {
         // Projects.useProjectPrompts 让用户关掉项目级覆盖、只用全局与内置。
         await m.createTable(promptOverrideVersions);
         await m.addColumn(projects, projects.useProjectPrompts);
+      }
+      if (from < 15) {
+        // M24：两张只追加不修改的历史表。CharacterRelations 记录角色关系的
+        // 每次演变（当前快照仍在 TruthFile 里，反转不再被覆盖丢失）；
+        // GateLogs 把本地校验从算力台账里分出来单独记账。两表都不加
+        // references()，删除走 CascadeDao 显式路径（T20.10 推迟的连带约束）。
+        await m.createTable(characterRelations);
+        await m.createTable(gateLogs);
       }
     },
     beforeOpen: (details) async {

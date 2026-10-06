@@ -150,6 +150,11 @@ class _TaskPageState extends ConsumerState<TaskPage>
             icon: const Icon(Icons.receipt_long),
             onPressed: () => context.go('/tasks/attempts'),
           ),
+          IconButton(
+            tooltip: '质量门报表',
+            icon: const Icon(Icons.checklist_rtl),
+            onPressed: () => context.go('/tasks/gates'),
+          ),
         ],
       ),
       body: videoTasksAsync.when(

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../app.dart';
+import '../../core/gate_issue.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/script_dao.dart';
@@ -87,8 +88,8 @@ class ScriptDetailPage extends ConsumerWidget {
                   return GateIssueList(
                     title: '台词体检',
                     issues: issues,
-                    onRecord: () => ref.read(attemptRecorderProvider)
-                        .recordValidation(
+                    onRecord: () => ref.read(gateLogDaoProvider).recordValidation(
+                      subjectType: GateSubjects.script,
                       subjectLabel: '剧本 ${script.title} 台词体检',
                       gates: const ['台词门'],
                       issues: issues,
@@ -107,8 +108,8 @@ class ScriptDetailPage extends ConsumerWidget {
                   return GateIssueList(
                     title: '剧本体检',
                     issues: issues,
-                    onRecord: () => ref.read(attemptRecorderProvider)
-                        .recordValidation(
+                    onRecord: () => ref.read(gateLogDaoProvider).recordValidation(
+                      subjectType: GateSubjects.script,
                       subjectLabel: '剧本 ${script.title} 剧本体检',
                       gates: const ['剧本门'],
                       issues: issues,

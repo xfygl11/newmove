@@ -5,7 +5,9 @@ import '../../agent/active_llm.dart';
 import '../../core/gate_issue.dart';
 import '../../core/json_values.dart';
 import '../../core/storage/providers.dart';
+import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
+import '../../widgets/character_relation_graph.dart';
 import '../../widgets/gate_issue_list.dart';
 import 'character_gate.dart';
 import 'novel_models.dart';
@@ -58,6 +60,8 @@ class _CharacterList extends ConsumerStatefulWidget {
 class _CharacterListState extends ConsumerState<_CharacterList> {
   List<CharacterSpec> _characters = [];
   List<GateIssue> _issues = [];
+  List<CharacterRelation> _relations = [];
+  List<CharacterRelation> _history = [];
   String _chapterContext = '';
   bool _loading = true;
   bool _saving = false;
@@ -77,13 +81,22 @@ class _CharacterListState extends ConsumerState<_CharacterList> {
     try {
       final chars = await _load();
       final context_ = await _chapterContextOf(widget.bookId);
+      final relations = await ref
+          .read(characterRelationDaoProvider)
+          .currentEdges(widget.bookId);
+      final history = await ref
+          .read(characterRelationDaoProvider)
+          .listByBook(widget.bookId);
       if (!mounted) return;
       setState(() {
         _characters = chars;
         _chapterContext = context_;
+        _relations = relations;
+        _history = history;
         _issues = CharacterGate.validate(
           characters: chars,
           content: context_,
+          relations: relations,
         );
         _loading = false;
         _error = null;
@@ -113,13 +126,50 @@ class _CharacterListState extends ConsumerState<_CharacterList> {
         const SizedBox(height: 4),
         _CharacterGatePanel(
           issues: _issues,
-          onRecord: () => ref.read(attemptRecorderProvider).recordValidation(
+          onRecord: () => ref.read(gateLogDaoProvider).recordValidation(
+            subjectType: GateSubjects.characters,
             subjectLabel: '角色矩阵 · 体检',
-            gates: ['CharacterGate'],
+            gates: const ['角色门'],
             issues: _issues,
             projectId: widget.projectId,
           ),
         ),
+        const SizedBox(height: 12),
+        if (_relations.isNotEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('关系图谱', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  CharacterRelationGraph(edges: _relations),
+                ],
+              ),
+            ),
+          ),
+        if (_superseded.isNotEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('关系历史', style: Theme.of(context).textTheme.titleMedium),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2, bottom: 8),
+                    child: Text(
+                      '已被新版本取代的关系，按时间倒序',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  const Divider(),
+                  for (final row in _superseded) _RelationHistoryRow(row: row),
+                ],
+              ),
+            ),
+          ),
         const SizedBox(height: 12),
         for (final character in _sorted)
           _CharacterCard(
@@ -146,6 +196,10 @@ class _CharacterListState extends ConsumerState<_CharacterList> {
         (rank[a.tier] ?? 4).compareTo(rank[b.tier] ?? 4));
     return list;
   }
+
+  /// 已被新版本取代的关系，只读回看用。
+  List<CharacterRelation> get _superseded =>
+      _history.where((row) => row.isCurrent == 0).toList();
 
   Future<List<CharacterSpec>> _load() async {
     final store = ref.read(novelServiceProvider).storeFor(widget.bookId);
@@ -592,6 +646,60 @@ class _CharacterCard extends StatelessWidget {
         onTap: onEdit,
       ),
     );
+  }
+}
+
+class _RelationHistoryRow extends StatelessWidget {
+  const _RelationHistoryRow({required this.row});
+
+  final CharacterRelation row;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final chapterSeq = row.chapterSeq;
+    final when = _formatTime(row.createdAt);
+    final meta = chapterSeq == null
+        ? when
+        : '第$chapterSeq章 · $when';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              style: theme.textTheme.bodyMedium,
+              children: [
+                TextSpan(text: row.source),
+                const TextSpan(text: ' → '),
+                TextSpan(text: row.target),
+                if (row.description.trim().isNotEmpty)
+                  TextSpan(
+                    text: '  ${row.description.trim()}',
+                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+              ],
+            ),
+          ),
+          if (meta.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Text(
+                meta,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTime(DateTime time) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${time.year}-${two(time.month)}-${two(time.day)} '
+        '${two(time.hour)}:${two(time.minute)}';
   }
 }
 

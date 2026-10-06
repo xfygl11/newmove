@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show Value;
 
 import '../../core/json_values.dart';
 import '../../data/app_database.dart';
+import '../../data/daos/character_relation_dao.dart';
 import '../../data/daos/truth_file_dao.dart';
 import 'novel_models.dart';
 import 'truth_file_kinds.dart';
@@ -134,6 +135,7 @@ class TruthFileStore {
     return dao.attachedDatabase.transaction(() async {
       await _applyFacts(delta, chapterNumber);
       await _applyCharacters(delta);
+      await _applyRelations(delta, chapterNumber);
       await _applyResources(delta);
       await _applyHooks(delta);
       await _applySummary(delta);
@@ -205,6 +207,29 @@ class TruthFileStore {
     await write(TruthFileKind.characterMatrix, {
       'characters': list,
     }, expectedRevision: row?.revision);
+  }
+
+  /// 追加角色关系历史（M24 T25.3）。
+  ///
+  /// character_matrix 里的 `relations` 是自由文本快照，按字段覆盖后反转就无从
+  /// 追溯；这里把每次确立的关系追加成独立行，同一 (source, target) 只留最新一行
+  /// 为 isCurrent = 1。仍在 applyDelta 的事务里，任一条写入失败整段回滚。
+  Future<void> _applyRelations(SettleDelta delta, int chapterNumber) async {
+    if (delta.relationOps.isEmpty) return;
+    final relations = CharacterRelationDao(dao.attachedDatabase);
+    for (final op in delta.relationOps) {
+      final source = jsonString(op['source']).trim();
+      final target = jsonString(op['target']).trim();
+      // 缺起点的关系落不成边，跳过而不是报错：Settler 漏字段不该让整轮固化回滚。
+      if (source.isEmpty || target.isEmpty) continue;
+      await relations.appendRelation(
+        bookId: bookId,
+        source: source,
+        target: target,
+        description: jsonString(op['description']),
+        chapterSeq: chapterNumber,
+      );
+    }
   }
 
   Future<void> _applyResources(SettleDelta delta) async {

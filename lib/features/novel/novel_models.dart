@@ -353,6 +353,7 @@ class SettleDelta {
     required this.chapterSummary,
     required this.authorIntent,
     required this.currentFocus,
+    this.relationOps = const [],
   });
 
   final List<Map<String, dynamic>> factUpsert;
@@ -364,6 +365,9 @@ class SettleDelta {
   final Map<String, dynamic>? chapterSummary;
   final String authorIntent;
   final String currentFocus;
+
+  /// 本章确立或改变的角色关系，落 CharacterRelations 追加历史。
+  final List<Map<String, dynamic>> relationOps;
 
   factory SettleDelta.fromJson(Map<String, dynamic> json) {
     final factOps = jsonMap(json['factOps']);
@@ -378,6 +382,7 @@ class SettleDelta {
       resources: [for (final r in jsonList(json['resourceOps'])) jsonMap(r)],
       hookUpsert: [for (final h in jsonList(hookOps['upsert'])) jsonMap(h)],
       hookResolve: [for (final h in jsonList(hookOps['resolve'])) h.toString()],
+      relationOps: [for (final r in jsonList(json['relationOps'])) jsonMap(r)],
       chapterSummary: json['chapterSummary'] is Map
           ? jsonMap(json['chapterSummary'])
           : null,
