@@ -76,7 +76,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -163,6 +163,17 @@ class AppDatabase extends _$AppDatabase {
         // 分镜图与视频只能靠自由文本描述服装，模型对「本镜头穿什么」
         // 的注意力低于结构化字段；单列承载覆盖清单，空即默认造型。
         await m.addColumn(shots, shots.costumeOverrides);
+      }
+      if (from < 13) {
+        // M21：创作前基础设置向导落地到作品行。受众 / 类型 / 标签作为写章
+        // 与审校的风格上下文，章节规划承载体感规模（只记录，不铺开章节行）。
+        await m.addColumn(novelBooks, novelBooks.audience);
+        await m.addColumn(novelBooks, novelBooks.workGenre);
+        await m.addColumn(novelBooks, novelBooks.tags);
+        await m.addColumn(novelBooks, novelBooks.volumeCount);
+        await m.addColumn(novelBooks, novelBooks.chaptersPerVolume);
+        await m.addColumn(novelBooks, novelBooks.synopsis);
+        await m.addColumn(novelBooks, novelBooks.protagonistAbility);
       }
     },
     beforeOpen: (details) async {

@@ -10,6 +10,7 @@ import 'features/novel/hook_manager_page.dart';
 import 'features/novel/outline_editor_page.dart';
 import 'features/novel/chapter_editor_page.dart';
 import 'features/novel/novel_shelf_page.dart';
+import 'features/novel/novel_setup_page.dart';
 import 'features/novel/setting_workshop_page.dart';
 import 'features/project/project_page.dart';
 import 'features/provider_config/provider_config_page.dart';
@@ -72,7 +73,8 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/settings/prompts/:projectId',
       redirect: (_, state) => requireIntParams(state, ['projectId']),
-      builder: (_, state) => PromptOverridePage(projectId: pathId(state, 'projectId')),
+      builder: (_, state) =>
+          PromptOverridePage(projectId: pathId(state, 'projectId')),
     ),
     // 生成台账：任务中心入口，只读展示历次生成尝试（M17 T19.4）。
     GoRoute(path: '/tasks/attempts', builder: (_, _) => const AttemptLogPage()),
@@ -89,6 +91,12 @@ final GoRouter appRouter = GoRouter(
           requireIntParams(state, ['projectId', 'chapterId']),
       builder: (_, state) =>
           ChapterEditorPage(chapterId: pathId(state, 'chapterId')),
+    ),
+    GoRoute(
+      path: '/novel/:projectId/setup',
+      redirect: (_, state) => requireIntParams(state, ['projectId']),
+      builder: (_, state) =>
+          NovelSetupPage(projectId: pathId(state, 'projectId')),
     ),
     GoRoute(
       path: '/novel/:projectId/settings',

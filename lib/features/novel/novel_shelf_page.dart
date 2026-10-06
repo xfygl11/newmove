@@ -28,19 +28,13 @@ class NovelShelfPage extends ConsumerWidget {
         error: (e, _) => Center(child: Text('加载失败：$e')),
         data: (book) {
           if (book == null) {
-            return _EmptyBook(onStart: () => _showSetupDialog(context));
+            return _EmptyBook(
+              onStart: () => context.push('/novel/$projectId/setup'),
+            );
           }
           return _BookView(book: book);
         },
       ),
-    );
-  }
-
-  Future<void> _showSetupDialog(BuildContext context) {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => _SetupDialog(projectId: projectId),
     );
   }
 }
@@ -344,143 +338,6 @@ class _ChapterTile extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) _toast(context, '删除失败：$e');
     }
-  }
-}
-
-/// 开始创作：输入创意，AI 生成设定。
-class _SetupDialog extends ConsumerStatefulWidget {
-  const _SetupDialog({required this.projectId});
-
-  final int projectId;
-
-  @override
-  ConsumerState<_SetupDialog> createState() => _SetupDialogState();
-}
-
-class _SetupDialogState extends ConsumerState<_SetupDialog> {
-  static const _workTypes = ['长篇', '短篇', '剧本', '影游'];
-  final _idea = TextEditingController();
-  final _genre = TextEditingController();
-  String _workType = _workTypes.first;
-  bool _generating = false;
-
-  @override
-  void dispose() {
-    _idea.dispose();
-    _genre.dispose();
-    super.dispose();
-  }
-
-  Future<void> _generate() async {
-    final idea = _idea.text.trim();
-    if (idea.isEmpty) return;
-    final llm = await ref.read(activeLlmProvider.future);
-    if (llm == null) {
-      if (mounted) {
-        _toast(context, '请先在「设置」配置可用的 LLM 供应商');
-      }
-      return;
-    }
-    setState(() => _generating = true);
-    try {
-      final dao = ref.read(novelDaoProvider);
-      final bookId = await dao.insertBook(
-        NovelBooksCompanion.insert(
-          projectId: widget.projectId,
-          title: '未命名作品',
-          workType: _workType != _workTypes.first
-              ? Value(_workType)
-              : const Value.absent(),
-        ),
-      );
-      await ref
-          .read(novelServiceProvider)
-          .generateSetup(
-            bookId: bookId,
-            idea: idea,
-            genre: _genre.text.trim(),
-            llm: llm,
-            workType: _workType,
-          );
-      if (mounted) Navigator.of(context).pop();
-    } catch (e) {
-      if (mounted) {
-        _toast(context, '生成失败：$e');
-      }
-    } finally {
-      if (mounted) setState(() => _generating = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('开始创作'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _idea,
-            autofocus: true,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: '创意 / 一句话',
-              hintText: '例如：一个少年在末世觉醒治愈能力',
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _genre,
-            decoration: const InputDecoration(labelText: '题材（可选）'),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Text('类型', style: TextStyle(fontSize: 13)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: _workType,
-                  items: _workTypes
-                      .map(
-                        (t) => DropdownMenuItem(
-                          value: t,
-                          child: Text(t, style: const TextStyle(fontSize: 13)),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) =>
-                      setState(() => _workType = v ?? _workTypes.first),
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: _generating ? null : () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: _generating ? null : _generate,
-          child: _generating
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('生成设定'),
-        ),
-      ],
-    );
   }
 }
 

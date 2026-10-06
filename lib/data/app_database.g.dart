@@ -625,6 +625,83 @@ class $NovelBooksTable extends NovelBooks
     requiredDuringInsert: false,
     defaultValue: const Constant(2000),
   );
+  static const VerificationMeta _audienceMeta = const VerificationMeta(
+    'audience',
+  );
+  @override
+  late final GeneratedColumn<String> audience = GeneratedColumn<String>(
+    'audience',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _workGenreMeta = const VerificationMeta(
+    'workGenre',
+  );
+  @override
+  late final GeneratedColumn<String> workGenre = GeneratedColumn<String>(
+    'work_genre',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _tagsMeta = const VerificationMeta('tags');
+  @override
+  late final GeneratedColumn<String> tags = GeneratedColumn<String>(
+    'tags',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _volumeCountMeta = const VerificationMeta(
+    'volumeCount',
+  );
+  @override
+  late final GeneratedColumn<int> volumeCount = GeneratedColumn<int>(
+    'volume_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _chaptersPerVolumeMeta = const VerificationMeta(
+    'chaptersPerVolume',
+  );
+  @override
+  late final GeneratedColumn<int> chaptersPerVolume = GeneratedColumn<int>(
+    'chapters_per_volume',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _synopsisMeta = const VerificationMeta(
+    'synopsis',
+  );
+  @override
+  late final GeneratedColumn<String> synopsis = GeneratedColumn<String>(
+    'synopsis',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _protagonistAbilityMeta =
+      const VerificationMeta('protagonistAbility');
+  @override
+  late final GeneratedColumn<String> protagonistAbility =
+      GeneratedColumn<String>(
+        'protagonist_ability',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -647,6 +724,13 @@ class $NovelBooksTable extends NovelBooks
     outline,
     workType,
     targetWords,
+    audience,
+    workGenre,
+    tags,
+    volumeCount,
+    chaptersPerVolume,
+    synopsis,
+    protagonistAbility,
     status,
   ];
   @override
@@ -725,6 +809,57 @@ class $NovelBooksTable extends NovelBooks
         ),
       );
     }
+    if (data.containsKey('audience')) {
+      context.handle(
+        _audienceMeta,
+        audience.isAcceptableOrUnknown(data['audience']!, _audienceMeta),
+      );
+    }
+    if (data.containsKey('work_genre')) {
+      context.handle(
+        _workGenreMeta,
+        workGenre.isAcceptableOrUnknown(data['work_genre']!, _workGenreMeta),
+      );
+    }
+    if (data.containsKey('tags')) {
+      context.handle(
+        _tagsMeta,
+        tags.isAcceptableOrUnknown(data['tags']!, _tagsMeta),
+      );
+    }
+    if (data.containsKey('volume_count')) {
+      context.handle(
+        _volumeCountMeta,
+        volumeCount.isAcceptableOrUnknown(
+          data['volume_count']!,
+          _volumeCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('chapters_per_volume')) {
+      context.handle(
+        _chaptersPerVolumeMeta,
+        chaptersPerVolume.isAcceptableOrUnknown(
+          data['chapters_per_volume']!,
+          _chaptersPerVolumeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('synopsis')) {
+      context.handle(
+        _synopsisMeta,
+        synopsis.isAcceptableOrUnknown(data['synopsis']!, _synopsisMeta),
+      );
+    }
+    if (data.containsKey('protagonist_ability')) {
+      context.handle(
+        _protagonistAbilityMeta,
+        protagonistAbility.isAcceptableOrUnknown(
+          data['protagonist_ability']!,
+          _protagonistAbilityMeta,
+        ),
+      );
+    }
     if (data.containsKey('status')) {
       context.handle(
         _statusMeta,
@@ -780,6 +915,34 @@ class $NovelBooksTable extends NovelBooks
         DriftSqlType.int,
         data['${effectivePrefix}target_words'],
       )!,
+      audience: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}audience'],
+      ),
+      workGenre: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}work_genre'],
+      ),
+      tags: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tags'],
+      ),
+      volumeCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}volume_count'],
+      )!,
+      chaptersPerVolume: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}chapters_per_volume'],
+      )!,
+      synopsis: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}synopsis'],
+      ),
+      protagonistAbility: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}protagonist_ability'],
+      ),
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
@@ -804,6 +967,13 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
   final String? outline;
   final String workType;
   final int targetWords;
+  final String? audience;
+  final String? workGenre;
+  final String? tags;
+  final int volumeCount;
+  final int chaptersPerVolume;
+  final String? synopsis;
+  final String? protagonistAbility;
   final String status;
   const NovelBook({
     required this.id,
@@ -816,6 +986,13 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
     this.outline,
     required this.workType,
     required this.targetWords,
+    this.audience,
+    this.workGenre,
+    this.tags,
+    required this.volumeCount,
+    required this.chaptersPerVolume,
+    this.synopsis,
+    this.protagonistAbility,
     required this.status,
   });
   @override
@@ -841,6 +1018,23 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
     }
     map['work_type'] = Variable<String>(workType);
     map['target_words'] = Variable<int>(targetWords);
+    if (!nullToAbsent || audience != null) {
+      map['audience'] = Variable<String>(audience);
+    }
+    if (!nullToAbsent || workGenre != null) {
+      map['work_genre'] = Variable<String>(workGenre);
+    }
+    if (!nullToAbsent || tags != null) {
+      map['tags'] = Variable<String>(tags);
+    }
+    map['volume_count'] = Variable<int>(volumeCount);
+    map['chapters_per_volume'] = Variable<int>(chaptersPerVolume);
+    if (!nullToAbsent || synopsis != null) {
+      map['synopsis'] = Variable<String>(synopsis);
+    }
+    if (!nullToAbsent || protagonistAbility != null) {
+      map['protagonist_ability'] = Variable<String>(protagonistAbility);
+    }
     map['status'] = Variable<String>(status);
     return map;
   }
@@ -867,6 +1061,21 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
           : Value(outline),
       workType: Value(workType),
       targetWords: Value(targetWords),
+      audience: audience == null && nullToAbsent
+          ? const Value.absent()
+          : Value(audience),
+      workGenre: workGenre == null && nullToAbsent
+          ? const Value.absent()
+          : Value(workGenre),
+      tags: tags == null && nullToAbsent ? const Value.absent() : Value(tags),
+      volumeCount: Value(volumeCount),
+      chaptersPerVolume: Value(chaptersPerVolume),
+      synopsis: synopsis == null && nullToAbsent
+          ? const Value.absent()
+          : Value(synopsis),
+      protagonistAbility: protagonistAbility == null && nullToAbsent
+          ? const Value.absent()
+          : Value(protagonistAbility),
       status: Value(status),
     );
   }
@@ -887,6 +1096,15 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
       outline: serializer.fromJson<String?>(json['outline']),
       workType: serializer.fromJson<String>(json['workType']),
       targetWords: serializer.fromJson<int>(json['targetWords']),
+      audience: serializer.fromJson<String?>(json['audience']),
+      workGenre: serializer.fromJson<String?>(json['workGenre']),
+      tags: serializer.fromJson<String?>(json['tags']),
+      volumeCount: serializer.fromJson<int>(json['volumeCount']),
+      chaptersPerVolume: serializer.fromJson<int>(json['chaptersPerVolume']),
+      synopsis: serializer.fromJson<String?>(json['synopsis']),
+      protagonistAbility: serializer.fromJson<String?>(
+        json['protagonistAbility'],
+      ),
       status: serializer.fromJson<String>(json['status']),
     );
   }
@@ -904,6 +1122,13 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
       'outline': serializer.toJson<String?>(outline),
       'workType': serializer.toJson<String>(workType),
       'targetWords': serializer.toJson<int>(targetWords),
+      'audience': serializer.toJson<String?>(audience),
+      'workGenre': serializer.toJson<String?>(workGenre),
+      'tags': serializer.toJson<String?>(tags),
+      'volumeCount': serializer.toJson<int>(volumeCount),
+      'chaptersPerVolume': serializer.toJson<int>(chaptersPerVolume),
+      'synopsis': serializer.toJson<String?>(synopsis),
+      'protagonistAbility': serializer.toJson<String?>(protagonistAbility),
       'status': serializer.toJson<String>(status),
     };
   }
@@ -919,6 +1144,13 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
     Value<String?> outline = const Value.absent(),
     String? workType,
     int? targetWords,
+    Value<String?> audience = const Value.absent(),
+    Value<String?> workGenre = const Value.absent(),
+    Value<String?> tags = const Value.absent(),
+    int? volumeCount,
+    int? chaptersPerVolume,
+    Value<String?> synopsis = const Value.absent(),
+    Value<String?> protagonistAbility = const Value.absent(),
     String? status,
   }) => NovelBook(
     id: id ?? this.id,
@@ -931,6 +1163,15 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
     outline: outline.present ? outline.value : this.outline,
     workType: workType ?? this.workType,
     targetWords: targetWords ?? this.targetWords,
+    audience: audience.present ? audience.value : this.audience,
+    workGenre: workGenre.present ? workGenre.value : this.workGenre,
+    tags: tags.present ? tags.value : this.tags,
+    volumeCount: volumeCount ?? this.volumeCount,
+    chaptersPerVolume: chaptersPerVolume ?? this.chaptersPerVolume,
+    synopsis: synopsis.present ? synopsis.value : this.synopsis,
+    protagonistAbility: protagonistAbility.present
+        ? protagonistAbility.value
+        : this.protagonistAbility,
     status: status ?? this.status,
   );
   NovelBook copyWithCompanion(NovelBooksCompanion data) {
@@ -949,6 +1190,19 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
       targetWords: data.targetWords.present
           ? data.targetWords.value
           : this.targetWords,
+      audience: data.audience.present ? data.audience.value : this.audience,
+      workGenre: data.workGenre.present ? data.workGenre.value : this.workGenre,
+      tags: data.tags.present ? data.tags.value : this.tags,
+      volumeCount: data.volumeCount.present
+          ? data.volumeCount.value
+          : this.volumeCount,
+      chaptersPerVolume: data.chaptersPerVolume.present
+          ? data.chaptersPerVolume.value
+          : this.chaptersPerVolume,
+      synopsis: data.synopsis.present ? data.synopsis.value : this.synopsis,
+      protagonistAbility: data.protagonistAbility.present
+          ? data.protagonistAbility.value
+          : this.protagonistAbility,
       status: data.status.present ? data.status.value : this.status,
     );
   }
@@ -966,6 +1220,13 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
           ..write('outline: $outline, ')
           ..write('workType: $workType, ')
           ..write('targetWords: $targetWords, ')
+          ..write('audience: $audience, ')
+          ..write('workGenre: $workGenre, ')
+          ..write('tags: $tags, ')
+          ..write('volumeCount: $volumeCount, ')
+          ..write('chaptersPerVolume: $chaptersPerVolume, ')
+          ..write('synopsis: $synopsis, ')
+          ..write('protagonistAbility: $protagonistAbility, ')
           ..write('status: $status')
           ..write(')'))
         .toString();
@@ -983,6 +1244,13 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
     outline,
     workType,
     targetWords,
+    audience,
+    workGenre,
+    tags,
+    volumeCount,
+    chaptersPerVolume,
+    synopsis,
+    protagonistAbility,
     status,
   );
   @override
@@ -999,6 +1267,13 @@ class NovelBook extends DataClass implements Insertable<NovelBook> {
           other.outline == this.outline &&
           other.workType == this.workType &&
           other.targetWords == this.targetWords &&
+          other.audience == this.audience &&
+          other.workGenre == this.workGenre &&
+          other.tags == this.tags &&
+          other.volumeCount == this.volumeCount &&
+          other.chaptersPerVolume == this.chaptersPerVolume &&
+          other.synopsis == this.synopsis &&
+          other.protagonistAbility == this.protagonistAbility &&
           other.status == this.status);
 }
 
@@ -1013,6 +1288,13 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
   final Value<String?> outline;
   final Value<String> workType;
   final Value<int> targetWords;
+  final Value<String?> audience;
+  final Value<String?> workGenre;
+  final Value<String?> tags;
+  final Value<int> volumeCount;
+  final Value<int> chaptersPerVolume;
+  final Value<String?> synopsis;
+  final Value<String?> protagonistAbility;
   final Value<String> status;
   const NovelBooksCompanion({
     this.id = const Value.absent(),
@@ -1025,6 +1307,13 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     this.outline = const Value.absent(),
     this.workType = const Value.absent(),
     this.targetWords = const Value.absent(),
+    this.audience = const Value.absent(),
+    this.workGenre = const Value.absent(),
+    this.tags = const Value.absent(),
+    this.volumeCount = const Value.absent(),
+    this.chaptersPerVolume = const Value.absent(),
+    this.synopsis = const Value.absent(),
+    this.protagonistAbility = const Value.absent(),
     this.status = const Value.absent(),
   });
   NovelBooksCompanion.insert({
@@ -1038,6 +1327,13 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     this.outline = const Value.absent(),
     this.workType = const Value.absent(),
     this.targetWords = const Value.absent(),
+    this.audience = const Value.absent(),
+    this.workGenre = const Value.absent(),
+    this.tags = const Value.absent(),
+    this.volumeCount = const Value.absent(),
+    this.chaptersPerVolume = const Value.absent(),
+    this.synopsis = const Value.absent(),
+    this.protagonistAbility = const Value.absent(),
     this.status = const Value.absent(),
   }) : projectId = Value(projectId),
        title = Value(title);
@@ -1052,6 +1348,13 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     Expression<String>? outline,
     Expression<String>? workType,
     Expression<int>? targetWords,
+    Expression<String>? audience,
+    Expression<String>? workGenre,
+    Expression<String>? tags,
+    Expression<int>? volumeCount,
+    Expression<int>? chaptersPerVolume,
+    Expression<String>? synopsis,
+    Expression<String>? protagonistAbility,
     Expression<String>? status,
   }) {
     return RawValuesInsertable({
@@ -1065,6 +1368,13 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
       if (outline != null) 'outline': outline,
       if (workType != null) 'work_type': workType,
       if (targetWords != null) 'target_words': targetWords,
+      if (audience != null) 'audience': audience,
+      if (workGenre != null) 'work_genre': workGenre,
+      if (tags != null) 'tags': tags,
+      if (volumeCount != null) 'volume_count': volumeCount,
+      if (chaptersPerVolume != null) 'chapters_per_volume': chaptersPerVolume,
+      if (synopsis != null) 'synopsis': synopsis,
+      if (protagonistAbility != null) 'protagonist_ability': protagonistAbility,
       if (status != null) 'status': status,
     });
   }
@@ -1080,6 +1390,13 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     Value<String?>? outline,
     Value<String>? workType,
     Value<int>? targetWords,
+    Value<String?>? audience,
+    Value<String?>? workGenre,
+    Value<String?>? tags,
+    Value<int>? volumeCount,
+    Value<int>? chaptersPerVolume,
+    Value<String?>? synopsis,
+    Value<String?>? protagonistAbility,
     Value<String>? status,
   }) {
     return NovelBooksCompanion(
@@ -1093,6 +1410,13 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
       outline: outline ?? this.outline,
       workType: workType ?? this.workType,
       targetWords: targetWords ?? this.targetWords,
+      audience: audience ?? this.audience,
+      workGenre: workGenre ?? this.workGenre,
+      tags: tags ?? this.tags,
+      volumeCount: volumeCount ?? this.volumeCount,
+      chaptersPerVolume: chaptersPerVolume ?? this.chaptersPerVolume,
+      synopsis: synopsis ?? this.synopsis,
+      protagonistAbility: protagonistAbility ?? this.protagonistAbility,
       status: status ?? this.status,
     );
   }
@@ -1130,6 +1454,27 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
     if (targetWords.present) {
       map['target_words'] = Variable<int>(targetWords.value);
     }
+    if (audience.present) {
+      map['audience'] = Variable<String>(audience.value);
+    }
+    if (workGenre.present) {
+      map['work_genre'] = Variable<String>(workGenre.value);
+    }
+    if (tags.present) {
+      map['tags'] = Variable<String>(tags.value);
+    }
+    if (volumeCount.present) {
+      map['volume_count'] = Variable<int>(volumeCount.value);
+    }
+    if (chaptersPerVolume.present) {
+      map['chapters_per_volume'] = Variable<int>(chaptersPerVolume.value);
+    }
+    if (synopsis.present) {
+      map['synopsis'] = Variable<String>(synopsis.value);
+    }
+    if (protagonistAbility.present) {
+      map['protagonist_ability'] = Variable<String>(protagonistAbility.value);
+    }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
@@ -1149,6 +1494,13 @@ class NovelBooksCompanion extends UpdateCompanion<NovelBook> {
           ..write('outline: $outline, ')
           ..write('workType: $workType, ')
           ..write('targetWords: $targetWords, ')
+          ..write('audience: $audience, ')
+          ..write('workGenre: $workGenre, ')
+          ..write('tags: $tags, ')
+          ..write('volumeCount: $volumeCount, ')
+          ..write('chaptersPerVolume: $chaptersPerVolume, ')
+          ..write('synopsis: $synopsis, ')
+          ..write('protagonistAbility: $protagonistAbility, ')
           ..write('status: $status')
           ..write(')'))
         .toString();
@@ -1249,7 +1601,7 @@ class $ChaptersTable extends Chapters with TableInfo<$ChaptersTable, Chapter> {
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant('草稿'),
+    defaultValue: const Constant(ChapterStatuses.draft),
   );
   static const VerificationMeta _revisionMeta = const VerificationMeta(
     'revision',
@@ -12029,6 +12381,13 @@ typedef $$NovelBooksTableCreateCompanionBuilder = NovelBooksCompanion Function({
   Value<String?> outline,
   Value<String> workType,
   Value<int> targetWords,
+  Value<String?> audience,
+  Value<String?> workGenre,
+  Value<String?> tags,
+  Value<int> volumeCount,
+  Value<int> chaptersPerVolume,
+  Value<String?> synopsis,
+  Value<String?> protagonistAbility,
   Value<String> status,
 });
 typedef $$NovelBooksTableUpdateCompanionBuilder = NovelBooksCompanion Function({
@@ -12042,6 +12401,13 @@ typedef $$NovelBooksTableUpdateCompanionBuilder = NovelBooksCompanion Function({
   Value<String?> outline,
   Value<String> workType,
   Value<int> targetWords,
+  Value<String?> audience,
+  Value<String?> workGenre,
+  Value<String?> tags,
+  Value<int> volumeCount,
+  Value<int> chaptersPerVolume,
+  Value<String?> synopsis,
+  Value<String?> protagonistAbility,
   Value<String> status,
 });
 
@@ -12174,6 +12540,41 @@ class $$NovelBooksTableFilterComposer
 
   ColumnFilters<int> get targetWords => $composableBuilder(
     column: $table.targetWords,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get audience => $composableBuilder(
+    column: $table.audience,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get workGenre => $composableBuilder(
+    column: $table.workGenre,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tags => $composableBuilder(
+    column: $table.tags,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get volumeCount => $composableBuilder(
+    column: $table.volumeCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get chaptersPerVolume => $composableBuilder(
+    column: $table.chaptersPerVolume,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get synopsis => $composableBuilder(
+    column: $table.synopsis,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get protagonistAbility => $composableBuilder(
+    column: $table.protagonistAbility,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12335,6 +12736,41 @@ class $$NovelBooksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get audience => $composableBuilder(
+    column: $table.audience,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get workGenre => $composableBuilder(
+    column: $table.workGenre,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tags => $composableBuilder(
+    column: $table.tags,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get volumeCount => $composableBuilder(
+    column: $table.volumeCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get chaptersPerVolume => $composableBuilder(
+    column: $table.chaptersPerVolume,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get synopsis => $composableBuilder(
+    column: $table.synopsis,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get protagonistAbility => $composableBuilder(
+    column: $table.protagonistAbility,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnOrderings(column),
@@ -12401,6 +12837,33 @@ class $$NovelBooksTableAnnotationComposer
 
   GeneratedColumn<int> get targetWords => $composableBuilder(
     column: $table.targetWords,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get audience =>
+      $composableBuilder(column: $table.audience, builder: (column) => column);
+
+  GeneratedColumn<String> get workGenre =>
+      $composableBuilder(column: $table.workGenre, builder: (column) => column);
+
+  GeneratedColumn<String> get tags =>
+      $composableBuilder(column: $table.tags, builder: (column) => column);
+
+  GeneratedColumn<int> get volumeCount => $composableBuilder(
+    column: $table.volumeCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get chaptersPerVolume => $composableBuilder(
+    column: $table.chaptersPerVolume,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get synopsis =>
+      $composableBuilder(column: $table.synopsis, builder: (column) => column);
+
+  GeneratedColumn<String> get protagonistAbility => $composableBuilder(
+    column: $table.protagonistAbility,
     builder: (column) => column,
   );
 
@@ -12549,6 +13012,13 @@ class $$NovelBooksTableTableManager
                 Value<String?> outline = const Value.absent(),
                 Value<String> workType = const Value.absent(),
                 Value<int> targetWords = const Value.absent(),
+                Value<String?> audience = const Value.absent(),
+                Value<String?> workGenre = const Value.absent(),
+                Value<String?> tags = const Value.absent(),
+                Value<int> volumeCount = const Value.absent(),
+                Value<int> chaptersPerVolume = const Value.absent(),
+                Value<String?> synopsis = const Value.absent(),
+                Value<String?> protagonistAbility = const Value.absent(),
                 Value<String> status = const Value.absent(),
               }) => NovelBooksCompanion(
                 id: id,
@@ -12561,6 +13031,13 @@ class $$NovelBooksTableTableManager
                 outline: outline,
                 workType: workType,
                 targetWords: targetWords,
+                audience: audience,
+                workGenre: workGenre,
+                tags: tags,
+                volumeCount: volumeCount,
+                chaptersPerVolume: chaptersPerVolume,
+                synopsis: synopsis,
+                protagonistAbility: protagonistAbility,
                 status: status,
               ),
           createCompanionCallback:
@@ -12575,6 +13052,13 @@ class $$NovelBooksTableTableManager
                 Value<String?> outline = const Value.absent(),
                 Value<String> workType = const Value.absent(),
                 Value<int> targetWords = const Value.absent(),
+                Value<String?> audience = const Value.absent(),
+                Value<String?> workGenre = const Value.absent(),
+                Value<String?> tags = const Value.absent(),
+                Value<int> volumeCount = const Value.absent(),
+                Value<int> chaptersPerVolume = const Value.absent(),
+                Value<String?> synopsis = const Value.absent(),
+                Value<String?> protagonistAbility = const Value.absent(),
                 Value<String> status = const Value.absent(),
               }) => NovelBooksCompanion.insert(
                 id: id,
@@ -12587,6 +13071,13 @@ class $$NovelBooksTableTableManager
                 outline: outline,
                 workType: workType,
                 targetWords: targetWords,
+                audience: audience,
+                workGenre: workGenre,
+                tags: tags,
+                volumeCount: volumeCount,
+                chaptersPerVolume: chaptersPerVolume,
+                synopsis: synopsis,
+                protagonistAbility: protagonistAbility,
                 status: status,
               ),
           withReferenceMapper: (p0) => p0

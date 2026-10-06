@@ -3,6 +3,7 @@ import '../../agent/prompt_resolver.dart';
 import '../../core/json_values.dart';
 import '../../core/network/llm_provider_adapter.dart';
 import 'novel_models.dart';
+import 'novel_setup_draft.dart';
 
 /// AI 写小说各阶段 Agent：组合 skill 提示词 + LLM 调用 + 结构化解析。
 class NovelAgents {
@@ -12,6 +13,7 @@ class NovelAgents {
   final PromptResolver resolver;
 
   static const _planning = 'novel/planning.md';
+  static const _setupFields = 'novel/setup_fields.md';
   static const _chapterPlanning = 'novel/chapter_planning.md';
   static const _writing = 'novel/writing.md';
   static const _review = 'novel/review.md';
@@ -25,9 +27,11 @@ class NovelAgents {
     required ActiveLlm llm,
     required int bookId,
     String workType = '长篇',
+    String brief = '',
   }) async {
     final system = await resolver.resolveByBook(_planning, bookId: bookId);
     final typeNote = workType != '长篇' ? '\n【作品类型】$workType' : '';
+    final briefNote = brief.trim().isEmpty ? '' : '\n$brief';
     final reply = await adapter.chat(
       baseUrl: llm.baseUrl,
       apiKey: llm.apiKey,
@@ -36,12 +40,44 @@ class NovelAgents {
         (role: ChatRole.system, content: system),
         (
           role: ChatRole.user,
-          content: '【创意】$idea\n【题材】$genre$typeNote\n请按规则产出设定 JSON。',
+          content:
+              '【创意】$idea\n【题材】$genre$typeNote$briefNote\n'
+              '请按规则产出设定 JSON。',
         ),
       ],
       temperature: 0.7,
     );
     return SetupResult.fromJson(extractJsonObject(reply));
+  }
+
+  /// 生成基础设置的单个字段文本（作品名称 / 简介 / 角色信息 / 主角能力）。
+  ///
+  /// 返回 LLM 原文（已去首尾空白），由调用方决定是否覆盖表单内容。
+  Future<String> generateSetupField({
+    required SetupField field,
+    required String brief,
+    required ActiveLlm llm,
+    int? bookId,
+  }) async {
+    final system = await resolver.resolveByBook(_setupFields, bookId: bookId);
+    final context = brief.trim().isEmpty
+        ? '【基础设置】用户尚未填写'
+        : brief.trim();
+    final reply = await adapter.chat(
+      baseUrl: llm.baseUrl,
+      apiKey: llm.apiKey,
+      model: llm.modelId,
+      messages: [
+        (role: ChatRole.system, content: system),
+        (
+          role: ChatRole.user,
+          content:
+              '$context\n\n请生成【${field.label}】字段内容，只输出内容本身。',
+        ),
+      ],
+      temperature: 0.8,
+    );
+    return reply.trim();
   }
 
   // ---- 章节规划（Planner，P3-13） ----

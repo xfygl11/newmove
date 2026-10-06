@@ -19,6 +19,7 @@ class PromptResolver {
     'adaptation/source_and_script.md',
     'adaptation/screen_adaptation.md',
     'novel/planning.md',
+    'novel/setup_fields.md',
     'novel/writing.md',
     'novel/chapter_planning.md',
     'novel/review.md',

@@ -234,7 +234,7 @@ void main() {
     });
 
     test('PromptResolver.allSlots 与内置 skill 目录一一对应', () async {
-      expect(PromptResolver.allSlots, hasLength(12));
+      expect(PromptResolver.allSlots, hasLength(13));
       expect(PromptResolver.allSlots, contains('shot/storyboard.md'));
       expect(PromptResolver.allSlots, contains('novel/writing.md'));
       expect(PromptResolver.allSlots.toSet(), PromptResolver.allSlots.toSet());

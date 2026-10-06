@@ -131,9 +131,9 @@ void main() {
     });
   });
 
-  group('schema v12 结构', () {
+  group('schema v13 结构', () {
     test('剧本表已删除 aspect_ratio 与 language 死字段', () async {
-      expect(db.schemaVersion, 12);
+      expect(db.schemaVersion, 13);
 
       final rows = await db.customSelect('PRAGMA table_info(scripts)').get();
       final columns = rows.map((row) => row.data['name'] as String).toSet();

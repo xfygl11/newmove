@@ -34,6 +34,20 @@ class NovelBooks extends Table {
   TextColumn get workType => text().withDefault(const Constant('长篇'))();
   // M17 T19.5：每章目标字数，供写作与定稿字数门槛使用；0 表示不设门槛。
   IntColumn get targetWords => integer().withDefault(const Constant(2000))();
+  // M21 基础设置：核心受众（男频 / 女频 / 全性别）。
+  TextColumn get audience => text().nullable()();
+  // M21 基础设置：作品类型多选（JSON 字符串数组，含自定义项）。
+  TextColumn get workGenre => text().nullable()();
+  // M21 基础设置：作品标签 {personas: [], backgrounds: []}，各最多 5 个。
+  TextColumn get tags => text().nullable()();
+  // M21 章节规划：总卷数（1-20），0 表示未规划。
+  IntColumn get volumeCount => integer().withDefault(const Constant(0))();
+  // M21 章节规划：每卷章节数（1-50），0 表示未规划。
+  IntColumn get chaptersPerVolume => integer().withDefault(const Constant(0))();
+  // M21 作品简介（高级设置，可 AI 帮写）。
+  TextColumn get synopsis => text().nullable()();
+  // M21 主角能力 / 金手指设定（高级设置，可 AI 帮写）。
+  TextColumn get protagonistAbility => text().nullable()();
   TextColumn get status => text().withDefault(const Constant('草稿'))();
 }
 
