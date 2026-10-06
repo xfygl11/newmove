@@ -445,9 +445,53 @@ lib/
       「已全部核对」，未勾完显示「稍后再核对」——两种情况都能关闭，只提示不阻塞。
       相似度比较对象是「新写内容」与「续写前的既有正文」；词元数不足时返回
       **null 而不是 0**——0 会被误判为「完全无关」而错误触发全量重写建议；首次
-      写作无既有正文时跳过相似度检查、只做清单提示。阈值 0.35 与 `PromptGate`
-      的 0.75（查雷同）是同一量尺上的反向用法。
+       写作无既有正文时跳过相似度检查、只做清单提示。阈值 0.35 与 `PromptGate`
+       的 0.75（查雷同）是同一量尺上的反向用法。
 
+### 画面风格词表与作品形式约定（M21）
+
+- **画风存名不存文本**：`Scripts.artStyle` 只存风格短名（默认存 `null`，沿用
+  「空=默认」旧语义），完整提示词由 `script_models.dart` 的 `effectiveArtStyle`
+  按名解析——改词表即自动影响存量剧本，不用在库里重复存同一段长文本。词表单一
+  来源是 `lib/features/script/art_styles.dart` 的 `ArtStyleCatalog`（16 条，动漫 8
+  / 写实 4 / 三维 4），新增画风只改这一处 + 同步 `PromptGate.styleFamilies`。
+  画风词表是业务数据不是提示词规则，所以放 `lib/features/script/` 而不是
+  `assets/skills/`。
+- **历史自由文本原样透传，不静默丢用户写过的内容**：`promptOf` 命中不上词表时
+  按原文返回。唯一例外是词表化前的默认文案
+  `ArtStyleCatalog.legacyDefaultPrompt`（旧编辑器的「恢复默认」把短文案
+  `日式 2D 动画，干净线稿，柔和上色` 原样写进了库），经 `isDefaultOrEmpty`
+  按「未设置」处理，让默认画风升级后这批剧本跟着用新文案。
+- **画风提示词只能含本族关键词**：画风提示词会注入每条资产 / 分镜 / 视频提示词，
+  `PromptGate.styleFamilyOf` 的族判定按 `contains` 且**不看否定语境**，负向分句里
+  夹带的跨族词也会命中（实测：`pixar3d` 的「避免手绘墨线」被误判动漫族，改成
+  「避免粗黑墨线」）。`test/art_styles_test.dart` 逐条断言每条风格命中自己声明的
+  族，改提示词不补关键词该测试会红。`'赛璐璐'` 不加进动漫关键词（它出现在三维与
+  写实 prompt 的负向里），`'写实'` 单独也不是写实族关键词（只有 `真人实拍` /
+  `摄影写实` / `realistic`）；族判定顺序敏感（写实 → 动漫 → 三维 首个命中即返回）。
+- **默认值必须 const 可引用**：`ArtStyleCatalog.defaultPrompt` / `defaultName` 是
+  `static const String` 字面量，`defaultStyle` 由它们构造（const 表达式里不能用
+  `ArtStyle(x).name`，报 `const_eval_property_access`）；`VideoPromptBuilder` 的
+  `artStyle` 默认参数需要 const，不能改成 `final`。
+- **画风编辑器是选择式，历史自定义文案给提示不覆盖**：`_ArtStyleEditor` 按族分组
+  `ChoiceChip` + `SelectableText` 展示完整提示词；库里存的是未登记的历史自由文本
+  时给红色提示「选择画风会覆盖它」，但不主动覆盖。
+- **skill 模板引用【画面风格】原句，不再内联默认文案**：`asset_design.md` 与
+  `storyboard.md` 的模板与示例统一用 `{已确认风格}` 占位，规则写「原样引用、不改
+  写、不缩写、不自行补充风格描述」。业务代码与 skill 都不再出现默认画风字面量。
+- **作品形式（`workType`）与题材类型（`workTypes`）是两个字段**：前者是长篇 /
+  短篇 / 剧本 / 影游，后者是东方玄幻等题材。作品形式是必填项，
+  `NovelSetupDraft.briefText` 首行恒含 `【作品形式】`，这是
+  `NovelAgents.generateSetup` 删掉 `workType` 参数与 `【作品类型】` 行的原因——
+  同一份 briefText 已把形式带给 Planner，再拼一次是重复标签。
+- **作品形式只影响结构与篇幅，不改章节模型**：卷数 / 每卷章节的字段名与 DB 语义
+  不变，也不生成章节占位行；非长篇只在 UI hint（`_chapterPlanNote`）与
+  `planning.md` 里给读法（剧本按分集组读卷数、按场次数读每卷章节；影游按章节组 /
+  关卡）。`genreContext` 只在非默认形式时输出 `【作品形式】`（默认「长篇」不重复
+  标注，`test/novel_setup_test.dart` 有 `genreContext(empty) == ''` 的断言）。
+- **审校提示词不单独带作品形式**：`buildReviewPrompt` 的 `【作品类型】` 行已删
+  （该值几乎恒为「长篇」、`未设定` 分支是死代码），作品形式由 `genreContext`
+  承载——「作品类型」标签与题材类型撞名，模型会把两者当同一个东西。
 
 
 ---
