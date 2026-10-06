@@ -407,7 +407,8 @@ lib/
     - **`PromptOverrides` 覆盖按整段替换，不做局部合并**：局部合并需要插槽解析，
       语义太脆。三级顺序 项目级 > 全局级 > 内置 skill 原文，由
       `lib/agent/prompt_resolver.dart` 的 `PromptResolver.resolve` 统一解析，
-       `allSlots` 常量与 `assets/skills/` 目录一一对应（12 个）。
+        `allSlots` 常量与 `assets/skills/` 目录一一对应（13 个；M19 建立时为
+        12 个，`novel/setup_fields.md` 是后补的插槽）。
        覆盖列为空串时视为未覆盖、继续回落。项目删除时
        `CascadeDao.deleteProjectCascade` 按 `projectId` 清项目级覆盖，
        `scope='global'` 的行 `projectId` 为 null 天然被谓词排除、不误删。
