@@ -131,9 +131,9 @@ void main() {
     });
   });
 
-  group('schema v13 结构', () {
+  group('schema v14 结构', () {
     test('剧本表已删除 aspect_ratio 与 language 死字段', () async {
-      expect(db.schemaVersion, 13);
+      expect(db.schemaVersion, 14);
 
       final rows = await db.customSelect('PRAGMA table_info(scripts)').get();
       final columns = rows.map((row) => row.data['name'] as String).toSet();
@@ -243,6 +243,47 @@ void main() {
       );
       expect(PromptOverrideScopes.global, 'global');
       expect(PromptOverrideScopes.project, 'project');
+    });
+
+    test('M23 项目表新增项目级提示词开关，可空且默认未设置', () async {
+      final rows = await db
+          .customSelect('PRAGMA table_info(projects)')
+          .get();
+      final rowsMeta = rows
+          .where((r) => r.data['name'] == 'use_project_prompts')
+          .toList();
+      expect(rowsMeta, hasLength(1));
+      expect(rowsMeta.single.data['notnull'], 0);
+
+      final id = await db.projectDao.insertProject(
+        ProjectsCompanion.insert(name: 't'),
+      );
+      final project = await db.projectDao.findById(id);
+      expect(project?.useProjectPrompts, isNull);
+    });
+
+    test('M23 提示词版本表列集', () async {
+      final rows = await db
+          .customSelect('PRAGMA table_info(prompt_override_versions)')
+          .get();
+      expect(
+        rows.map((r) => r.data['name']).toSet(),
+        containsAll(['id', 'scope', 'project_id', 'slot_key', 'body', 'created_at']),
+      );
+      final projectMeta = rows
+          .where((r) => r.data['name'] == 'project_id')
+          .toList();
+      expect(projectMeta.single.data['notnull'], 0);
+    });
+
+    test('M23 全表清单含提示词版本表', () async {
+      final rows = await db.customSelect(
+        "SELECT name FROM sqlite_master WHERE type = 'table'",
+      ).get();
+      expect(
+        rows.map((r) => r.data['name'] as String),
+        contains('prompt_override_versions'),
+      );
     });
   });
 }

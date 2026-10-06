@@ -36,7 +36,32 @@ class SetupResult {
   }
 }
 
+/// 角色分档闭集词表（M23 T24.1）。
+///
+/// 对齐 shuohao-skills `novel-outline` 的 G1a-G1c 分档约束：主角组只有 1 人，
+/// 副角与工具人各有上限。不在词表内的值一律回落空串——写「未知」进库
+/// 会让 UI 渲染出「分档：未知」这种没有信息的行。
+abstract final class CharacterTiers {
+  CharacterTiers._();
+
+  static const lead = '主角';
+  static const support = '副角';
+  static const functional = '工具人';
+  static const other = '其他';
+
+  static const all = [lead, support, functional, other];
+
+  /// 各档人数上限，超了由 `CharacterGate.tier_cap` 提示。
+  static const caps = {lead: 1, support: 6, functional: 10};
+
+  /// 未登记的分档视为未分档，参与 `tier_missing` 而不是 `tier_cap`。
+  static bool isKnown(String? tier) => tier != null && all.contains(tier);
+}
+
 /// 角色设定。
+///
+/// 前五个字段是 M0 起的基础画像；后五个是 M23 T24.1 的画像补全，
+/// 全部可选、默认空串，存量数据缺字段时不报错。
 class CharacterSpec {
   const CharacterSpec({
     required this.name,
@@ -44,6 +69,11 @@ class CharacterSpec {
     required this.goal,
     required this.state,
     required this.relations,
+    this.tier = '',
+    this.arc = '',
+    this.evidenceQuotes = '',
+    this.voiceDesign = '',
+    this.performanceStyle = '',
   });
 
   final String name;
@@ -52,6 +82,21 @@ class CharacterSpec {
   final String state;
   final String relations;
 
+  /// 分档：主角 / 副角 / 工具人 / 其他（闭集，见 [CharacterTiers]）。
+  final String tier;
+
+  /// 人物弧光：起点 → 弧光 → 终点。
+  final String arc;
+
+  /// 原文逐字引文，多条用「；」分隔；供 `CharacterGate.evidence_unverified` 核对。
+  final String evidenceQuotes;
+
+  /// 音色设计提示词（音色 / 音高 / 语速 / 口音 / 情绪），TTS 输入，与图像提示词解耦。
+  final String voiceDesign;
+
+  /// 表演风格：动作习惯 / 反应节奏 / 情绪表达方式。
+  final String performanceStyle;
+
   factory CharacterSpec.fromJson(Map<String, dynamic> json) {
     return CharacterSpec(
       name: jsonString(json['name']),
@@ -59,6 +104,11 @@ class CharacterSpec {
       goal: jsonString(json['goal']),
       state: jsonString(json['state']),
       relations: jsonString(json['relations']),
+      tier: jsonString(json['tier']),
+      arc: jsonString(json['arc']),
+      evidenceQuotes: jsonString(json['evidenceQuotes']),
+      voiceDesign: jsonString(json['voiceDesign']),
+      performanceStyle: jsonString(json['performanceStyle']),
     );
   }
 
@@ -68,6 +118,11 @@ class CharacterSpec {
     'goal': goal,
     'state': state,
     'relations': relations,
+    'tier': tier,
+    'arc': arc,
+    'evidenceQuotes': evidenceQuotes,
+    'voiceDesign': voiceDesign,
+    'performanceStyle': performanceStyle,
   };
 }
 
@@ -136,6 +191,10 @@ class ReviewIssue {
 
   /// 本地校验命中时所在段落号（从 0 起）；null 表示未验证。
   final int? paragraphIndex;
+
+  /// 引文是否在正文中命中（三级降级匹配）。供质量门复用同一套规则。
+  static bool quoteInContent(String quote, String content) =>
+      _locateQuote(content, quote) != null;
 
   bool get isStructural => scope == 'structural';
 

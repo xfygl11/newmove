@@ -24,6 +24,8 @@ mixin _$CascadeDaoMixin on DatabaseAccessor<AppDatabase> {
   $GenerationAttemptsTable get generationAttempts =>
       attachedDatabase.generationAttempts;
   $PromptOverridesTable get promptOverrides => attachedDatabase.promptOverrides;
+  $PromptOverrideVersionsTable get promptOverrideVersions =>
+      attachedDatabase.promptOverrideVersions;
   CascadeDaoManager get managers => CascadeDaoManager(this);
 }
 
@@ -80,5 +82,10 @@ class CascadeDaoManager {
       $$PromptOverridesTableTableManager(
         _db.attachedDatabase,
         _db.promptOverrides,
+      );
+  $$PromptOverrideVersionsTableTableManager get promptOverrideVersions =>
+      $$PromptOverrideVersionsTableTableManager(
+        _db.attachedDatabase,
+        _db.promptOverrideVersions,
       );
 }

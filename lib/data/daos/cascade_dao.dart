@@ -13,8 +13,8 @@ part 'cascade_dao.g.dart';
 ///   → VideoTasks → Beats → Scenes → Shots → Assets → AssetRevisions
 ///   → ScriptRevisions → Scripts → TruthFiles → Chapters → NovelBooks → Projects
 ///
-/// PromptOverrides 与 GenerationAttempts 同层：两者只按 projectId 归属项目、
-/// 互不引用，谁先删都可以。
+/// PromptOverrides / PromptOverrideVersions 与 GenerationAttempts 同层：两者只按
+/// projectId 归属项目、互不引用，谁先删都可以。
 ///
 /// 业务层不得自行拼 `deleteByX` + 多次 `insert`，一律调用本 DAO 的复合方法；
 /// 复合方法内部开启事务，中间任一步失败整段回滚，不留中间态。
@@ -38,6 +38,7 @@ part 'cascade_dao.g.dart';
     AssetRevisions,
     GenerationAttempts,
     PromptOverrides,
+    PromptOverrideVersions,
   ],
 )
 class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
@@ -60,6 +61,10 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
       // 谓词天然排除，不重复删除。
       await (delete(
         promptOverrides,
+      )..where((t) => t.projectId.equals(projectId))).go();
+      // 覆盖的历史版本同一归属规则：清掉项目级的存档，全局级的保留。
+      await (delete(
+        promptOverrideVersions,
       )..where((t) => t.projectId.equals(projectId))).go();
       await (delete(projects)..where((t) => t.id.equals(projectId))).go();
     });

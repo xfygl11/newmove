@@ -75,6 +75,17 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     requiredDuringInsert: false,
     defaultValue: const Constant('草稿'),
   );
+  static const VerificationMeta _useProjectPromptsMeta = const VerificationMeta(
+    'useProjectPrompts',
+  );
+  @override
+  late final GeneratedColumn<int> useProjectPrompts = GeneratedColumn<int>(
+    'use_project_prompts',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -107,6 +118,7 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     genre,
     description,
     status,
+    useProjectPrompts,
     createdAt,
     updatedAt,
   ];
@@ -160,6 +172,15 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
       );
     }
+    if (data.containsKey('use_project_prompts')) {
+      context.handle(
+        _useProjectPromptsMeta,
+        useProjectPrompts.isAcceptableOrUnknown(
+          data['use_project_prompts']!,
+          _useProjectPromptsMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -205,6 +226,10 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
+      useProjectPrompts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}use_project_prompts'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -229,6 +254,7 @@ class Project extends DataClass implements Insertable<Project> {
   final String? genre;
   final String? description;
   final String status;
+  final int? useProjectPrompts;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Project({
@@ -238,6 +264,7 @@ class Project extends DataClass implements Insertable<Project> {
     this.genre,
     this.description,
     required this.status,
+    this.useProjectPrompts,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -256,6 +283,9 @@ class Project extends DataClass implements Insertable<Project> {
       map['description'] = Variable<String>(description);
     }
     map['status'] = Variable<String>(status);
+    if (!nullToAbsent || useProjectPrompts != null) {
+      map['use_project_prompts'] = Variable<int>(useProjectPrompts);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -275,6 +305,9 @@ class Project extends DataClass implements Insertable<Project> {
           ? const Value.absent()
           : Value(description),
       status: Value(status),
+      useProjectPrompts: useProjectPrompts == null && nullToAbsent
+          ? const Value.absent()
+          : Value(useProjectPrompts),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -292,6 +325,7 @@ class Project extends DataClass implements Insertable<Project> {
       genre: serializer.fromJson<String?>(json['genre']),
       description: serializer.fromJson<String?>(json['description']),
       status: serializer.fromJson<String>(json['status']),
+      useProjectPrompts: serializer.fromJson<int?>(json['useProjectPrompts']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -306,6 +340,7 @@ class Project extends DataClass implements Insertable<Project> {
       'genre': serializer.toJson<String?>(genre),
       'description': serializer.toJson<String?>(description),
       'status': serializer.toJson<String>(status),
+      'useProjectPrompts': serializer.toJson<int?>(useProjectPrompts),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -318,6 +353,7 @@ class Project extends DataClass implements Insertable<Project> {
     Value<String?> genre = const Value.absent(),
     Value<String?> description = const Value.absent(),
     String? status,
+    Value<int?> useProjectPrompts = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => Project(
@@ -327,6 +363,9 @@ class Project extends DataClass implements Insertable<Project> {
     genre: genre.present ? genre.value : this.genre,
     description: description.present ? description.value : this.description,
     status: status ?? this.status,
+    useProjectPrompts: useProjectPrompts.present
+        ? useProjectPrompts.value
+        : this.useProjectPrompts,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -340,6 +379,9 @@ class Project extends DataClass implements Insertable<Project> {
           ? data.description.value
           : this.description,
       status: data.status.present ? data.status.value : this.status,
+      useProjectPrompts: data.useProjectPrompts.present
+          ? data.useProjectPrompts.value
+          : this.useProjectPrompts,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -354,6 +396,7 @@ class Project extends DataClass implements Insertable<Project> {
           ..write('genre: $genre, ')
           ..write('description: $description, ')
           ..write('status: $status, ')
+          ..write('useProjectPrompts: $useProjectPrompts, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -368,6 +411,7 @@ class Project extends DataClass implements Insertable<Project> {
     genre,
     description,
     status,
+    useProjectPrompts,
     createdAt,
     updatedAt,
   );
@@ -381,6 +425,7 @@ class Project extends DataClass implements Insertable<Project> {
           other.genre == this.genre &&
           other.description == this.description &&
           other.status == this.status &&
+          other.useProjectPrompts == this.useProjectPrompts &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -392,6 +437,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
   final Value<String?> genre;
   final Value<String?> description;
   final Value<String> status;
+  final Value<int?> useProjectPrompts;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const ProjectsCompanion({
@@ -401,6 +447,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.genre = const Value.absent(),
     this.description = const Value.absent(),
     this.status = const Value.absent(),
+    this.useProjectPrompts = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -411,6 +458,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.genre = const Value.absent(),
     this.description = const Value.absent(),
     this.status = const Value.absent(),
+    this.useProjectPrompts = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   }) : name = Value(name);
@@ -421,6 +469,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Expression<String>? genre,
     Expression<String>? description,
     Expression<String>? status,
+    Expression<int>? useProjectPrompts,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -431,6 +480,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       if (genre != null) 'genre': genre,
       if (description != null) 'description': description,
       if (status != null) 'status': status,
+      if (useProjectPrompts != null) 'use_project_prompts': useProjectPrompts,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -443,6 +493,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Value<String?>? genre,
     Value<String?>? description,
     Value<String>? status,
+    Value<int?>? useProjectPrompts,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
   }) {
@@ -453,6 +504,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       genre: genre ?? this.genre,
       description: description ?? this.description,
       status: status ?? this.status,
+      useProjectPrompts: useProjectPrompts ?? this.useProjectPrompts,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -479,6 +531,9 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (useProjectPrompts.present) {
+      map['use_project_prompts'] = Variable<int>(useProjectPrompts.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -497,6 +552,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
           ..write('genre: $genre, ')
           ..write('description: $description, ')
           ..write('status: $status, ')
+          ..write('useProjectPrompts: $useProjectPrompts, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -11935,6 +11991,405 @@ class PromptOverridesCompanion extends UpdateCompanion<PromptOverride> {
   }
 }
 
+class $PromptOverrideVersionsTable extends PromptOverrideVersions
+    with TableInfo<$PromptOverrideVersionsTable, PromptOverrideVersion> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PromptOverrideVersionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _scopeMeta = const VerificationMeta('scope');
+  @override
+  late final GeneratedColumn<String> scope = GeneratedColumn<String>(
+    'scope',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _projectIdMeta = const VerificationMeta(
+    'projectId',
+  );
+  @override
+  late final GeneratedColumn<int> projectId = GeneratedColumn<int>(
+    'project_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _slotKeyMeta = const VerificationMeta(
+    'slotKey',
+  );
+  @override
+  late final GeneratedColumn<String> slotKey = GeneratedColumn<String>(
+    'slot_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    scope,
+    projectId,
+    slotKey,
+    body,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'prompt_override_versions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PromptOverrideVersion> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('scope')) {
+      context.handle(
+        _scopeMeta,
+        scope.isAcceptableOrUnknown(data['scope']!, _scopeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scopeMeta);
+    }
+    if (data.containsKey('project_id')) {
+      context.handle(
+        _projectIdMeta,
+        projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta),
+      );
+    }
+    if (data.containsKey('slot_key')) {
+      context.handle(
+        _slotKeyMeta,
+        slotKey.isAcceptableOrUnknown(data['slot_key']!, _slotKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_slotKeyMeta);
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bodyMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PromptOverrideVersion map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PromptOverrideVersion(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      scope: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scope'],
+      )!,
+      projectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}project_id'],
+      ),
+      slotKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}slot_key'],
+      )!,
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PromptOverrideVersionsTable createAlias(String alias) {
+    return $PromptOverrideVersionsTable(attachedDatabase, alias);
+  }
+}
+
+class PromptOverrideVersion extends DataClass
+    implements Insertable<PromptOverrideVersion> {
+  final int id;
+  final String scope;
+  final int? projectId;
+  final String slotKey;
+  final String body;
+  final DateTime createdAt;
+  const PromptOverrideVersion({
+    required this.id,
+    required this.scope,
+    this.projectId,
+    required this.slotKey,
+    required this.body,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['scope'] = Variable<String>(scope);
+    if (!nullToAbsent || projectId != null) {
+      map['project_id'] = Variable<int>(projectId);
+    }
+    map['slot_key'] = Variable<String>(slotKey);
+    map['body'] = Variable<String>(body);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  PromptOverrideVersionsCompanion toCompanion(bool nullToAbsent) {
+    return PromptOverrideVersionsCompanion(
+      id: Value(id),
+      scope: Value(scope),
+      projectId: projectId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(projectId),
+      slotKey: Value(slotKey),
+      body: Value(body),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory PromptOverrideVersion.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PromptOverrideVersion(
+      id: serializer.fromJson<int>(json['id']),
+      scope: serializer.fromJson<String>(json['scope']),
+      projectId: serializer.fromJson<int?>(json['projectId']),
+      slotKey: serializer.fromJson<String>(json['slotKey']),
+      body: serializer.fromJson<String>(json['body']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'scope': serializer.toJson<String>(scope),
+      'projectId': serializer.toJson<int?>(projectId),
+      'slotKey': serializer.toJson<String>(slotKey),
+      'body': serializer.toJson<String>(body),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  PromptOverrideVersion copyWith({
+    int? id,
+    String? scope,
+    Value<int?> projectId = const Value.absent(),
+    String? slotKey,
+    String? body,
+    DateTime? createdAt,
+  }) => PromptOverrideVersion(
+    id: id ?? this.id,
+    scope: scope ?? this.scope,
+    projectId: projectId.present ? projectId.value : this.projectId,
+    slotKey: slotKey ?? this.slotKey,
+    body: body ?? this.body,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  PromptOverrideVersion copyWithCompanion(
+    PromptOverrideVersionsCompanion data,
+  ) {
+    return PromptOverrideVersion(
+      id: data.id.present ? data.id.value : this.id,
+      scope: data.scope.present ? data.scope.value : this.scope,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
+      slotKey: data.slotKey.present ? data.slotKey.value : this.slotKey,
+      body: data.body.present ? data.body.value : this.body,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PromptOverrideVersion(')
+          ..write('id: $id, ')
+          ..write('scope: $scope, ')
+          ..write('projectId: $projectId, ')
+          ..write('slotKey: $slotKey, ')
+          ..write('body: $body, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, scope, projectId, slotKey, body, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PromptOverrideVersion &&
+          other.id == this.id &&
+          other.scope == this.scope &&
+          other.projectId == this.projectId &&
+          other.slotKey == this.slotKey &&
+          other.body == this.body &&
+          other.createdAt == this.createdAt);
+}
+
+class PromptOverrideVersionsCompanion
+    extends UpdateCompanion<PromptOverrideVersion> {
+  final Value<int> id;
+  final Value<String> scope;
+  final Value<int?> projectId;
+  final Value<String> slotKey;
+  final Value<String> body;
+  final Value<DateTime> createdAt;
+  const PromptOverrideVersionsCompanion({
+    this.id = const Value.absent(),
+    this.scope = const Value.absent(),
+    this.projectId = const Value.absent(),
+    this.slotKey = const Value.absent(),
+    this.body = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  PromptOverrideVersionsCompanion.insert({
+    this.id = const Value.absent(),
+    required String scope,
+    this.projectId = const Value.absent(),
+    required String slotKey,
+    required String body,
+    this.createdAt = const Value.absent(),
+  }) : scope = Value(scope),
+       slotKey = Value(slotKey),
+       body = Value(body);
+  static Insertable<PromptOverrideVersion> custom({
+    Expression<int>? id,
+    Expression<String>? scope,
+    Expression<int>? projectId,
+    Expression<String>? slotKey,
+    Expression<String>? body,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (scope != null) 'scope': scope,
+      if (projectId != null) 'project_id': projectId,
+      if (slotKey != null) 'slot_key': slotKey,
+      if (body != null) 'body': body,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  PromptOverrideVersionsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? scope,
+    Value<int?>? projectId,
+    Value<String>? slotKey,
+    Value<String>? body,
+    Value<DateTime>? createdAt,
+  }) {
+    return PromptOverrideVersionsCompanion(
+      id: id ?? this.id,
+      scope: scope ?? this.scope,
+      projectId: projectId ?? this.projectId,
+      slotKey: slotKey ?? this.slotKey,
+      body: body ?? this.body,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (scope.present) {
+      map['scope'] = Variable<String>(scope.value);
+    }
+    if (projectId.present) {
+      map['project_id'] = Variable<int>(projectId.value);
+    }
+    if (slotKey.present) {
+      map['slot_key'] = Variable<String>(slotKey.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PromptOverrideVersionsCompanion(')
+          ..write('id: $id, ')
+          ..write('scope: $scope, ')
+          ..write('projectId: $projectId, ')
+          ..write('slotKey: $slotKey, ')
+          ..write('body: $body, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -11966,6 +12421,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PromptOverridesTable promptOverrides = $PromptOverridesTable(
     this,
   );
+  late final $PromptOverrideVersionsTable promptOverrideVersions =
+      $PromptOverrideVersionsTable(this);
   late final ProjectDao projectDao = ProjectDao(this as AppDatabase);
   late final NovelDao novelDao = NovelDao(this as AppDatabase);
   late final CascadeDao cascadeDao = CascadeDao(this as AppDatabase);
@@ -12016,6 +12473,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     assetRevisions,
     generationAttempts,
     promptOverrides,
+    promptOverrideVersions,
   ];
 }
 
@@ -12026,6 +12484,7 @@ typedef $$ProjectsTableCreateCompanionBuilder = ProjectsCompanion Function({
   Value<String?> genre,
   Value<String?> description,
   Value<String> status,
+  Value<int?> useProjectPrompts,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -12036,6 +12495,7 @@ typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
   Value<String?> genre,
   Value<String?> description,
   Value<String> status,
+  Value<int?> useProjectPrompts,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
@@ -12099,6 +12559,11 @@ class $$ProjectsTableFilterComposer
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get useProjectPrompts => $composableBuilder(
+    column: $table.useProjectPrompts,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12177,6 +12642,11 @@ class $$ProjectsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get useProjectPrompts => $composableBuilder(
+    column: $table.useProjectPrompts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -12216,6 +12686,11 @@ class $$ProjectsTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get useProjectPrompts => $composableBuilder(
+    column: $table.useProjectPrompts,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -12283,6 +12758,7 @@ class $$ProjectsTableTableManager
                 Value<String?> genre = const Value.absent(),
                 Value<String?> description = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<int?> useProjectPrompts = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => ProjectsCompanion(
@@ -12292,6 +12768,7 @@ class $$ProjectsTableTableManager
                 genre: genre,
                 description: description,
                 status: status,
+                useProjectPrompts: useProjectPrompts,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -12303,6 +12780,7 @@ class $$ProjectsTableTableManager
                 Value<String?> genre = const Value.absent(),
                 Value<String?> description = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<int?> useProjectPrompts = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => ProjectsCompanion.insert(
@@ -12312,6 +12790,7 @@ class $$ProjectsTableTableManager
                 genre: genre,
                 description: description,
                 status: status,
+                useProjectPrompts: useProjectPrompts,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -21184,6 +21663,250 @@ typedef $$PromptOverridesTableProcessedTableManager =
       PromptOverride,
       PrefetchHooks Function()
     >;
+typedef $$PromptOverrideVersionsTableCreateCompanionBuilder =
+    PromptOverrideVersionsCompanion Function({
+      Value<int> id,
+      required String scope,
+      Value<int?> projectId,
+      required String slotKey,
+      required String body,
+      Value<DateTime> createdAt,
+    });
+typedef $$PromptOverrideVersionsTableUpdateCompanionBuilder =
+    PromptOverrideVersionsCompanion Function({
+      Value<int> id,
+      Value<String> scope,
+      Value<int?> projectId,
+      Value<String> slotKey,
+      Value<String> body,
+      Value<DateTime> createdAt,
+    });
+
+class $$PromptOverrideVersionsTableFilterComposer
+    extends Composer<_$AppDatabase, $PromptOverrideVersionsTable> {
+  $$PromptOverrideVersionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scope => $composableBuilder(
+    column: $table.scope,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get projectId => $composableBuilder(
+    column: $table.projectId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get slotKey => $composableBuilder(
+    column: $table.slotKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PromptOverrideVersionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PromptOverrideVersionsTable> {
+  $$PromptOverrideVersionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scope => $composableBuilder(
+    column: $table.scope,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get projectId => $composableBuilder(
+    column: $table.projectId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get slotKey => $composableBuilder(
+    column: $table.slotKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PromptOverrideVersionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PromptOverrideVersionsTable> {
+  $$PromptOverrideVersionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get scope =>
+      $composableBuilder(column: $table.scope, builder: (column) => column);
+
+  GeneratedColumn<int> get projectId =>
+      $composableBuilder(column: $table.projectId, builder: (column) => column);
+
+  GeneratedColumn<String> get slotKey =>
+      $composableBuilder(column: $table.slotKey, builder: (column) => column);
+
+  GeneratedColumn<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$PromptOverrideVersionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PromptOverrideVersionsTable,
+          PromptOverrideVersion,
+          $$PromptOverrideVersionsTableFilterComposer,
+          $$PromptOverrideVersionsTableOrderingComposer,
+          $$PromptOverrideVersionsTableAnnotationComposer,
+          $$PromptOverrideVersionsTableCreateCompanionBuilder,
+          $$PromptOverrideVersionsTableUpdateCompanionBuilder,
+          (
+            PromptOverrideVersion,
+            BaseReferences<
+              _$AppDatabase,
+              $PromptOverrideVersionsTable,
+              PromptOverrideVersion
+            >,
+          ),
+          PromptOverrideVersion,
+          PrefetchHooks Function()
+        > {
+  $$PromptOverrideVersionsTableTableManager(
+    _$AppDatabase db,
+    $PromptOverrideVersionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PromptOverrideVersionsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$PromptOverrideVersionsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$PromptOverrideVersionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> scope = const Value.absent(),
+                Value<int?> projectId = const Value.absent(),
+                Value<String> slotKey = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => PromptOverrideVersionsCompanion(
+                id: id,
+                scope: scope,
+                projectId: projectId,
+                slotKey: slotKey,
+                body: body,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String scope,
+                Value<int?> projectId = const Value.absent(),
+                required String slotKey,
+                required String body,
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => PromptOverrideVersionsCompanion.insert(
+                id: id,
+                scope: scope,
+                projectId: projectId,
+                slotKey: slotKey,
+                body: body,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $PromptOverrideVersionsTable,
+                    PromptOverrideVersion
+                  >(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $PromptOverrideVersionsTable,
+                    PromptOverrideVersion
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PromptOverrideVersionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PromptOverrideVersionsTable,
+      PromptOverrideVersion,
+      $$PromptOverrideVersionsTableFilterComposer,
+      $$PromptOverrideVersionsTableOrderingComposer,
+      $$PromptOverrideVersionsTableAnnotationComposer,
+      $$PromptOverrideVersionsTableCreateCompanionBuilder,
+      $$PromptOverrideVersionsTableUpdateCompanionBuilder,
+      (
+        PromptOverrideVersion,
+        BaseReferences<
+          _$AppDatabase,
+          $PromptOverrideVersionsTable,
+          PromptOverrideVersion
+        >,
+      ),
+      PromptOverrideVersion,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -21226,4 +21949,9 @@ class $AppDatabaseManager {
       $$GenerationAttemptsTableTableManager(_db, _db.generationAttempts);
   $$PromptOverridesTableTableManager get promptOverrides =>
       $$PromptOverridesTableTableManager(_db, _db.promptOverrides);
+  $$PromptOverrideVersionsTableTableManager get promptOverrideVersions =>
+      $$PromptOverrideVersionsTableTableManager(
+        _db,
+        _db.promptOverrideVersions,
+      );
 }

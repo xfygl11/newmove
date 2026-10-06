@@ -5,6 +5,8 @@ part of 'prompt_override_dao.dart';
 // ignore_for_file: type=lint
 mixin _$PromptOverrideDaoMixin on DatabaseAccessor<AppDatabase> {
   $PromptOverridesTable get promptOverrides => attachedDatabase.promptOverrides;
+  $PromptOverrideVersionsTable get promptOverrideVersions =>
+      attachedDatabase.promptOverrideVersions;
   $ProjectsTable get projects => attachedDatabase.projects;
   $NovelBooksTable get novelBooks => attachedDatabase.novelBooks;
   PromptOverrideDaoManager get managers => PromptOverrideDaoManager(this);
@@ -17,6 +19,11 @@ class PromptOverrideDaoManager {
       $$PromptOverridesTableTableManager(
         _db.attachedDatabase,
         _db.promptOverrides,
+      );
+  $$PromptOverrideVersionsTableTableManager get promptOverrideVersions =>
+      $$PromptOverrideVersionsTableTableManager(
+        _db.attachedDatabase,
+        _db.promptOverrideVersions,
       );
   $$ProjectsTableTableManager get projects =>
       $$ProjectsTableTableManager(_db.attachedDatabase, _db.projects);

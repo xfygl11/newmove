@@ -234,9 +234,10 @@ void main() {
     });
 
     test('PromptResolver.allSlots 与内置 skill 目录一一对应', () async {
-      expect(PromptResolver.allSlots, hasLength(13));
+      expect(PromptResolver.allSlots, hasLength(14));
       expect(PromptResolver.allSlots, contains('shot/storyboard.md'));
       expect(PromptResolver.allSlots, contains('novel/writing.md'));
+      expect(PromptResolver.allSlots, contains('novel/voice_design.md'));
       expect(PromptResolver.allSlots.toSet(), PromptResolver.allSlots.toSet());
     });
   });

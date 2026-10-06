@@ -367,7 +367,7 @@ lib/
       **禁止自动落库**——否则每次重绘写一条，台账被刷爆；只允许经
       `GateIssueList` 的「记一次」按钮显式触发。写入失败只
       `appLog('gate_record', …)` 并返回 false，不阻塞。
-     - **M19 / M22 校验码登记表**（新增校验码先登记再实现，对齐既有五条
+      - **M19 / M22 / M23 校验码登记表**（新增校验码先登记再实现，对齐既有五条
       `SegmentBudget` 校验码约定）：
       - `DurationGate`（`lib/features/script/duration_gate.dart`）：
         `line_too_long`（error，单句台词 > 35 字，一口说不完）、
@@ -412,18 +412,47 @@ lib/
         倒流（warn）、未被任何段认领（warn）。共用一个门码因为修法是同一个
         动作（改段落的 `beatRefs`）。节拍顺序走 `SkeletonGate.beatOrder`
         （按 `E##` 数字升序，无法解析的排在后面）。
-      - `ScriptGate`（`lib/features/script/script_gate.dart`，场次侧）：
-        `has_action`（warn，`Scenes.action` 为空，纯对话场次让下游分镜图只剩人物
-        与台词）、
-        `action_prose`（warn，动作字段里出现对话引号，台词必须进 `dialogue`）、
-        `speaker_unknown`（warn，说话人不在本场 `characters` 里；VO / OS 豁免，
-        出场名单为空时跳过）。
-       - 统一结果类型 `GateIssue` / `GateSeverity` 在 `lib/core/gate_issue.dart`，
-         `noteLine` 给确认框 `note` 用；与 `SegmentBudgetIssue` 同型但字段语义不同，
-         不合并。
-        - `SegmentBudget` 新增 `under_limit`（warn，段时长 < `minSegmentMs`（3000ms））。
-          下界是固定常量、不随 `modelVersion` 变：下界是内容约束，上界才是能力约束。
-          `durationMs == 0` 表示未填，按「缺字段照常通过」跳过。
+       - `ScriptGate`（`lib/features/script/script_gate.dart`，场次侧）：
+         `has_action`（warn，`Scenes.action` 为空，纯对话场次让下游分镜图只剩人物
+         与台词）、
+         `action_prose`（warn，动作字段里出现对话引号，台词必须进 `dialogue`）、
+         `speaker_unknown`（warn，说话人不在本场 `characters` 里；VO / OS 豁免，
+         出场名单为空时跳过）。
+       - `CharacterGate`（`lib/features/novel/character_gate.dart`，角色画像侧）：
+         `tier_missing`（warn，角色未标分档；分档是写作前的规模约束，没有它无法
+         判断主角组是否超员）、
+         `tier_cap`（warn，分档人数超上限：主角 >1 / 副角 >6 / 工具人 >10，
+         对齐 shuohao-skills `novel-outline` 的 G1a-G1c；未知分档不计入计数，
+         由 `tier_missing` 单独提示；「其他」无上限）、
+         `evidence_unverified`（warn，角色引文未在章节正文命中，无法定位证据；
+         匹配复用 `ReviewIssue.verifyQuotes` 的三级降级，不采信 LLM 自报位置；
+         未命中条目保留并提示，不删除；正文去空白为空时整门跳过，按
+         「缺数据照常通过」处理）。
+         三条全 warn：分档上限与未标分档都不改库、不拦生成。
+         引文核对的正文定位入口是 `ReviewIssue.quoteInContent` 静态助手，
+         复用私有 `_locateQuote`，不为质量门另写一套匹配逻辑。
+        - 统一结果类型 `GateIssue` / `GateSeverity` 在 `lib/core/gate_issue.dart`，
+          `noteLine` 给确认框 `note` 用；与 `SegmentBudgetIssue` 同型但字段语义不同，
+          不合并。
+         - `SegmentBudget` 新增 `under_limit`（warn，段时长 < `minSegmentMs`（3000ms））。
+           下界是固定常量、不随 `modelVersion` 变：下界是内容约束，上界才是能力约束。
+           `durationMs == 0` 表示未填，按「缺字段照常通过」跳过。
+     - **提示词覆盖的版本历史（M23）**：`PromptOverrideVersions` 只追加不修改，
+       `PromptOverrideDao.upsert` 包在事务里，在改正文**之前**把旧 body 存一行；
+       新建覆盖不存版本（没有旧值可留），文本与旧值相同时也不存
+       （无变化不制造版本）。版本行按 `scope + slotKey + projectId` 归组，
+       与覆盖行同粒度，全局级行的 `projectId` 为 null。
+       「回退」= 取某历史版本 body 再走一次 `upsert`，因此回退本身又产生
+       一条新版本，历史链不回溯删除——回退到 v1 后想回到 v2，v2 仍在链上。
+       取不到版本行抛 `ArgumentError`，不静默返回空。
+     - **项目级提示词开关**：`Projects.useProjectPrompts` 用
+       `integer().nullable()` 写 0/1，**`null`（存量项目）等价开启**——升级不能
+       把用户已经写好的项目级覆盖静默关掉。`PromptResolver.resolve` 与
+       `findOverride` 都要查开关，后者不查会让设置页显示「已自定义」而实际不生效。
+       关闭只影响解析，不影响已写入的覆盖行，也不影响版本历史列表
+       （历史是审计数据，不该被开关挡住）。
+       `PromptResolver.allSlots` 与 `assets/skills/` 目录一一对应（M23 起 14 个，
+       新增 `novel/voice_design.md`），`test/skill_loader_test.dart` 有双向守卫。
     - **下游产物失效标记必须覆盖 `Scenes` 表行，不能覆盖 `Scripts.content`**：
       场次编辑走 `updateScene` 只写 `Scenes` 表，而提案确认只改 `content` 里的
       `proposals`、不重写场次行，不该让下游失效。指纹按 `seq` 升序参与、剔除

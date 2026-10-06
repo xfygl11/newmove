@@ -12,6 +12,11 @@ class Projects extends Table {
   TextColumn get description => text().nullable()();
   // 状态：草稿 / 进行中 / 完结。
   TextColumn get status => text().withDefault(const Constant('草稿'))();
+  // M23 T24.5：是否使用项目级提示词覆盖。nullable Boolean，null 等价于开启
+  // ——存量项目没有这列值，行为与升级前一致，不能被误读成「已关闭」。
+  // M23 T24.5：是否使用项目级提示词覆盖，nullable Int（0 / 1），null 等价于
+  // 开启——存量项目没有这列值，行为与升级前一致，不能被误读成「已关闭」。
+  IntColumn get useProjectPrompts => integer().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
@@ -428,4 +433,30 @@ class PromptOverrides extends Table {
   // 覆盖全文。
   TextColumn get body => text()();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// 提示词覆盖的版本历史（M23 T24.4）。
+///
+/// 覆盖按整段替换，`PromptOverrides` 表本身没有历史——改坏了回不去。
+/// 每次改动正文**之前**把旧 body 存一行到这张表，实现「回退到上一次」。
+///
+/// 版本行只追加、不修改、不删除。新建覆盖不产生版本行（没有旧值可留）；
+/// 覆盖文本与旧值相同时也不产生（无变化不制造版本）。
+/// 「回退」= 取某历史版本的 body 再走一次 upsert，因此回退本身又产生一条
+/// 新版本，历史链不回溯删除——回退到 v2 后想回到 v3，v3 还在链上。
+///
+/// 列名与 [PromptOverrides] 对齐，不用 `key` / `text`（drift 2.35.1 的
+/// `ColumnParser` 会崩，见 `PromptOverrides` 的说明）。
+@DataClassName('PromptOverrideVersion')
+class PromptOverrideVersions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // 作用域：global / project，与 PromptOverrides.scope 同值。
+  TextColumn get scope => text()();
+  // 归属项目；scope == 'project' 时必填。
+  IntColumn get projectId => integer().nullable()();
+  // 提示词键，与 PromptOverrides.slotKey 同值。
+  TextColumn get slotKey => text()();
+  // 该版本被覆盖之前的正文。
+  TextColumn get body => text()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }

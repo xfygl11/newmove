@@ -18,6 +18,7 @@ class NovelAgents {
   static const _writing = 'novel/writing.md';
   static const _review = 'novel/review.md';
   static const _settling = 'novel/settling.md';
+  static const _voiceDesign = 'novel/voice_design.md';
 
   // ---- 设定生成（Planner + Architect） ----
 
@@ -74,6 +75,42 @@ class NovelAgents {
         ),
       ],
       temperature: 0.8,
+    );
+    return reply.trim();
+  }
+
+  // ---- 角色音色设计（M23 T24.3） ----
+
+  /// 为单个角色生成音色提示词（`voiceDesign` 字段）。
+  ///
+  /// 只产出音色描述文本，由调用方决定是否写回角色设定。音色是 TTS 输入，
+  /// 与角色四视图提示词解耦，所以单独一个 skill。
+  Future<String> designVoice({
+    required CharacterSpec character,
+    required String context,
+    required ActiveLlm llm,
+    int? bookId,
+  }) async {
+    final system = await resolver.resolveByBook(_voiceDesign, bookId: bookId);
+    final reply = await adapter.chat(
+      baseUrl: llm.baseUrl,
+      apiKey: llm.apiKey,
+      model: llm.modelId,
+      messages: [
+        (role: ChatRole.system, content: system),
+        (
+          role: ChatRole.user,
+          content:
+              '【角色】${character.name}\n'
+              '【定位】${character.role}\n'
+              '【目标】${character.goal}\n'
+              '【当前状态】${character.state}\n'
+              '【表演风格】${character.performanceStyle}\n'
+              '$context\n\n'
+              '请为该角色设计音色。',
+        ),
+      ],
+      temperature: 0.7,
     );
     return reply.trim();
   }

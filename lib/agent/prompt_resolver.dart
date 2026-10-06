@@ -24,6 +24,7 @@ class PromptResolver {
     'novel/chapter_planning.md',
     'novel/review.md',
     'novel/settling.md',
+    'novel/voice_design.md',
     'skeleton/beat_parsing.md',
     'skeleton/asset_states.md',
     'asset/asset_design.md',
@@ -32,8 +33,11 @@ class PromptResolver {
   ];
 
   /// 解析某插槽当前可用的提示词全文。
+  ///
+  /// 项目级覆盖受 `Projects.useProjectPrompts` 开关控制：关闭时跳过项目级，
+  /// 直接走全局与内置——用于「这个项目只想用统一的全局提示词」。
   Future<String> resolve(String relativePath, {int? projectId}) async {
-    if (projectId != null) {
+    if (projectId != null && await dao.projectPromptsEnabled(projectId)) {
       final project = await dao.find(
         PromptOverrideScopes.project,
         relativePath,
@@ -64,18 +68,24 @@ class PromptResolver {
   }
 
   /// 当前插槽是否已被覆盖（用于设置页展示「已自定义」标记）。
+  ///
+  /// 同样遵循项目级开关：关闭时项目级覆盖不生效，也就不该标「已自定义」。
   Future<PromptOverride?> findOverride(String relativePath, {int? projectId}) {
-    if (projectId != null) {
-      final project = dao.find(
+    if (projectId == null) {
+      return dao.find(PromptOverrideScopes.global, relativePath);
+    }
+    return dao.projectPromptsEnabled(projectId).then((enabled) {
+      if (!enabled) {
+        return dao.find(PromptOverrideScopes.global, relativePath);
+      }
+      return dao.find(
         PromptOverrideScopes.project,
         relativePath,
         projectId: projectId,
-      );
-      return project.then((row) {
+      ).then((row) {
         if (row != null) return row;
         return dao.find(PromptOverrideScopes.global, relativePath);
       });
-    }
-    return dao.find(PromptOverrideScopes.global, relativePath);
+    });
   }
 }

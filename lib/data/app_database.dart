@@ -46,6 +46,7 @@ part 'app_database.g.dart';
     AssetRevisions,
     GenerationAttempts,
     PromptOverrides,
+    PromptOverrideVersions,
   ],
   daos: [
     ProjectDao,
@@ -76,7 +77,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -174,6 +175,13 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(novelBooks, novelBooks.chaptersPerVolume);
         await m.addColumn(novelBooks, novelBooks.synopsis);
         await m.addColumn(novelBooks, novelBooks.protagonistAbility);
+      }
+      if (from < 14) {
+        // M23：提示词覆盖的版本历史。覆盖按整段替换、改动直接落库，用户改坏
+        // 提示词后没有回退路径；新增历史表在改动前存旧正文，只追加不修改。
+        // Projects.useProjectPrompts 让用户关掉项目级覆盖、只用全局与内置。
+        await m.createTable(promptOverrideVersions);
+        await m.addColumn(projects, projects.useProjectPrompts);
       }
     },
     beforeOpen: (details) async {
