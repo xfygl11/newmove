@@ -47,7 +47,7 @@ void main() {
   // 章节与伏笔状态不经 StatusBadge，各有自己的颜色映射，
   // 但仍要求登记在单一状态表里，避免又长出一套字面量分叉。
   test('StatusKinds 覆盖章节与伏笔的展示状态', () {
-    final chapterStatuses = ['草稿', '审校中', '定稿'];
+    final chapterStatuses = ChapterStatuses.all;
     final hookLabels = [
       HookStates.label('open'),
       HookStates.label('progressing'),

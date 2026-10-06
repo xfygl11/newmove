@@ -48,7 +48,7 @@ class Chapters extends Table {
   TextColumn get content => text().nullable()();
   IntColumn get wordCount => integer().withDefault(const Constant(0))();
   // 状态：草稿 / 审校中 / 定稿。
-  TextColumn get status => text().withDefault(const Constant('草稿'))();
+  TextColumn get status => text().withDefault(const Constant(ChapterStatuses.draft))();
   IntColumn get revision => integer().withDefault(const Constant(1))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();

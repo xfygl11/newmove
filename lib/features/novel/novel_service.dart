@@ -134,6 +134,51 @@ class NovelService {
 
   // ---- 章节写作（T1.3） ----
 
+  /// 上一章结尾片段默认字数。
+  ///
+  /// 上一章未定稿时 TruthFile 里没有它，不注入这段 Writer 就完全看不到
+  /// 上一章写了什么，第二章必然接不上。
+  static const int previousTailChars = 1200;
+
+  /// 上一章信息，供写作上下文注入与确认框说明。
+  ///
+  /// 按 seq 找小于 [chapterNumber] 的最大一章，不做内容判断——
+  /// 有没有正文由 [tail] 是否为空体现。
+  Future<({int seq, String title, String status, String tail})?>
+      previousChapter(int bookId, int chapterNumber) async {
+    Chapter? prev;
+    for (final c in await novelDao.listChapters(bookId)) {
+      if (c.seq < chapterNumber && (prev == null || c.seq > prev.seq)) {
+        prev = c;
+      }
+    }
+    if (prev == null) return null;
+    return (
+      seq: prev.seq,
+      title: prev.title,
+      status: prev.status,
+      tail: _tailOf(prev.content ?? '', previousTailChars),
+    );
+  }
+
+  /// 取正文结尾片段；切点落在代理对中间时回退，避免产出无法 UTF-8 编码的串。
+  static String _tailOf(String content, int chars) {
+    final text = content.trim();
+    if (text.isEmpty || text.length <= chars) return text;
+    var start = text.length - chars;
+    final code = text.codeUnitAt(start);
+    if (code >= 0xDC00 && code <= 0xDFFF) start++;
+    return text.substring(start);
+  }
+
+  /// 上一章结尾提示词条块，无前文返回空串。
+  static String _tailBlock(
+    ({int seq, String status, String tail, String title})? previous,
+  ) {
+    if (previous == null || previous.tail.isEmpty) return '';
+    return '【第 ${previous.seq} 章结尾（续写起点，已省略前文）】\n${previous.tail}\n\n';
+  }
+
   /// 构建写作 prompt 并返回流式正文。
   ///
   /// [chapterPlan] 为 P3-13 多 Agent 协作的 Planner 产出（可选），
@@ -152,7 +197,7 @@ class NovelService {
       chapterNumber: chapterNumber,
       targetWords: targetWords,
       existingContent: existingContent,
-      chapterPlan: chapterPlan,
+      chapterPlan: chapterPlan ?? const {},
       maxTokens: llm.budgetTokens,
     );
     final params = _paramsOf(llm);
@@ -233,13 +278,20 @@ class NovelService {
       ..writeln('【世界观】${book?.world ?? ''}')
       ..writeln('【风格指南】${book?.styleGuide ?? ''}')
       ..writeln('【大纲】${book?.outline ?? ''}');
+
+    // 续写时 Writer 手上已有本章正文，上一章结尾是噪音，不注入。
+    final resuming = existingContent != null && existingContent.trim().isNotEmpty;
+    final previous = resuming ? null : await previousChapter(bookId, chapterNumber);
+    final tailBlock = _tailBlock(previous);
+
     final budget = ContextBudget(
       maxTokens: maxTokens ?? ContextBudget.defaultMaxTokens,
-    ).budgetTruthFiles(texts, fixedContext: head.toString());
+    ).budgetTruthFiles(texts, fixedContext: '$head$tailBlock');
 
     final buf = StringBuffer();
     buf.write(head);
     buf.write(kindBlocks(budget));
+    buf.write(tailBlock);
 
     // P3-13：Planner 产出注入，Writer 按规划写。
     if (chapterPlan != null && chapterPlan.isNotEmpty) {

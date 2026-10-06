@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../agent/active_llm.dart';
+import '../../core/status_constants.dart';
 import '../../core/storage/providers.dart';
 import '../../core/text/chapter_import.dart';
 import '../../data/app_database.dart';
@@ -191,7 +192,7 @@ class _BookView extends ConsumerWidget {
           title: extracted.title.isNotEmpty ? extracted.title : '第 $seq 章（导入）',
           content: Value(extracted.content),
           wordCount: Value(ChapterImport.countWords(extracted.content)),
-          status: const Value('草稿'),
+          status: const Value(ChapterStatuses.draft),
         ),
       );
       if (context.mounted) {

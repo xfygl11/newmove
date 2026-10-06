@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../agent/active_llm.dart';
+import '../../core/status_constants.dart';
 import '../../core/storage/providers.dart';
 import '../../core/text/chapter_import.dart';
 import '../../data/app_database.dart';
@@ -346,6 +347,10 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
       );
     }
 
+    // 写作前取上一章状态：未定稿时 Settler 没跑，前情摘要为空，Writer 只能靠
+    // 结尾片段接续，确认框必须把这一点说清楚，用户才知道「接不上」的原因。
+    final previous = await svc.previousChapter(chapter.bookId, chapter.seq);
+
     final prompt = await svc.buildWritePrompt(
       bookId: chapter.bookId,
       chapterNumber: chapter.seq,
@@ -365,6 +370,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
         '供应商：${llm.provider.label}',
         '模型：${llm.modelId}',
         if (plan != null) 'Planner 规划：已注入本章目标与关键事件',
+        _contextSourceLine(existing, previous),
       ],
       title: existing.isEmpty ? '确认写作' : '确认续写',
     )) {
@@ -488,7 +494,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
           .settleChapter(bookId: latest.bookId, chapter: latest, llm: llm);
       await ref
           .read(novelDaoProvider)
-          .updateChapter(latest.copyWith(status: '定稿'));
+          .updateChapter(latest.copyWith(status: ChapterStatuses.finalized));
       _toast('已定稿并固化状态（${latest.wordCount} 字）');
     } catch (e) {
       _toast('定稿失败：$e');
@@ -572,6 +578,23 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
         );
       },
     );
+  }
+
+  /// 写作确认框的「前情来源」说明：告诉用户 Writer 这次能看到什么。
+  String _contextSourceLine(
+    String existing,
+    ({int seq, String status, String tail, String title})? previous,
+  ) {
+    if (existing.isNotEmpty) return '前情来源：本章已有正文（续写，忽略上一章）';
+    if (previous == null) return '前情来源：无上一章，从故事起点开始';
+    if (previous.tail.isEmpty) {
+      return '前情来源：第 ${previous.seq} 章尚无正文，本次写作无前情可用';
+    }
+    if (previous.status == ChapterStatuses.finalized) {
+      return '前情来源：第 ${previous.seq} 章前情摘要（已定稿）+ 结尾片段';
+    }
+    return '前情来源：第 ${previous.seq} 章未定稿，无前情摘要，仅靠结尾片段接续；'
+        '定稿该章后下一章才能读到完整前情摘要';
   }
 
   Future<void> _save(Chapter chapter) async {

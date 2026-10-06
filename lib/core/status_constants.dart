@@ -1,6 +1,26 @@
 /// 生成类任务的中文状态字面量单一来源。
 library;
 
+/// 章节状态常量（DB 直接存中文）。
+///
+/// `tables.dart` 的列默认值与书架颜色映射各写一份字面量，拼写一旦漂移
+/// 「定稿」判定就会失效——上一章已定稿却仍按未定稿提示，用户看不到前情。
+class ChapterStatuses {
+  ChapterStatuses._();
+
+  /// 新建章节与导入章节的初始状态。
+  static const draft = '草稿';
+
+  /// 已提交审校。
+  static const reviewing = '审校中';
+
+  /// 已定稿并完成 TruthFile 固化，下一章写作才能读到它的前情摘要。
+  static const finalized = '定稿';
+
+  /// 全部取值。
+  static const all = [draft, reviewing, finalized];
+}
+
 /// 视频生成任务状态常量（DB 直接存中文）。
 ///
 /// 此前这些字面量散落在 service / DAO / 两个页面共 20 处，且 `StatusKinds`
