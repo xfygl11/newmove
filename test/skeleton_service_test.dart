@@ -98,6 +98,7 @@ void main() {
         adapter: _FakeAdapter(_cannedJson),
         resolver: PromptResolver(db.promptOverrideDao),
       ),
+      revisionDao: db.revisionDao,
       attemptDao: db.generationAttemptDao,
     );
 

@@ -159,6 +159,74 @@ void main() {
       expect(hooks.first['status'], 'resolved');
     });
 
+    test('hook upsert 状态带空格被归一化：合法转移落干净值', () async {
+      final store = TruthFileStore(dao: db.truthFileDao, bookId: bookId);
+      await store.write(TruthFileKind.hooks, {
+        'hooks': [
+          {'id': 'h1', 'status': 'open', 'desc': '黑玉令'},
+        ],
+      });
+
+      // LLM 回带空格的状态值：trim 后是合法转移 open → progressing。
+      await store.applyDelta(
+        const SettleDelta(
+          factUpsert: [],
+          factExpire: [],
+          characters: [],
+          resources: [],
+          hookUpsert: [
+            {'id': 'h1', 'status': ' progressing '},
+          ],
+          hookResolve: [],
+          chapterSummary: null,
+          authorIntent: '',
+          currentFocus: '',
+        ),
+        5,
+      );
+
+      final read = await store.read(TruthFileKind.hooks);
+      final hooks = (read['hooks'] as List<dynamic>).cast<Map>();
+      expect(hooks.first['status'], 'progressing');
+      // 未被拒绝，rejectedTransitions 不写入。
+      expect(read.containsKey('rejectedTransitions'), isFalse);
+    });
+
+    test('hook 终态带空格不被当作 open 绕过回退约束', () async {
+      final store = TruthFileStore(dao: db.truthFileDao, bookId: bookId);
+      // 历史条目 status 是终态 resolved（脏值带空格）。
+      await store.write(TruthFileKind.hooks, {
+        'hooks': [
+          {'id': 'h1', 'status': ' resolved ', 'desc': '黑玉令'},
+        ],
+      });
+
+      // 终态回退到 progressing：trim 后 from=resolved 是终态，必须拒绝；
+      // 未 trim 时 from 会经 containsKey 失败回落 open 而被错误放行。
+      await store.applyDelta(
+        const SettleDelta(
+          factUpsert: [],
+          factExpire: [],
+          characters: [],
+          resources: [],
+          hookUpsert: [
+            {'id': 'h1', 'status': 'progressing'},
+          ],
+          hookResolve: [],
+          chapterSummary: null,
+          authorIntent: '',
+          currentFocus: '',
+        ),
+        5,
+      );
+
+      final read = await store.read(TruthFileKind.hooks);
+      final hooks = (read['hooks'] as List<dynamic>).cast<Map>();
+      // 原状态保持不变（未被非法转移覆盖）。
+      expect(hooks.first['status'], ' resolved ');
+      expect(read['rejectedTransitions'], isNotNull);
+    });
+
     test('summary 按章节 upsert', () async {
       final store = TruthFileStore(dao: db.truthFileDao, bookId: bookId);
       await store.applyDelta(

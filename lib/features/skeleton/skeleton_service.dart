@@ -10,6 +10,7 @@ import '../../data/daos/generation_attempt_dao.dart';
 import '../../data/daos/cascade_dao.dart';
 import '../../data/daos/scene_dao.dart';
 import '../../data/daos/script_dao.dart';
+import '../../data/daos/revision_dao.dart';
 import '../../data/daos/shot_dao.dart';
 import '../provider_config/provider_models.dart';
 import '../shot/segment_budget.dart';
@@ -26,6 +27,7 @@ class SkeletonService {
     required this.shotDao,
     required this.cascadeDao,
     required this.agents,
+    required this.revisionDao,
     required GenerationAttemptDao attemptDao,
   }) : _attempts = AttemptRecorder(attemptDao);
 
@@ -35,6 +37,11 @@ class SkeletonService {
   final BeatDao beatDao;
   final ShotDao shotDao;
   final CascadeDao cascadeDao;
+
+  /// 产物版本快照（M18：五 service 的 revisionDao 一律 required，编译期防线）。
+  /// 骨架是结构数据，重提取删除 Shots 时快照因外键级联清除，暂无独立快照语义，
+  /// 注入点为未来骨架快照机制预留。
+  final RevisionDao revisionDao;
 
   /// 生成尝试台账（M18 T20.1 起必填，见 [AttemptRecorder]）。
   final AttemptRecorder _attempts;
@@ -52,6 +59,7 @@ class SkeletonService {
     required String subjectLabel,
     required String prompt,
     required String params,
+    Map<String, dynamic> before = const {},
     int? bookId,
   }) {
     return _attempts.start(
@@ -60,6 +68,7 @@ class SkeletonService {
       subjectLabel: subjectLabel,
       prompt: prompt,
       params: params,
+      before: before,
       bookId: bookId,
     );
   }
@@ -122,12 +131,23 @@ class SkeletonService {
       scenes: scenes,
       videoModel: videoModel,
     );
+    // 删除前留痕：已出图 / 出视频分段的产物路径记入台账 before。重提取会
+    // 级联清除 ShotRevisions 快照（外键随 Shots 删除），磁盘文件不删但 DB
+    // 引用消失，台账是找回旧产物的唯一线索。
+    final oldShots = await shotDao.listByScript(script.id);
     final attempt = await _start(
       subjectType: AttemptSubjects.skeletonExtract,
       subjectId: script.id,
       subjectLabel: script.title,
       prompt: prompt,
       params: _paramsOf(llm),
+      before: {
+        'shots': [
+          for (final s in oldShots)
+            if ((s.outputPath ?? '').isNotEmpty)
+              {'globalSeq': s.globalSeq, 'outputPath': s.outputPath},
+        ],
+      },
       bookId: script.bookId,
     );
     try {

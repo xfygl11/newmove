@@ -178,6 +178,19 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
     await (delete(
       scriptRevisions,
     )..where((t) => t.scriptId.equals(scriptId))).go();
+    // 脚本级台账（subjectId=scriptId）随剧本删除；改编 / 骨架提取 / 导演 /
+    // 资产提取的历史审计一并清理，避免留孤儿行。
+    await (delete(generationAttempts)..where(
+          (t) =>
+              t.subjectId.equals(scriptId) &
+              t.subjectType.isIn([
+                AttemptSubjects.scriptAdapt,
+                AttemptSubjects.skeletonExtract,
+                AttemptSubjects.shotDirection,
+                AttemptSubjects.assetExtract,
+              ]),
+        ))
+        .go();
     await (delete(scripts)..where((t) => t.id.equals(scriptId))).go();
   }
 
@@ -197,17 +210,15 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
     await (delete(
       shotRevisions,
     )..where((t) => t.shotId.isInQuery(shotIds))).go();
+    // 镜头级台账（subjectId=shotId）随镜头删除；脚本级台账
+    // （skeleton_extract / shot_direction，subjectId=scriptId）由
+    // _deleteScriptSubtree 单独按 scriptId 清理，不能混进 shotIds 过滤。
     await (delete(generationAttempts)..where(
           (t) =>
-              t.subjectId.isInQuery(
-                selectOnly(shots)
-                  ..addColumns([shots.id])
-                  ..where(shots.scriptId.equals(scriptId)),
-              ) &
+              t.subjectId.isInQuery(shotIds) &
               t.subjectType.isIn([
-                'shot_image',
-                'shot_video',
-                'skeleton_extract',
+                AttemptSubjects.shotImage,
+                AttemptSubjects.shotVideo,
               ]),
         ))
         .go();
@@ -218,25 +229,23 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
   }
 
   Future<void> _deleteAssetsOfScript(int scriptId) async {
+    final assetIds = selectOnly(assets)
+      ..addColumns([assets.id])
+      ..where(assets.scriptId.equals(scriptId));
     await (delete(assetRevisions)..where(
-          (t) => t.assetId.isInQuery(
-            selectOnly(assets)
-              ..addColumns([assets.id])
-              ..where(assets.scriptId.equals(scriptId)),
-          ),
+          (t) => t.assetId.isInQuery(assetIds),
+        ))
+        .go();
+    // 资产级台账（subjectId=assetId）须在删 assets 之前清理：删后再查 assets
+    // 子查询恒空，台账会永远残留。asset_extract（subjectId=scriptId）由
+    // _deleteScriptSubtree 单独清理。
+    await (delete(generationAttempts)..where(
+          (t) =>
+              t.subjectId.isInQuery(assetIds) &
+              t.subjectType.equals(AttemptSubjects.assetImage),
         ))
         .go();
     await (delete(assets)..where((t) => t.scriptId.equals(scriptId))).go();
-    await (delete(generationAttempts)..where(
-          (t) =>
-              t.subjectId.isInQuery(
-                selectOnly(assets)
-                  ..addColumns([assets.id])
-                  ..where(assets.scriptId.equals(scriptId)),
-              ) &
-              t.subjectType.isIn(['asset_extract', 'asset_image']),
-        ))
-        .go();
   }
 
   Future<void> _deleteRevisionsForShot(int shotId) {

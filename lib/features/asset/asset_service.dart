@@ -114,18 +114,17 @@ class AssetService {
       }),
       bookId: bookId,
     );
-    final result = await agents.extract(
-      skeletonContext: context,
-      llm: llm,
-      bookId: bookId,
-    );
 
     try {
       // stableId -> 已存在/本轮新建的资产，用于复用与变体父解析。
+      final result = await agents.extract(
+        skeletonContext: context,
+        llm: llm,
+        bookId: bookId,
+      );
       final byStableId = <String, Asset>{
         for (final a in await assetDao.listByScript(scriptId)) a.stableId: a,
       };
-
       var created = 0;
       var reused = 0;
       var variants = 0;

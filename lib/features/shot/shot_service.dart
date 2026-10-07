@@ -937,6 +937,25 @@ class ShotService {
     return ShotGate.validate(shots: shots, frames: frames, characterNames: names);
   }
 
+  /// 构建视频提示词（A9）。确认框展示与 [submitVideo] 实际执行共用同一来源，
+  /// 保证用户授权看到的提示词与提交的提示词一致；镜头不存在返回 null。
+  Future<String?> buildVideoPrompt(int shotId, {required int durationSec}) async {
+    final shot = await shotDao.find(shotId);
+    if (shot == null) return null;
+    final frames = await shotFrameDao.listByShot(shotId);
+    final refs = await assetRefDao.listByShot(shotId);
+    final assets = await assetDao.listByScript(shot.scriptId);
+    final script = await scriptDao.find(shot.scriptId);
+    return const VideoPromptBuilder().build(
+      shot: shot,
+      frames: frames,
+      refs: refs,
+      assetById: {for (final a in assets) a.id: a},
+      artStyle: effectiveArtStyle(script?.artStyle),
+      durationSec: durationSec,
+    );
+  }
+
   /// 视频提示词（A9）角色名检查（M22 T23.2）；只提示不阻塞。
   ///
   /// 视频侧引用角色必须走 `{{ref N}}`，直呼其名会让模型去找字面实体。
@@ -948,18 +967,9 @@ class ShotService {
   }) async {
     final shot = await shotDao.find(shotId);
     if (shot == null) return const [];
-    final frames = await shotFrameDao.listByShot(shotId);
-    final refs = await assetRefDao.listByShot(shotId);
+    final prompt = await buildVideoPrompt(shotId, durationSec: durationSec);
+    if (prompt == null) return const [];
     final assets = await assetDao.listByScript(shot.scriptId);
-    final script = await scriptDao.find(shot.scriptId);
-    final prompt = const VideoPromptBuilder().build(
-      shot: shot,
-      frames: frames,
-      refs: refs,
-      assetById: {for (final a in assets) a.id: a},
-      artStyle: effectiveArtStyle(script?.artStyle),
-      durationSec: durationSec,
-    );
     return ShotGate.videoNoNames(
       locator: shot.globalSeq,
       prompt: prompt,
@@ -1035,18 +1045,12 @@ class ShotService {
 
     // 构造 A9 视频提示词（时长取参数面板选择值）。
     // 画风随剧本走：未设置时用统一默认值，避免跨段视觉漂移。
-    final frames = await shotFrameDao.listByShot(shotId);
-    final script = await scriptDao.find(shot.scriptId);
-    final prompt = const VideoPromptBuilder().build(
-      shot: shot,
-      frames: frames,
-      refs: refs,
-      assetById: {
-        for (final a in await assetDao.listByScript(shot.scriptId)) a.id: a,
-      },
-      artStyle: effectiveArtStyle(script?.artStyle),
+    // 与确认框展示共用同一构建来源，授权所见即提交所执行。
+    final prompt = await buildVideoPrompt(
+      shotId,
       durationSec: params.durationSec,
     );
+    if (prompt == null) throw StateError('镜头不存在：$shotId');
 
     // 台账在提交前写入：视频提示词与完整参数，供事后查证。
     final attemptId = await _recordAttempt(
@@ -1124,10 +1128,12 @@ class ShotService {
   final Map<int, GenerationCancelToken> _videoCancelTokens = {};
 
   Future<VideoTask> pollVideoTask(int videoTaskId) {
-    final token = GenerationCancelToken();
-    _videoCancelTokens[videoTaskId] = token;
+    // 先去重：任务已在轮询中时复用既有 Future，避免并发重入时新 token
+    // 覆盖在途旧 token 导致 cancelVideoTask 持旧引用、无法中断真实请求。
     final existing = _pollingTasks[videoTaskId];
     if (existing != null) return existing;
+    final token = GenerationCancelToken();
+    _videoCancelTokens[videoTaskId] = token;
     final future = _pollVideoTaskOnce(videoTaskId, cancelToken: token)
         .timeout(pollAllTimeout)
         .whenComplete(() {
@@ -1258,8 +1264,9 @@ class ShotService {
     } on TimeoutException {
       // 单次请求超时：标记失败，避免下一周期反复卡住整轮轮询。
       return _markVideoFailed(task, '查询超时（${pollTimeout.inSeconds}s 无响应）');
-    } catch (_) {
+    } catch (e) {
       // 网络异常不标记失败，保持生成中，下次轮询重试。
+      appLog('video_poll', 'task=$videoTaskId 轮询异常保持生成中', error: e);
       return task;
     }
   }

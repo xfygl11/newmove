@@ -219,6 +219,62 @@ void main() {
       expect((await db.select(db.chapters).get()).length, 1);
     });
 
+    test('级联删除剧本清理 script/shot/asset 三级台账，不误删他剧本', () async {
+      final chain = await seedFullChain();
+      Future<int> attempt(String type, int? subjectId) =>
+          db.generationAttemptDao.insert(
+            GenerationAttemptsCompanion.insert(
+              subjectType: type,
+              subjectId: Value(subjectId),
+              prompt: 'p',
+            ),
+          );
+      // 脚本级（subjectId=scriptId）：改编 / 骨架 / 导演 / 资产提取。
+      await attempt('script_adapt', chain.script);
+      await attempt('skeleton_extract', chain.script);
+      await attempt('shot_direction', chain.script);
+      await attempt('asset_extract', chain.script);
+      // 镜头级（subjectId=shotId）。
+      await attempt('shot_image', chain.shot);
+      await attempt('shot_video', chain.shot);
+      // 资产级（subjectId=assetId）。
+      await attempt('asset_image', chain.asset);
+      // 指向他剧本镜头的台账不应被误删。
+      await attempt('shot_image', 999999);
+
+      await db.cascadeDao.deleteScriptCascade(chain.script);
+
+      final rows = await db.select(db.generationAttempts).get();
+      expect(rows, hasLength(1));
+      expect(rows.single.subjectType, 'shot_image');
+      expect(rows.single.subjectId, 999999);
+    });
+
+    test('骨架重提取保留 skeleton_extract 台账历史', () async {
+      final chain = await seedFullChain();
+      await db.generationAttemptDao.insert(
+        GenerationAttemptsCompanion.insert(
+          subjectType: 'skeleton_extract',
+          subjectId: Value(chain.script),
+          prompt: 'p',
+        ),
+      );
+      await db.generationAttemptDao.insert(
+        GenerationAttemptsCompanion.insert(
+          subjectType: 'shot_image',
+          subjectId: Value(chain.shot),
+          prompt: 'p',
+        ),
+      );
+
+      await db.cascadeDao.deleteSkeletonCascade(chain.script);
+
+      final rows = await db.select(db.generationAttempts).get();
+      // 镜头级台账随旧镜头清理；脚本级提取历史保留供审计。
+      expect(rows, hasLength(1));
+      expect(rows.single.subjectType, 'skeleton_extract');
+    });
+
     test('已有帧/参考/视频任务的镜头可被删除', () async {
       final chain = await seedFullChain();
 

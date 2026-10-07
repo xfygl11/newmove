@@ -262,28 +262,31 @@ class TruthFileStore {
     for (final up in delta.hookUpsert) {
       final idx = hooks.indexWhere((h) => h['id'] == up['id']);
       // 不直接 as String：LLM 可能回数字或布尔（{"status":1}），强转会抛
-      // TypeError 并中断整轮固化。统一归一成字符串，非法值交给 allows 拒绝。
-      final next = (up['status']?.toString() ?? '').trim();
-      if (next.isEmpty) {
-        // 新建且未给状态时默认 open；历史条目无状态视为 open。
-        up['status'] = HookStates.open;
-      }
-      final target = up['status']?.toString() ?? '';
-      final from = idx >= 0 ? hooks[idx]['status']?.toString() : null;
-      if (!HookStates.allows(from, target)) {
-        rejected.add('${up['id']} ${HookStates.label(from)} → $target');
+      // TypeError 并中断整轮固化。统一归一成字符串（含 trim）再判，
+      // 带空格的合法值会绕过 isValid / containsKey 判定，必须先 trim。
+      final target = (up['status']?.toString() ?? '').trim();
+      // 新建且未给状态时默认 open；历史条目无状态视为 open。
+      final nextStatus = target.isEmpty ? HookStates.open : target;
+      final from = idx >= 0
+          ? (hooks[idx]['status']?.toString() ?? '').trim()
+          : null;
+      if (!HookStates.allows(from, nextStatus)) {
+        rejected.add('${up['id']} ${HookStates.label(from)} → $nextStatus');
         continue;
       }
+      // 用新 map 落库且状态写归一化值：不原地改输入（可能来自 const
+      // SettleDelta 的不可变 map），库里也不存带空格的脏值。
+      final normalized = {...up, 'status': nextStatus};
       if (idx >= 0) {
-        hooks[idx] = {...hooks[idx], ...up};
+        hooks[idx] = {...hooks[idx], ...normalized};
       } else {
-        hooks.add(up);
+        hooks.add(normalized);
       }
     }
     for (final id in delta.hookResolve) {
       final idx = hooks.indexWhere((h) => h['id'] == id);
       if (idx < 0) continue;
-      final from = hooks[idx]['status']?.toString();
+      final from = (hooks[idx]['status']?.toString() ?? '').trim();
       if (!HookStates.allows(from, HookStates.resolved)) {
         rejected.add('$id ${HookStates.label(from)} → resolved');
         continue;

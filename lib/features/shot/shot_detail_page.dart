@@ -514,6 +514,12 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
       widget.shot.id,
       durationSec: params.durationSec,
     );
+    // 展示与执行同源：确认框展示 A9 视频提示词（submitVideo 实际提交的内容）；
+    // 构建失败（镜头已被删）回落分镜图提示词，提交时 submitVideo 会自检拦截。
+    final videoPrompt = await svc.buildVideoPrompt(
+      widget.shot.id,
+      durationSec: params.durationSec,
+    );
     if (!mounted) return;
     final budgetErrors = svc.errorIssuesOf(budgetIssues);
     final noteLines = <String>[
@@ -529,7 +535,7 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
       objectName: '镜头视频 · ${widget.shot.globalSeq}',
       gate: '镜头视频生成（授权范围仅限本次镜头的视频）',
       quantity: '1 次生成',
-      promptPreview: widget.shot.prompt,
+      promptPreview: videoPrompt ?? widget.shot.prompt,
       params: [
         '时长 ${params.durationSec}s · 比例 ${params.ratio} · 分辨率 ${params.resolution}',
         '音频：${params.generateAudio ? '含音频' : '无音频'}',

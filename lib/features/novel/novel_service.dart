@@ -121,11 +121,15 @@ class NovelService {
         );
       }
 
-      // 初始化角色矩阵 TruthFile。
+      // 初始化角色矩阵 TruthFile：先读同一行取 revision 再带锁写入，
+      // 与其他 TruthFile 写入口一致，避免并发固化时静默覆盖。
       final store = storeFor(bookId);
-      await store.write(TruthFileKind.characterMatrix, {
-        'characters': [for (final c in result.characters) c.toJson()],
-      });
+      final matrixRow = await store.readRow(TruthFileKind.characterMatrix);
+      await store.write(
+        TruthFileKind.characterMatrix,
+        {'characters': [for (final c in result.characters) c.toJson()]},
+        expectedRevision: matrixRow?.revision,
+      );
 
       await _finish(attempt, AttemptStatuses.succeeded);
       return result;

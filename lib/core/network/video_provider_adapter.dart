@@ -372,11 +372,11 @@ class VideoProviderAdapter {
   /// `{host}/agnesapi`（去掉 `/v1` 前缀，host 根路径）。
   static String _openAiVideosPollHost(String baseUrl) {
     final base = _strip(baseUrl);
-    // base 形如 https://host/v1，返回 https://host
+    // base 形如 https://host/v1，返回 https://host/agnesapi
     if (base.endsWith('/v1')) {
-      return base.substring(0, base.length - 3);
+      return '${base.substring(0, base.length - 3)}/agnesapi';
     }
-    return base;
+    return '$base/agnesapi';
   }
 
   /// 流式下载视频到文件，全程不整包驻留内存。

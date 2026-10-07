@@ -23,6 +23,7 @@ final skeletonServiceProvider = Provider<SkeletonService>(
     shotDao: ref.watch(shotDaoProvider),
     cascadeDao: ref.watch(cascadeDaoProvider),
     agents: ref.watch(skeletonAgentsProvider),
+    revisionDao: ref.watch(revisionDaoProvider),
     attemptDao: ref.watch(generationAttemptDaoProvider),
   ),
 );
