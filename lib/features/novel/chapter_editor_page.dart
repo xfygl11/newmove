@@ -102,59 +102,12 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
 
   /// 目标字数可编辑：底栏点字数标签即可改，0 表示不设门槛。
   Future<void> _editTargetWords(Chapter chapter) async {
-    final input = TextEditingController(
-      text: _targetWords > 0 ? '$_targetWords' : '',
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => _TargetWordsDialog(initial: _targetWords),
     );
-    try {
-      final result = await showDialog<int>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('每章目标字数'),
-          // Dialog 会把键盘 inset 加到外边距上，可用高度变小；非滚动 Column 会溢出。
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: input,
-                  keyboardType: TextInputType.number,
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                    hintText: '0 表示不设门槛',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '定稿时会按目标的 '
-                  '${(ChapterWordGate.minRatio * 100).round()}% ~ '
-                  '${(ChapterWordGate.maxRatio * 100).round()}% 提示。',
-                  style: Theme.of(ctx).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final v = int.tryParse(input.text.trim()) ?? 0;
-                Navigator.of(ctx).pop(v < 0 ? 0 : v);
-              },
-              child: const Text('保存'),
-            ),
-          ],
-        ),
-      );
-      if (result == null) return;
-      await _saveTargetWords(chapter, result);
-    } finally {
-      input.dispose();
-    }
+    if (result == null) return;
+    await _saveTargetWords(chapter, result);
   }
 
   /// 安全构造 Quill 文档：空内容用默认单换行文档，避免
@@ -1051,6 +1004,84 @@ class _BottomBar extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 每章目标字数编辑对话框。
+///
+/// controller 由本 State 持有并在 [dispose] 释放——只有退出动画结束、
+/// 元素真正 unmount 后才调用，避免「controller 已释放但 TextField 仍要重建」
+/// 引发的 `TextEditingController used after being disposed` 与
+/// `_dependents.isEmpty` 断言（framework.dart:6281）。
+class _TargetWordsDialog extends StatefulWidget {
+  const _TargetWordsDialog({required this.initial});
+
+  final int initial;
+
+  @override
+  State<_TargetWordsDialog> createState() => _TargetWordsDialogState();
+}
+
+class _TargetWordsDialogState extends State<_TargetWordsDialog> {
+  late final TextEditingController _input;
+
+  @override
+  void initState() {
+    super.initState();
+    _input = TextEditingController(
+      text: widget.initial > 0 ? '${widget.initial}' : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('每章目标字数'),
+      // Dialog 会把键盘 inset 加到外边距上，可用高度变小；非滚动 Column 会溢出。
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _input,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: const InputDecoration(
+                isDense: true,
+                border: OutlineInputBorder(),
+                hintText: '0 表示不设门槛',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '定稿时会按目标的 '
+              '${(ChapterWordGate.minRatio * 100).round()}% ~ '
+              '${(ChapterWordGate.maxRatio * 100).round()}% 提示。',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final v = int.tryParse(_input.text.trim()) ?? 0;
+            Navigator.of(context).pop(v < 0 ? 0 : v);
+          },
+          child: const Text('保存'),
+        ),
+      ],
     );
   }
 }

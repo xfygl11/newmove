@@ -544,51 +544,12 @@ class _AgnesPresetRow extends ConsumerWidget {
   }
 
   Future<void> _addAgnesPreset(BuildContext context, WidgetRef ref) async {
-    final keyController = TextEditingController();
     final messenger = ScaffoldMessenger.of(context);
 
     final key = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('添加 Agnes AI 预设'),
-        // 内容可滚动：3.47 的 Dialog 会把键盘 inset 加到外边距上，
-        // 可用高度变小后非滚动内容会直接溢出（底部斜纹水印）。
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '将创建 3 个供应商条目：\n'
-                '  · Agnes LLM（agnes-2.5-flash）\n'
-                '  · Agnes 图片（agnes-image-2.5-flash）\n'
-                '  · Agnes 视频（agnes-video-2.5 + flash）\n\n'
-                'Base URL：https://apihub.agnes-ai.cn/v1',
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: keyController,
-                decoration: const InputDecoration(
-                  labelText: 'API Key（存系统 Keystore，不进 DB）',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, keyController.text.trim()),
-            child: const Text('确认'),
-          ),
-        ],
-      ),
+      builder: (ctx) => const _AgnesPresetDialog(),
     );
-    keyController.dispose();
 
     if (key == null || key.isEmpty) return;
 
@@ -610,5 +571,70 @@ class _AgnesPresetRow extends ConsumerWidget {
         messenger.showSnackBar(SnackBar(content: Text('添加失败：$e')));
       }
     }
+  }
+}
+
+/// Agnes 预设输入框对话框。
+///
+/// controller 由本 State 持有并在 [dispose] 释放——只有退出动画彻底结束、
+/// 元素真正 unmount 后才调用，避免「controller 已释放但 TextField 仍要重建」
+/// 引发的 `TextEditingController used after being disposed` 与
+/// `_dependents.isEmpty` 断言（framework.dart:6281）。
+class _AgnesPresetDialog extends StatefulWidget {
+  const _AgnesPresetDialog();
+
+  @override
+  State<_AgnesPresetDialog> createState() => _AgnesPresetDialogState();
+}
+
+class _AgnesPresetDialogState extends State<_AgnesPresetDialog> {
+  final _keyController = TextEditingController();
+
+  @override
+  void dispose() {
+    _keyController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('添加 Agnes AI 预设'),
+      // 内容可滚动：3.47 的 Dialog 会把键盘 inset 加到外边距上，
+      // 可用高度变小后非滚动内容会直接溢出（底部斜纹水印）。
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '将创建 3 个供应商条目：\n'
+              '  · Agnes LLM（agnes-2.5-flash）\n'
+              '  · Agnes 图片（agnes-image-2.5-flash）\n'
+              '  · Agnes 视频（agnes-video-2.5 + flash）\n\n'
+              'Base URL：https://apihub.agnes-ai.cn/v1',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _keyController,
+              decoration: const InputDecoration(
+                labelText: 'API Key（存系统 Keystore，不进 DB）',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _keyController.text.trim()),
+          child: const Text('确认'),
+        ),
+      ],
+    );
   }
 }

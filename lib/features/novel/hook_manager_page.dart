@@ -186,65 +186,19 @@ class _HookListState extends ConsumerState<_HookList> {
   }
 
   Future<void> _showEditDialog(Map<String, dynamic>? existing) async {
-    final id = TextEditingController(text: existing?['id']?.toString() ?? '');
-    final desc = TextEditingController(
-      text: existing?['description']?.toString() ?? '',
-    );
-    final planted = TextEditingController(
-      text: existing?['plantedChapter']?.toString() ?? '',
-    );
-
-    final confirmed = await showDialog<bool>(
+    final result = await showDialog<({String id, String desc, String planted})>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(existing == null ? '登记伏笔' : '编辑伏笔'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: id,
-                decoration: const InputDecoration(
-                  labelText: '伏笔 ID（如 hook_01）',
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: desc,
-                autofocus: existing == null,
-                decoration: const InputDecoration(labelText: '伏笔描述 *'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: planted,
-                decoration: const InputDecoration(labelText: '埋设章节（如「第 3 章」）'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (desc.text.trim().isEmpty) return;
-              Navigator.of(ctx).pop(true);
-            },
-            child: const Text('保存'),
-          ),
-        ],
+      builder: (ctx) => _HookEditDialog(
+        existing: existing,
+        defaultId: 'hook_${_hooks.length + 1}',
       ),
     );
-    if (confirmed != true) return;
+    if (result == null) return;
 
     final newHook = <String, dynamic>{
-      'id': id.text.trim().isEmpty
-          ? 'hook_${_hooks.length + 1}'
-          : id.text.trim(),
-      'description': desc.text.trim(),
-      'plantedChapter': planted.text.trim(),
+      'id': result.id,
+      'description': result.desc.trim(),
+      'plantedChapter': result.planted.trim(),
       'status': existing?['status'] ?? 'open',
     };
     if (existing?['resolvedChapter'] != null) {
@@ -405,6 +359,98 @@ class _HookCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 伏笔登记/编辑对话框：controller 由 State 持有，退出动画结束后才释放。
+class _HookEditDialog extends StatefulWidget {
+  const _HookEditDialog({required this.existing, required this.defaultId});
+
+  final Map<String, dynamic>? existing;
+  final String defaultId;
+
+  @override
+  State<_HookEditDialog> createState() => _HookEditDialogState();
+}
+
+class _HookEditDialogState extends State<_HookEditDialog> {
+  late final TextEditingController _id;
+  late final TextEditingController _desc;
+  late final TextEditingController _planted;
+
+  @override
+  void initState() {
+    super.initState();
+    _id = TextEditingController(
+      text: widget.existing?['id']?.toString() ?? '',
+    );
+    _desc = TextEditingController(
+      text: widget.existing?['description']?.toString() ?? '',
+    );
+    _planted = TextEditingController(
+      text: widget.existing?['plantedChapter']?.toString() ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _id.dispose();
+    _desc.dispose();
+    _planted.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final desc = _desc.text.trim();
+    if (desc.isEmpty) return;
+    final id = _id.text.trim().isEmpty ? widget.defaultId : _id.text.trim();
+    Navigator.of(context).pop((
+      id: id,
+      desc: desc,
+      planted: _planted.text.trim(),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isNew = widget.existing == null;
+    return AlertDialog(
+      title: Text(isNew ? '登记伏笔' : '编辑伏笔'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _id,
+              decoration: const InputDecoration(
+                labelText: '伏笔 ID（如 hook_01）',
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _desc,
+              autofocus: isNew,
+              decoration: const InputDecoration(labelText: '伏笔描述 *'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _planted,
+              decoration: const InputDecoration(labelText: '埋设章节（如「第 3 章」）'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('保存'),
+        ),
+      ],
     );
   }
 }

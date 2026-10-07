@@ -185,35 +185,75 @@ class _EditRow extends StatelessWidget {
   }
 
   Future<void> _showEditDialog(BuildContext context) async {
-    final controller = TextEditingController(text: value ?? '');
     final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('编辑$label'),
-        // Dialog 会把键盘 inset 加到外边距上，可用高度可能小于 minLines 撑开的高度。
-        content: SingleChildScrollView(
-          child: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLines: multiline ? 10 : 5,
-            minLines: multiline ? 4 : 1,
-            decoration: const InputDecoration(border: OutlineInputBorder()),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text),
-            child: const Text('保存'),
-          ),
-        ],
+      builder: (ctx) => _EditRowDialog(
+        label: label,
+        initial: value ?? '',
+        multiline: multiline,
       ),
     );
-    controller.dispose();
     if (result != null) onEdit(result);
+  }
+}
+
+/// 快速编辑对话框：controller 由 State 持有，退出动画结束后才释放，
+/// 避免「controller 已释放但 TextField 仍要重建」引发的断言。
+class _EditRowDialog extends StatefulWidget {
+  const _EditRowDialog({
+    required this.label,
+    required this.initial,
+    required this.multiline,
+  });
+
+  final String label;
+  final String initial;
+  final bool multiline;
+
+  @override
+  State<_EditRowDialog> createState() => _EditRowDialogState();
+}
+
+class _EditRowDialogState extends State<_EditRowDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initial);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('编辑${widget.label}'),
+      // Dialog 会把键盘 inset 加到外边距上，可用高度可能小于 minLines 撑开的高度。
+      content: SingleChildScrollView(
+        child: TextField(
+          controller: _controller,
+          autofocus: true,
+          maxLines: widget.multiline ? 10 : 5,
+          minLines: widget.multiline ? 4 : 1,
+          decoration: const InputDecoration(border: OutlineInputBorder()),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text),
+          child: const Text('保存'),
+        ),
+      ],
+    );
   }
 }
 

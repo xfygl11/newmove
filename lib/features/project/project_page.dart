@@ -290,64 +290,19 @@ class _ProjectCard extends ConsumerWidget {
 
   /// 编辑项目信息（名称 / 题材 / 描述）。
   Future<void> _showEditDialog(BuildContext context, WidgetRef ref) async {
-    final name = TextEditingController(text: project.name);
-    final genre = TextEditingController(text: project.genre ?? '');
-    final desc = TextEditingController(text: project.description ?? '');
-
-    final confirmed = await showDialog<bool>(
+    final result = await showDialog<({String name, String genre, String desc})>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('编辑项目信息'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: name,
-                autofocus: true,
-                decoration: const InputDecoration(labelText: '项目名称 *'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: genre,
-                decoration: const InputDecoration(labelText: '题材（可选）'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: desc,
-                decoration: const InputDecoration(labelText: '描述（可选）'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (name.text.trim().isEmpty) return;
-              Navigator.of(ctx).pop(true);
-            },
-            child: const Text('保存'),
-          ),
-        ],
-      ),
+      builder: (ctx) => _ProjectEditDialog(project: project),
     );
-    if (confirmed != true || !context.mounted) return;
+    if (result == null || !context.mounted) return;
 
     try {
-      await ref
-          .read(projectDaoProvider)
-          .replaceProject(
+      await ref.read(projectDaoProvider).replaceProject(
             project.copyWith(
-              name: name.text.trim(),
-              genre: Value(
-                genre.text.trim().isEmpty ? null : genre.text.trim(),
-              ),
+              name: result.name,
+              genre: Value(result.genre.isEmpty ? null : result.genre),
               description: Value(
-                desc.text.trim().isEmpty ? null : desc.text.trim(),
+                result.desc.isEmpty ? null : result.desc,
               ),
             ),
           );
@@ -429,6 +384,87 @@ class _ProjectCard extends ConsumerWidget {
             .showSnackBar(SnackBar(content: Text('删除失败：$e')));
       }
     }
+  }
+}
+
+/// 编辑项目信息对话框：controller 由 State 持有，退出动画结束后才释放。
+class _ProjectEditDialog extends StatefulWidget {
+  const _ProjectEditDialog({required this.project});
+
+  final Project project;
+
+  @override
+  State<_ProjectEditDialog> createState() => _ProjectEditDialogState();
+}
+
+class _ProjectEditDialogState extends State<_ProjectEditDialog> {
+  late final TextEditingController _name;
+  late final TextEditingController _genre;
+  late final TextEditingController _desc;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = TextEditingController(text: widget.project.name);
+    _genre = TextEditingController(text: widget.project.genre ?? '');
+    _desc = TextEditingController(text: widget.project.description ?? '');
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _genre.dispose();
+    _desc.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _name.text.trim();
+    if (name.isEmpty) return;
+    Navigator.of(context).pop((
+      name: name,
+      genre: _genre.text.trim(),
+      desc: _desc.text.trim(),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('编辑项目信息'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _name,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: '项目名称 *'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _genre,
+              decoration: const InputDecoration(labelText: '题材（可选）'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _desc,
+              decoration: const InputDecoration(labelText: '描述（可选）'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('保存'),
+        ),
+      ],
+    );
   }
 }
 
