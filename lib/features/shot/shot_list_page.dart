@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../agent/active_image.dart';
 import '../../agent/active_llm.dart';
+import '../../core/gate_issue.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
 import '../../widgets/status_badge.dart';
@@ -40,9 +41,18 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
   @override
   Widget build(BuildContext context) {
     final shotsAsync = ref.watch(shotListByScriptProvider(widget.scriptId));
-    final issuesAsync = ref.watch(
-      shotTransitionIssuesProvider(widget.scriptId),
-    );
+    final transitionIssues =
+        ref.watch(shotTransitionIssuesProvider(widget.scriptId)).value ??
+        const <ShotTransitionIssue>[];
+    final budgetIssues =
+        ref.watch(shotBudgetIssuesProvider(widget.scriptId)).value ??
+        const <SegmentBudgetIssue>[];
+    final costumeIssues =
+        ref.watch(shotCostumeIssuesProvider(widget.scriptId)).value ??
+        const <GateIssue>[];
+    final shotGateIssues =
+        ref.watch(shotGateIssuesProvider(widget.scriptId)).value ??
+        const <GateIssue>[];
 
     return Scaffold(
       appBar: AppBar(
@@ -63,114 +73,12 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
       ),
       body: Column(
         children: [
-          issuesAsync.maybeWhen(
-            data: (issues) {
-              if (issues.isEmpty) return const SizedBox.shrink();
-              return Card(
-                margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                color: Colors.orange.shade900.withValues(alpha: 0.25),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '段间衔接提示（A7，${issues.length}）',
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      const SizedBox(height: 4),
-                      for (final issue in issues)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(
-                            '⚠ ${issue.message}',
-                            style: TextStyle(color: Colors.orange.shade200),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
-            orElse: () => const SizedBox.shrink(),
+          _GatePanel(
+            transitionIssues: transitionIssues,
+            budgetIssues: budgetIssues,
+            costumeIssues: costumeIssues,
+            shotGateIssues: shotGateIssues,
           ),
-
-          // 时长与容量预算（M16）。与 A7 面板并列：A7 管画面区分度，这里管时长。
-          // error 与 warn 分卡展示：前者需确认后才放行生成，后者只提示。
-          ref
-              .watch(shotBudgetIssuesProvider(widget.scriptId))
-              .maybeWhen(
-                data: (issues) {
-                  if (issues.isEmpty) return const SizedBox.shrink();
-                  final errors = issues.where((i) => i.isError).toList();
-                  final warns = issues.where((i) => !i.isError).toList();
-                  return Column(
-                    children: [
-                      if (errors.isNotEmpty)
-                        _issueCard(
-                          context: context,
-                          title: '时长约束冲突（${errors.length}）',
-                          message: '错误级：提交视频生成前需逐条确认',
-                          entries: [
-                            for (final issue in errors) _budgetLine(issue),
-                          ],
-                          color: Colors.red.shade900,
-                          tint: Colors.red.shade100,
-                        ),
-                      if (warns.isNotEmpty)
-                        _issueCard(
-                          context: context,
-                          title: '时长预算提示（${warns.length}）',
-                          message: '提示级：不阻塞生成，建议调整分段',
-                          entries: [
-                            for (final issue in warns) _budgetLine(issue),
-                          ],
-                          color: Colors.amber.shade900,
-                          tint: Colors.amber.shade100,
-                        ),
-                    ],
-                  );
-                },
-                orElse: () => const SizedBox.shrink(),
-              ),
-
-          // 镜头级服装覆盖校验（M19 T21.13）：覆盖的套名必须是角色资产清单里的
-          // 套名，覆盖的角色必须在本镜头参考绑定里。只提示，不阻塞生成。
-          ref
-              .watch(shotCostumeIssuesProvider(widget.scriptId))
-              .maybeWhen(
-                data: (issues) {
-                  if (issues.isEmpty) return const SizedBox.shrink();
-                  return _issueCard(
-                    context: context,
-                    title: '服装覆盖提示（${issues.length}）',
-                    message: '提示级：分镜图与视频会按覆盖渲染，建议先修正',
-                    entries: [for (final issue in issues) issue.noteLine],
-                    color: Colors.amber.shade900,
-                    tint: Colors.amber.shade100,
-                  );
-                },
-                orElse: () => const SizedBox.shrink(),
-              ),
-
-          // 镜头侧体检（M22 T23.2）：同框人数、段号、分镜图提示词非空、
-          // 景别运镜词回查。只提示，不阻塞生成。
-          ref
-              .watch(shotGateIssuesProvider(widget.scriptId))
-              .maybeWhen(
-                data: (issues) {
-                  if (issues.isEmpty) return const SizedBox.shrink();
-                  return _issueCard(
-                    context: context,
-                    title: '镜头体检（${issues.length}）',
-                    message: '提示级：出图与视频前建议先修正',
-                    entries: [for (final issue in issues) issue.noteLine],
-                    color: Colors.amber.shade900,
-                    tint: Colors.amber.shade100,
-                  );
-                },
-                orElse: () => const SizedBox.shrink(),
-              ),
 
           Expanded(
             child: shotsAsync.when(
@@ -323,53 +231,6 @@ class _ShotListPageState extends ConsumerState<ShotListPage> {
   /// 只保留仍存在的镜头 id，不改动 [_selected]，避免在 build 内产生副作用。
   static Set<int> _prune(Set<int> selected, Iterable<int> existing) =>
       selected.where(existing.contains).toSet();
-
-  /// 提示面板共用结构（A7 与 M16 预算面板样式一致，仅内容不同）。
-  Widget _issueCard({
-    required BuildContext context,
-    required String title,
-    required String message,
-    required List<String> entries,
-    required Color color,
-    required Color tint,
-  }) {
-    return Card(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      color: color.withValues(alpha: 0.25),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 4),
-            Text(message, style: TextStyle(color: tint)),
-            const SizedBox(height: 2),
-            for (final e in entries)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text('⚠ $e', style: TextStyle(color: tint)),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 校验条目展示文案：严重度 + 段号 + 中文标签。
-  static String _budgetLine(SegmentBudgetIssue issue) =>
-      '[${issue.isError ? 'error' : 'warn'}] ${issue.seq}：'
-      '${_budgetLabelOf(issue.code)}';
-
-  /// M16 校验码 → 中文标签（对齐 docs/05 §12.2）。
-  static String _budgetLabelOf(String code) => switch (code) {
-    'over_limit' => '超出单段上限',
-    'dialogue_overflow' => '台词装不下',
-    'total_mismatch' => '与目标总时长偏差大',
-    'too_few_segments' => '段数偏少',
-    'batch_too_large' => '单批段数过多',
-    _ => code,
-  };
 
   /// 批量生成选中的分镜图（含确认 Sheet）。
   Future<void> _generateSelected() async {
@@ -588,6 +449,187 @@ class _Chip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(label, style: Theme.of(context).textTheme.labelSmall),
+    );
+  }
+}
+
+/// 镜头页统一体检入口：四类校验结果合并成一行折叠面板，默认收起。
+///
+/// 无问题时整体不占位；有问题时只占一行（标题 + 数量徽章），点开才展开各
+/// 分类详情。门只提示不改数据，常驻铺开会把镜头列表挤到只剩一点。
+class _GatePanel extends StatelessWidget {
+  const _GatePanel({
+    required this.transitionIssues,
+    required this.budgetIssues,
+    required this.costumeIssues,
+    required this.shotGateIssues,
+  });
+
+  final List<ShotTransitionIssue> transitionIssues;
+  final List<SegmentBudgetIssue> budgetIssues;
+  final List<GateIssue> costumeIssues;
+  final List<GateIssue> shotGateIssues;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final budgetErrors = budgetIssues.where((i) => i.isError).toList();
+    final budgetWarns = budgetIssues.where((i) => !i.isError).toList();
+    final errorCount =
+        budgetErrors.length +
+        costumeIssues.where((i) => i.isError).length +
+        shotGateIssues.where((i) => i.isError).length;
+    final totalCount =
+        transitionIssues.length +
+        budgetIssues.length +
+        costumeIssues.length +
+        shotGateIssues.length;
+
+    if (totalCount == 0) return const SizedBox.shrink();
+
+    return ExpansionTile(
+      tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+      childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      title: Row(
+        children: [
+          Expanded(child: Text('镜头体检', style: theme.textTheme.titleSmall)),
+          _GateCountBadge(count: totalCount, errorCount: errorCount),
+          const SizedBox(width: 8),
+        ],
+      ),
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              '以下问题需手动调整，门只提示、不自动修改。',
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+        ),
+        if (transitionIssues.isNotEmpty)
+          _gateGroup(
+            context,
+            title: '段间衔接（${transitionIssues.length}）',
+            message: '画面区分度不足，建议调整景别/角度',
+            entries: [for (final i in transitionIssues) i.message],
+            isError: false,
+          ),
+        if (budgetErrors.isNotEmpty)
+          _gateGroup(
+            context,
+            title: '时长约束冲突（${budgetErrors.length}）',
+            message: '错误级：提交视频生成前需逐条确认',
+            entries: [for (final i in budgetErrors) _budgetLine(i)],
+            isError: true,
+          ),
+        if (budgetWarns.isNotEmpty)
+          _gateGroup(
+            context,
+            title: '时长预算提示（${budgetWarns.length}）',
+            message: '提示级：不阻塞生成，建议调整分段',
+            entries: [for (final i in budgetWarns) _budgetLine(i)],
+            isError: false,
+          ),
+        if (costumeIssues.isNotEmpty)
+          _gateGroup(
+            context,
+            title: '服装覆盖（${costumeIssues.length}）',
+            message: '分镜图与视频会按覆盖渲染，建议先修正',
+            entries: [for (final i in costumeIssues) i.noteLine],
+            isError: costumeIssues.any((i) => i.isError),
+          ),
+        if (shotGateIssues.isNotEmpty)
+          _gateGroup(
+            context,
+            title: '镜头体检（${shotGateIssues.length}）',
+            message: '出图与视频前建议先修正',
+            entries: [for (final i in shotGateIssues) i.noteLine],
+            isError: shotGateIssues.any((i) => i.isError),
+          ),
+      ],
+    );
+  }
+
+  Widget _gateGroup(
+    BuildContext context, {
+    required String title,
+    required String message,
+    required List<String> entries,
+    required bool isError,
+  }) {
+    final theme = Theme.of(context);
+    final color = isError
+        ? theme.colorScheme.error
+        : theme.colorScheme.tertiary;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(color: color),
+          ),
+          const SizedBox(height: 2),
+          Text(message, style: theme.textTheme.bodySmall),
+          const SizedBox(height: 2),
+          for (final e in entries)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                e,
+                style: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _budgetLine(SegmentBudgetIssue issue) =>
+      '[${issue.isError ? 'error' : 'warn'}] ${issue.seq}：'
+      '${_budgetLabelOf(issue.code)}';
+
+  String _budgetLabelOf(String code) => switch (code) {
+    'over_limit' => '超出单段上限',
+    'dialogue_overflow' => '台词装不下',
+    'total_mismatch' => '与目标总时长偏差大',
+    'too_few_segments' => '段数偏少',
+    'batch_too_large' => '单批段数过多',
+    _ => code,
+  };
+}
+
+/// 数量徽章：有错误时红色强调，否则中性色。
+class _GateCountBadge extends StatelessWidget {
+  const _GateCountBadge({required this.count, required this.errorCount});
+
+  final int count;
+  final int errorCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hasError = errorCount > 0;
+    final color = hasError
+        ? theme.colorScheme.error
+        : theme.colorScheme.outline;
+    final text = hasError ? '$count 条 · $errorCount 错误' : '$count 条';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: theme.textTheme.labelSmall?.copyWith(color: color),
+      ),
     );
   }
 }
