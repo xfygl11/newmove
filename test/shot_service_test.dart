@@ -520,6 +520,67 @@ void main() {
       expect(result.success, 2);
       expect(result.failed, 0);
     });
+
+    test('参考图按图片模型 maxImageRefs 截断，不超供应商上限', () async {
+      await service.directAndSave(scriptId: scriptId, llm: await fakeLlm());
+      final g01 = (await db.shotDao.listByScript(scriptId))
+          .firstWhere((s) => s.globalSeq == 'G01');
+
+      // 清掉 directAndSave 绑定的引用，改绑 8 个有图资产。
+      await db.assetRefDao.deleteByShot(g01.id);
+      final assetIds = <int>[];
+      for (var i = 0; i < 8; i++) {
+        final path = '/tmp/newmove_test_extra_$i.png';
+        final id = await db.assetDao.insert(
+          AssetsCompanion.insert(
+            scriptId: scriptId,
+            type: '角色',
+            name: '角色$i',
+            stableId: 'char_extra_$i',
+            imagePath: Value(path),
+            status: const Value('已采用'),
+          ),
+        );
+        await File(path).writeAsBytes([i]);
+        await db.assetRefDao.insert(
+          AssetRefsCompanion.insert(
+            shotId: g01.id,
+            assetId: id,
+            role: '角色参考',
+            order: Value(i),
+          ),
+        );
+        assetIds.add(id);
+      }
+
+      // 图片模型声明 maxImageRefs=6，超出部分不得上传。
+      final base = await fakeImage();
+      final limitedImage = ActiveImage(
+        provider: base.provider,
+        apiKey: base.apiKey,
+        model: const ProviderModel(
+          id: 'img',
+          label: 'IMG',
+          maxImageRefs: 6,
+        ),
+      );
+
+      await service.generate(shotId: g01.id, image: limitedImage);
+
+      // 8 张有图资产被截断到 6 张，走多图分支且只传 6 张。
+      expect(
+        fakeImageAdapter.calls,
+        contains('multi:6'),
+        reason: '参考图应被截断到模型上限 6 张',
+      );
+
+      // 清理测试临时文件。
+      for (var i = 0; i < 8; i++) {
+        final f = File('/tmp/newmove_test_extra_$i.png');
+        if (await f.exists()) await f.delete();
+      }
+      expect(assetIds, hasLength(8));
+    });
   });
 
   group('ShotService.submitVideo / pollVideoTask（M6）', () {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/protocols.dart';
 import '../core/storage/providers.dart';
 import '../data/app_database.dart';
+import '../features/provider_config/model_presets.dart';
 import '../features/provider_config/provider_models.dart';
 
 /// 当前激活的图片供应商配置（取第一个已配置且 Key/模型齐全的 image 组）。
@@ -40,7 +41,9 @@ final activeImageProvider = FutureProvider<ActiveImage?>((ref) async {
     if (!Protocols.isSupported('image', p.protocol)) continue;
     final key = await ref.watch(secureKeyStoreProvider).readKey(p.id);
     // 只使用勾选启用的模型（docs/02 §4.1.2）。
-    final models = ProviderModelCodec.decode(p.models)
+    // 加载时补全已知模型能力（只补空字段），存量条目缺 maxImageRefs 时
+    // 也能拿到正确的参考图上限，而不是回退到全局硬上限。
+    final models = ModelPresets.applyAll(ProviderModelCodec.decode(p.models))
         .where((m) => m.enabled)
         .toList();
     if (key != null && key.isNotEmpty && models.isNotEmpty) {

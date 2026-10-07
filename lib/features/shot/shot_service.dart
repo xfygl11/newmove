@@ -520,7 +520,11 @@ class ShotService {
     if (shot.prompt.isEmpty) throw StateError('镜头尚未生成分镜提示词');
 
     // 台账在调用前写入：提示词、参数、参考顺序与调用前状态，之后的编辑不回写。
-    final refUploads = await _collectUploads(shot, cancelToken: cancelToken);
+    final refUploads = await _collectUploads(
+      shot,
+      cancelToken: cancelToken,
+      maxRefs: image.model.maxImageRefs ?? 9,
+    );
     final prompt = await _resolvePrompt(
       shot,
       refUploads.refs,
@@ -663,7 +667,11 @@ class ShotService {
     ActiveImage image, {
     GenerationCancelToken? cancelToken,
   }) async {
-    final refUploads = await _collectUploads(shot, cancelToken: cancelToken);
+    final refUploads = await _collectUploads(
+      shot,
+      cancelToken: cancelToken,
+      maxRefs: image.model.maxImageRefs ?? 9,
+    );
 
     final prompt = await _resolvePrompt(
       shot,
@@ -721,15 +729,20 @@ class ShotService {
   ///
   /// 资产待生成或图片文件缺失都是正常状态，这些引用不进上传清单，
   /// 因此提示词编号也不能用 refs 下标（见 [_RefUploads]）。
+  ///
+  /// [maxRefs] 为图片模型参考数量上限（能力字段，缺省回退 9）：超出上限的
+  /// 有图资产不进上传清单，避免供应商以「too many input images」拒绝请求。
   Future<_RefUploads> _collectUploads(
     Shot shot, {
     GenerationCancelToken? cancelToken,
+    int maxRefs = 9,
   }) async {
     final refs = await assetRefDao.listByShot(shot.id);
     final assetsById = <int, Asset>{};
     final uploads = <_RefUpload>[];
     for (final ref in refs) {
       cancelToken?.throwIfCancelled();
+      if (uploads.length >= maxRefs) break;
       final asset = await assetDao.find(ref.assetId);
       if (asset == null) continue;
       assetsById[asset.id] = asset;

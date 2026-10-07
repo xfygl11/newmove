@@ -85,11 +85,12 @@ class ModelPresets {
       contextWindow: 512000,
       maxOutputTokens: 65536,
     ),
-    // Agnes 图片：1K-4K 尺寸，多画幅。
+    // Agnes 图片：1K-4K 尺寸，多画幅，参考图上限 6 张。
     _Spec(
       match: ['agnes-image', 'agnes image'],
       imageSizes: ['1K', '2K', '3K', '4K'],
       imageRatios: ['1:1', '3:4', '4:3', '16:9', '9:16', '2:3', '3:2', '21:9'],
+      maxImageRefs: 6,
     ),
     // Agnes 视频 2.5：4-12s，720P/1080P/1K/2K，多参 + 首尾帧，12 个媒体文件上限。
     _Spec(

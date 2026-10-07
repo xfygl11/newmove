@@ -64,6 +64,7 @@ class AgnesPresets {
               '3:2',
               '21:9',
             ],
+            maxImageRefs: 6,
           ),
         ],
         readme: 'Agnes AI 图片生成/图生图/多图合成（内联参考图协议）',
