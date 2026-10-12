@@ -956,7 +956,7 @@ class _BottomBar extends StatelessWidget {
                                         ) ==
                                         null
                                     ? Theme.of(context).colorScheme.primary
-                                    : Colors.orange.shade700,
+                                    : Theme.of(context).colorScheme.error,
                               ),
                         ),
                       ),

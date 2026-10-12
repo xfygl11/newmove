@@ -270,7 +270,7 @@ class _VideoTaskTile extends ConsumerWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('状态：${task.status} · 模型 ${params.modelId}'),
+            Text('模型 ${params.modelId}'),
             if (task.error != null && task.error!.isNotEmpty)
               Text(
                 task.error!,
@@ -332,7 +332,7 @@ class _AssetTaskTile extends ConsumerWidget {
           ),
         ),
         title: Text(asset.name),
-        subtitle: Text('${asset.type} · ${asset.status}'),
+        subtitle: Text(asset.type),
         trailing: StatusBadge(status: asset.status),
         onTap: () async {
           final route = await _assetRoute(ref, asset);
@@ -368,7 +368,7 @@ class _ShotTaskTile extends ConsumerWidget {
           ),
         ),
         title: Text('${shot.globalSeq} 分镜图'),
-        subtitle: Text('${shot.globalTimeRange} · ${shot.status}'),
+        subtitle: Text(shot.globalTimeRange),
         trailing: StatusBadge(status: shot.status),
         onTap: () async {
           final route = await _shotRoute(ref, shot);

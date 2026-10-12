@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/json_values.dart';
+import '../../widgets/status_badge.dart';
 import 'novel_providers.dart';
 import 'truth_file_kinds.dart';
+import 'truth_file_store.dart';
 
 /// 伏笔池管理页：登记/追踪/回收伏笔钩子，写回 TruthFile（hooks）。
 ///
@@ -310,23 +312,21 @@ class _HookCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Chip(
-                  label: Text(
-                    isResolved ? '已回收' : '未闭合',
-                    style: TextStyle(
-                      color: isResolved
-                          ? Colors.green
-                          : Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
+                StatusBadge(
+                  status: HookStates.label(hook['status']?.toString()),
                 ),
                 const SizedBox(width: 8),
                 if (planted.isNotEmpty)
-                  Text(
-                    '埋设于 $planted',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                const Spacer(),
+                  Expanded(
+                    child: Text(
+                      '埋设于 $planted',
+                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  )
+                else
+                  const Spacer(),
                 Text(
                   hook['id']?.toString() ?? '',
                   style: Theme.of(context).textTheme.bodySmall,
@@ -344,8 +344,9 @@ class _HookCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
               children: [
                 TextButton(onPressed: onEdit, child: const Text('编辑')),
                 TextButton(onPressed: onRemove, child: const Text('删除')),

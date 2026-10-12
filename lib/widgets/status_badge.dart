@@ -31,10 +31,11 @@ class StatusKinds {
     'succeeded': StatusKind(Colors.green, Icons.check_circle_outline, false),
     'failed': StatusKind(Colors.red, Icons.error_outline, false),
     'cancelled': StatusKind(Colors.orange, Icons.cancel_outlined, false),
-    // 章节 / 伏笔
+    // 章节 / 剧本 / 伏笔
     '草稿': StatusKind(Colors.grey, Icons.edit_note, false),
     '审校中': StatusKind(Colors.blue, Icons.looks_one, false),
     '定稿': StatusKind(Colors.green, Icons.fact_check, false),
+    '草案': StatusKind(Colors.grey, Icons.edit_note, false),
     '已回收': StatusKind(Colors.grey, Icons.archive_outlined, false),
     // 伏笔状态（HookStates.label 的展示标签）
     '未闭合': StatusKind(Colors.grey, Icons.radio_button_unchecked, false),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/app_database.dart';
+import '../../widgets/status_badge.dart';
 import '../novel/novel_providers.dart';
 import 'script_adapt_sheet.dart';
 import 'script_providers.dart';
@@ -95,7 +96,6 @@ class _ScriptTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scenesAsync = ref.watch(scenesByScriptProvider(script.id));
     final sceneCount = scenesAsync.value?.length ?? 0;
-    final statusColor = script.status == '定稿' ? Colors.green : Colors.amber;
 
     return ListTile(
       leading: const CircleAvatar(child: Icon(Icons.movie_outlined)),
@@ -103,7 +103,7 @@ class _ScriptTile extends ConsumerWidget {
       subtitle: Text(
         'v${script.version} · $sceneCount 场 · ${script.fidelityMode}',
       ),
-      trailing: Text(script.status, style: TextStyle(color: statusColor)),
+      trailing: StatusBadge(status: script.status),
       onTap: () => context.push('/script/$projectId/script/${script.id}'),
     );
   }

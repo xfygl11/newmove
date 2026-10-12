@@ -10,6 +10,7 @@ import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/script_dao.dart';
 import '../../widgets/gate_issue_list.dart';
+import '../../widgets/status_badge.dart';
 import '../novel/novel_providers.dart';
 import '../shot/shot_compose_service.dart';
 import '../shot/shot_providers.dart';
@@ -193,14 +194,7 @@ class _HeaderCard extends ConsumerWidget {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
-                Chip(
-                  label: Text(
-                    script.status,
-                    style: TextStyle(
-                      color: isFinal ? Colors.green : Colors.amber.shade900,
-                    ),
-                  ),
-                ),
+                StatusBadge(status: script.status),
               ],
             ),
             const SizedBox(height: 4),

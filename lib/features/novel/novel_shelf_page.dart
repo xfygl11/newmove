@@ -9,6 +9,7 @@ import '../../core/status_constants.dart';
 import '../../core/storage/providers.dart';
 import '../../core/text/chapter_import.dart';
 import '../../data/app_database.dart';
+import '../../widgets/status_badge.dart';
 import 'novel_providers.dart';
 import 'novel_setup_catalog.dart';
 
@@ -211,56 +212,82 @@ class _BookHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final workType = book.workType;
     final isDefault = workType == NovelSetupCatalog.defaultWorkForm;
-    return ListTile(
-      title: Row(
-        children: [
-          if (!isDefault)
-            Container(
-              margin: const EdgeInsets.only(right: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                workType,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Row(
+            children: [
+              if (!isDefault)
+                Container(
+                  margin: const EdgeInsets.only(right: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    workType,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+              Expanded(
+                child: Text(
+                  book.title,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-            ),
-          Expanded(child: Text(book.title, overflow: TextOverflow.ellipsis)),
-        ],
-      ),
-      subtitle: Text(
-        book.premise?.isNotEmpty == true ? book.premise! : '尚未生成设定',
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
+          child: Text(
+            book.premise?.isNotEmpty == true ? book.premise! : '尚未生成设定',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+        _BookNavRow(projectId: book.projectId),
+      ],
+    );
+  }
+}
+
+/// 书架入口导航行：横向可滚动，避免多个入口按钮在窄屏溢出。
+class _BookNavRow extends StatelessWidget {
+  const _BookNavRow({required this.projectId});
+
+  final int projectId;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = [
+      ('大纲', Icons.list_alt_outlined, '/novel/$projectId/outline'),
+      ('角色', Icons.people_outline, '/novel/$projectId/characters'),
+      ('伏笔', Icons.bolt_outlined, '/novel/$projectId/hooks'),
+      ('剧本', Icons.movie_outlined, '/script/$projectId'),
+      ('设定', Icons.tune, '/novel/$projectId/settings'),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
         children: [
-          TextButton(
-            onPressed: () => context.push('/novel/${book.projectId}/outline'),
-            child: const Text('大纲'),
-          ),
-          TextButton(
-            onPressed: () =>
-                context.push('/novel/${book.projectId}/characters'),
-            child: const Text('角色'),
-          ),
-          TextButton(
-            onPressed: () => context.push('/novel/${book.projectId}/hooks'),
-            child: const Text('伏笔'),
-          ),
-          TextButton(
-            onPressed: () => context.push('/script/${book.projectId}'),
-            child: const Text('剧本'),
-          ),
-          TextButton(
-            onPressed: () => context.push('/novel/${book.projectId}/settings'),
-            child: const Text('设定'),
-          ),
+          for (final (label, icon, route) in entries)
+            TextButton.icon(
+              onPressed: () => context.push(route),
+              icon: Icon(icon, size: 18),
+              label: Text(label),
+            ),
         ],
       ),
     );
@@ -275,16 +302,11 @@ class _ChapterTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final statusColor = switch (chapter.status) {
-      '定稿' => Colors.green,
-      '审校中' => Colors.blue,
-      _ => Colors.grey,
-    };
     return ListTile(
       leading: CircleAvatar(radius: 16, child: Text('${chapter.seq}')),
       title: Text(chapter.title),
       subtitle: Text('${chapter.wordCount} 字 · 修订 ${chapter.revision}'),
-      trailing: Text(chapter.status, style: TextStyle(color: statusColor)),
+      trailing: StatusBadge(status: chapter.status),
       onTap: () => context.push('/novel/$projectId/chapter/${chapter.id}'),
       onLongPress: () => _showChapterMenu(context, ref),
     );
