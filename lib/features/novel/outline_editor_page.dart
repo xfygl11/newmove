@@ -319,10 +319,10 @@ class _GoalCardState extends State<_GoalCard> {
                 IconButton(
                   tooltip: '删除本章',
                   onPressed: widget.onRemove,
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.delete_outline,
                     size: 18,
-                    color: Colors.red,
+                    color: Theme.of(context).colorScheme.error,
                   ),
                 ),
               ],

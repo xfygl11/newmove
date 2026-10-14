@@ -432,7 +432,7 @@ class _SegmentCard extends StatelessWidget {
       label: Text(
         missing ? '$ref（缺失）' : '$ref·${beat.type}',
         style: TextStyle(
-          color: missing ? Colors.red.shade200 : null,
+          color: missing ? Theme.of(context).colorScheme.error : null,
           fontSize: 12,
         ),
       ),

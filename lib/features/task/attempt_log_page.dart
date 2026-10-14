@@ -240,7 +240,7 @@ class _AttemptCard extends StatelessWidget {
   Widget? _errorSection(ThemeData theme) {
     final msg = attempt.errorMessage;
     if (msg == null || msg.isEmpty) return null;
-    return _section('失败原因', msg, theme, color: Colors.red.shade400);
+    return _section('失败原因', msg, theme, color: theme.colorScheme.error);
   }
 
   String _resultText() {

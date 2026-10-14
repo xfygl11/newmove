@@ -303,9 +303,9 @@ class _AssetCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       const Spacer(),
-                      StatusBadge(status: asset.status),
+                      StatusBadge(status: asset.status, compact: true),
                       if (asset.isStale != 0) ...[
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 4),
                         StaleBadge(isStale: asset.isStale),
                       ],
                     ],

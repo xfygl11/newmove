@@ -431,8 +431,9 @@ class NovelSetupPageState extends ConsumerState<NovelSetupPage> {
         ),
         Text(
           _chapterPlanNote(_draft.workType),
-          style: Theme.of(context).textTheme.bodySmall
-              ?.copyWith(color: Colors.grey),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.outline,
+          ),
         ),
       ],
     ),
@@ -533,7 +534,7 @@ class NovelSetupPageState extends ConsumerState<NovelSetupPage> {
                 child: Text(
                   '还需选择核心受众与作品类型',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.grey,
+                    color: theme.colorScheme.outline,
                   ),
                 ),
               ),
@@ -749,7 +750,7 @@ class _Card extends StatelessWidget {
                   Text(
                     '*',
                     style: theme.textTheme.titleSmall?.copyWith(
-                      color: Colors.red,
+                      color: theme.colorScheme.error,
                     ),
                   ),
               ],
@@ -760,7 +761,7 @@ class _Card extends StatelessWidget {
                 child: Text(
                   hint,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.grey,
+                    color: theme.colorScheme.outline,
                   ),
                 ),
               ),

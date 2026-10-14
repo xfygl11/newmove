@@ -488,9 +488,14 @@ class _GroupSection extends StatelessWidget {
         ),
         for (final p in providers) _ProviderCard(provider: p),
         if (providers.isEmpty)
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text('暂无', style: TextStyle(color: Colors.grey)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              '暂无',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
           ),
       ],
     );
