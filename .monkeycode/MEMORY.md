@@ -85,7 +85,8 @@ Entries discovered by the Agent during task execution should follow this format:
        - **`@DataClassName('X')` 的行类在 `app_database.g.dart`（不是 `tables.g.dart`）**，要用就得 import `package:newmove/data/app_database.dart`；直接用表名 `PromptOverrideVersions` / `CharacterRelation` 作类型会得到带 `Column<String>` getter 的表对象，比较与传参全报错。**用 edit 工具做 `replaceAll` 改类型名时要防 `PromptOverrideVersionsCompanion` 被连带改成 `PromptOverrideVersionssCompanion`**
        - **`ReviewIssue._locateQuote` 有前缀降级**（从 `len-1` 缩到 4 字为止），所以写「长引文未命中」类测试时选一个前 4 字都不在正文里的长串，否则会被降级匹配命中、门不响
         - **当前基线（M27 后）**：schema v15，门码 34 个（`GateCodes.all`），全量 **601 例**全通过（M24 基线 581 + M26 键盘溢出 12 + 章节编辑器 pump 修复 + M27 主题 8），`flutter analyze` 零问题
-        - **M26 / M27（2026-10-06，零 schema）**：弹窗包 `SingleChildScrollView`；章节工具栏 `multiRowsDisplay: false`；顶层 GoRoute 入口用 `context.push`；外观主题词表 `AppThemeCatalog` 六款深色，`AppSettings.themeId` 走 shared_preferences
+         - **M26 / M27（2026-10-06，零 schema）**：弹窗包 `SingleChildScrollView`；章节工具栏 `multiRowsDisplay: false`；顶层 GoRoute 入口用 `context.push`；外观主题词表 `AppThemeCatalog` 六款深色，`AppSettings.themeId` 走 shared_preferences
+         - **M28（2026-10-16，零 schema）**：书架入口改横向滚动、状态统一走 `StatusBadge`、固定字面色回归主题色（T28.1–T28.3，此前已分批提交 4 次）；本轮补章节版本对比 + 恢复（T28.4–T28.7）：`lib/core/text/text_diff.dart` 行级 LCS（`maxCells = 1 << 20` 超限退化为整块替换，空文本按零行处理）、`ChapterRevisionDao.snapshotAndReplace` 单事务存档+替换、`chapter_editor_page.dart` 版本历史「对比当前 / 恢复」。全量 **622 例**全通过（基线 601 + text_diff 8 + daos 3 + 本轮其余），`flutter analyze` 零问题
   - **`flutter analyze` 与 `flutter test` 不要放在两个后台终端里并发跑**：本环境内存紧张，并发时会把 analyze 顶到 OOM（exit code -1 + `killed_by_timeout`，且输出 0 字节）。串行跑，先 analyze（约 25 秒）再 test
   - 单文件 test 加 `| tail -N` 会等到进程结束才输出，运行期间日志一直是 0 字节；要观察进度就别加 tail
   - 全量测试偶发 `<某文件>: loading <该文件>` 失败而其余 480+ 例全绿（2026-10-06 实测：`backup_service_test.dart`）——是该文件的编译 isolate 被内存顶掉，不是代码问题。判定方式：单独重跑该文件，通过即为环境抖动，无需改代码

@@ -11,6 +11,7 @@ import '../../agent/active_llm.dart';
 import '../../core/status_constants.dart';
 import '../../core/storage/providers.dart';
 import '../../core/text/chapter_import.dart';
+import '../../core/text/text_diff.dart';
 import '../../data/app_database.dart';
 import '../../widgets/confirm_sheet.dart';
 import 'chapter_maintain_gate.dart';
@@ -737,31 +738,207 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      builder: (ctx) => ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('版本历史', style: Theme.of(ctx).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          if (revisions.isEmpty)
-            const Padding(padding: EdgeInsets.all(16), child: Text('暂无历史版本。')),
-          for (final r in revisions)
-            ListTile(
-              leading: Text('v${r.revision}'),
-              title: Text(
-                r.content ?? '',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: Text('${r.createdAt}'),
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.92,
+        builder: (ctx, scrollCtl) => ListView(
+          controller: scrollCtl,
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text('版本历史', style: Theme.of(ctx).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              '对比历史快照与当前正文，或回退到某一版。',
+              style: Theme.of(ctx).textTheme.bodySmall,
             ),
+            const SizedBox(height: 8),
+            if (revisions.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('暂无历史版本。AI 修订后会在此留下快照。'),
+              ),
+            for (final r in revisions)
+              _RevisionTile(
+                revision: r,
+                onCompare: () => _compareRevision(r),
+                onRestore: () => _restoreRevision(chapter, r),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 对比某历史快照与「当前正文」，展示行级差异。
+  Future<void> _compareRevision(ChapterRevision revision) async {
+    final oldText = revision.content ?? '';
+    final diff = TextDiff.lines(oldText, _plainText);
+    if (!TextDiff.hasChange(diff)) {
+      _toast('v${revision.revision} 与当前正文一致');
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('v${revision.revision} → 当前正文'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final line in diff) _DiffRow(line: line),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('关闭'),
+          ),
         ],
       ),
     );
   }
 
+  /// 回退到某一历史版本。先把当前正文存一份快照，保证回退本身可再回退。
+  Future<void> _restoreRevision(
+    Chapter chapter,
+    ChapterRevision revision,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('恢复版本'),
+        content: Text(
+          '用 v${revision.revision} 的正文替换当前正文？'
+          '当前内容会先存一份快照，仍可在版本历史里找回。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('恢复'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    final content = revision.content ?? '';
+    // 快照存「编辑器里的当前正文」而非上次落库的版本，未保存的手改也不会丢。
+    // 存档 + 替换两步同一事务（对齐 reviseChapter 的存档约定）。
+    await ref
+        .read(chapterRevisionDaoProvider)
+        .snapshotAndReplace(
+          chapter: chapter.copyWith(content: Value(_plainText)),
+          content: content,
+          wordCount: ChapterImport.countWords(content),
+        );
+    if (!mounted) return;
+    _replaceContent(content);
+    _toast('已恢复到 v${revision.revision}');
+  }
+
   void _toast(String text) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+}
+
+/// 版本历史里的一条快照：摘要 + 字数 + 对比 / 恢复操作。
+class _RevisionTile extends StatelessWidget {
+  const _RevisionTile({
+    required this.revision,
+    required this.onCompare,
+    required this.onRestore,
+  });
+
+  final ChapterRevision revision;
+  final VoidCallback onCompare;
+  final VoidCallback onRestore;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = revision.content ?? '';
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'v${revision.revision}',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${ChapterImport.countWords(text)} 字 · ${revision.createdAt}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              text.isEmpty ? '（空）' : text,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(onPressed: onCompare, child: const Text('对比当前')),
+                TextButton(onPressed: onRestore, child: const Text('恢复')),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 差异对比里的一行：`+` 新增 / `-` 删除 / 空格 未变。
+class _DiffRow extends StatelessWidget {
+  const _DiffRow({required this.line});
+
+  final DiffLine line;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final (prefix, color, background) = switch (line.op) {
+      DiffOp.insert => (
+        '+',
+        scheme.primary,
+        scheme.primaryContainer.withValues(alpha: 0.25),
+      ),
+      DiffOp.delete => (
+        '-',
+        scheme.error,
+        scheme.errorContainer.withValues(alpha: 0.25),
+      ),
+      DiffOp.equal => (' ', scheme.onSurfaceVariant, Colors.transparent),
+    };
+    return Container(
+      width: double.infinity,
+      color: background,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      child: Text(
+        '$prefix ${line.text}',
+        style: TextStyle(color: color, fontFamily: 'monospace', fontSize: 12),
+      ),
+    );
   }
 }
 

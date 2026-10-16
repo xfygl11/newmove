@@ -358,4 +358,94 @@ void main() {
       }
     });
   });
+
+  group('ChapterRevisionDao.snapshotAndReplace', () {
+    Future<({int bookId, int chapterId})> seed(String content) async {
+      final pid = await db.projectDao.insertProject(
+        ProjectsCompanion.insert(name: '测试项目'),
+      );
+      final bookId = await db.novelDao.insertBook(
+        NovelBooksCompanion.insert(projectId: pid, title: '测试书'),
+      );
+      final chapterId = await db.novelDao.insertChapter(
+        ChaptersCompanion.insert(
+          bookId: bookId,
+          seq: 1,
+          title: '第一章',
+          content: Value(content),
+        ),
+      );
+      return (bookId: bookId, chapterId: chapterId);
+    }
+
+    test('存档旧正文、替换正文并推进修订号', () async {
+      final ids = await seed('旧正文一二三');
+      final chapter = (await db.novelDao.findChapter(ids.chapterId))!;
+
+      await db.chapterRevisionDao.snapshotAndReplace(
+        chapter: chapter,
+        content: '新正文',
+        wordCount: 3,
+      );
+
+      final after = (await db.novelDao.findChapter(ids.chapterId))!;
+      expect(after.content, '新正文');
+      expect(after.wordCount, 3);
+      expect(after.revision, chapter.revision + 1);
+
+      final revisions = await db.chapterRevisionDao.listByChapter(
+        ids.chapterId,
+      );
+      expect(revisions, hasLength(1));
+      expect(revisions.single.content, '旧正文一二三');
+      expect(revisions.single.revision, chapter.revision);
+    });
+
+    test('连续两次替换形成两档可回退的版本链', () async {
+      final ids = await seed('v1 正文');
+
+      for (final text in ['v2 正文', 'v3 正文']) {
+        final chapter = (await db.novelDao.findChapter(ids.chapterId))!;
+        await db.chapterRevisionDao.snapshotAndReplace(
+          chapter: chapter,
+          content: text,
+          wordCount: text.length,
+        );
+      }
+
+      final after = (await db.novelDao.findChapter(ids.chapterId))!;
+      expect(after.content, 'v3 正文');
+
+      final revisions = await db.chapterRevisionDao.listByChapter(
+        ids.chapterId,
+      );
+      // 倒序：最新存档在前，指向被替换掉的那一版正文。
+      expect(revisions.map((r) => r.content).toList(), [
+        'v2 正文',
+        'v1 正文',
+      ]);
+    });
+
+    test('任一步失败整段回滚：不留半套快照', () async {
+      final ids = await seed('旧正文');
+      final chapter = (await db.novelDao.findChapter(ids.chapterId))!;
+      // 章节 id 不存在 → 快照插入违反外键，事务必须整段回滚。
+      final ghost = chapter.copyWith(id: 999999);
+
+      await expectLater(
+        db.chapterRevisionDao.snapshotAndReplace(
+          chapter: ghost,
+          content: '新正文',
+          wordCount: 3,
+        ),
+        throwsA(isA<Exception>()),
+      );
+
+      final after = (await db.novelDao.findChapter(ids.chapterId))!;
+      expect(after.content, '旧正文');
+      expect(after.revision, chapter.revision);
+      expect(await db.chapterRevisionDao.listByChapter(ids.chapterId), isEmpty);
+      expect(await db.chapterRevisionDao.listByChapter(999999), isEmpty);
+    });
+  });
 }
