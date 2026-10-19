@@ -16932,6 +16932,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final PromptOverrideDao promptOverrideDao = PromptOverrideDao(
     this as AppDatabase,
   );
+  late final PromptPresetDao promptPresetDao = PromptPresetDao(
+    this as AppDatabase,
+  );
   late final CharacterRelationDao characterRelationDao = CharacterRelationDao(
     this as AppDatabase,
   );

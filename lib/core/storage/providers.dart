@@ -14,6 +14,7 @@ import '../../data/daos/novel_dao.dart';
 import '../../data/daos/project_dao.dart';
 import '../../data/daos/provider_dao.dart';
 import '../../data/daos/prompt_override_dao.dart';
+import '../../data/daos/prompt_preset_dao.dart';
 import '../../data/daos/revision_dao.dart';
 import '../../data/daos/generation_attempt_dao.dart';
 import '../../data/daos/scene_dao.dart';
@@ -112,6 +113,10 @@ final attemptRecorderProvider = Provider<AttemptRecorder>(
 
 final promptOverrideDaoProvider = Provider<PromptOverrideDao>(
   (ref) => ref.watch(databaseProvider).promptOverrideDao,
+);
+
+final promptPresetDaoProvider = Provider<PromptPresetDao>(
+  (ref) => ref.watch(databaseProvider).promptPresetDao,
 );
 
 final promptResolverProvider = Provider<PromptResolver>(

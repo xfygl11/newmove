@@ -693,6 +693,21 @@ lib/
 - **不改 aspectRatio**：`Scripts.aspectRatio` 仍是死列（M14 已删），M32 未复活。
   多比例支持留待后续批次（需透传给供应商能力）。
 
+### 提示词预设包约定（M33）
+
+- **预设包是命名的一组槽位覆盖**：`PromptPresets` 表（id/name/slots/createdAt），
+  `slots` 存 JSON 对象 `{ slotKey: body, ... }`，与 `PromptOverrides` 对齐。
+  预设包不直接参与提示词解析，是覆盖的打包/应用工具。
+- **同名预设包不允许**：`PromptPresetService.createPreset` / `updatePreset` 检查
+  名称唯一性，重复抛 `ArgumentError`。
+- **applyPreset 写项目级覆盖**：`PromptPresetService.applyPreset` 把预设 slots 写为
+  项目级覆盖（走 `PromptOverrideDao.upsert`，带版本历史），返回实际写入的槽位数量。
+  空预设或坏 JSON 返回 0。
+- **saveAsPreset 从项目保存**：`PromptPresetService.saveAsPreset` 从项目当前覆盖
+  保存为预设包，空覆盖或全空文本抛 `ArgumentError`。
+- **_decodeSlots 容错解码**：坏 JSON / 非 Map 回落空对象，不抛异常。
+- **UI 路由**：`/settings/presets/:projectId`，与 PromptOverridePage 同级。
+
 ---
 
 ## 5. 数据与状态约定

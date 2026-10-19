@@ -11,6 +11,7 @@ import 'daos/gate_log_dao.dart';
 import 'daos/generation_attempt_dao.dart';
 import 'daos/location_dao.dart';
 import 'daos/prompt_override_dao.dart';
+import 'daos/prompt_preset_dao.dart';
 import 'daos/story_arc_dao.dart';
 import 'daos/revision_dao.dart';
 import 'daos/chapter_revision_dao.dart';
@@ -79,6 +80,7 @@ part 'app_database.g.dart';
     RevisionDao,
     GenerationAttemptDao,
     PromptOverrideDao,
+    PromptPresetDao,
     CharacterRelationDao,
     GateLogDao,
     LocationDao,

@@ -19,6 +19,7 @@ import 'features/novel/world_building_page.dart';
 import 'features/project/project_page.dart';
 import 'features/provider_config/provider_config_page.dart';
 import 'features/provider_config/prompt_override_page.dart';
+import 'features/provider_config/prompt_preset_page.dart';
 import 'features/script/scene_edit_page.dart';
 import 'features/script/script_detail_page.dart';
 import 'features/script/script_page.dart';
@@ -80,6 +81,13 @@ final GoRouter appRouter = GoRouter(
       redirect: (_, state) => requireIntParams(state, ['projectId']),
       builder: (_, state) =>
           PromptOverridePage(projectId: pathId(state, 'projectId')),
+    ),
+    // 提示词预设包管理（M33）。
+    GoRoute(
+      path: '/settings/presets/:projectId',
+      redirect: (_, state) => requireIntParams(state, ['projectId']),
+      builder: (_, state) =>
+          PromptPresetPage(projectId: pathId(state, 'projectId')),
     ),
     // 生成台账：任务中心入口，只读展示历次生成尝试（M17 T19.4）。
     GoRoute(path: '/tasks/attempts', builder: (_, _) => const AttemptLogPage()),
