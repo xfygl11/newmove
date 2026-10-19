@@ -1,4 +1,4 @@
-/// TruthFile 7 类 kind 标识与中文标签。
+/// TruthFile 9 类 kind 标识与中文标签。
 class TruthFileKind {
   TruthFileKind._();
 
@@ -9,6 +9,8 @@ class TruthFileKind {
   static const String chapterSummaries = 'chapter_summaries';
   static const String authorIntent = 'author_intent';
   static const String currentFocus = 'current_focus';
+  static const String chapterPlan = 'chapter_plan';
+  static const String readerKnowledge = 'reader_knowledge';
 
   static const List<String> all = [
     worldFacts,
@@ -18,6 +20,8 @@ class TruthFileKind {
     chapterSummaries,
     authorIntent,
     currentFocus,
+    chapterPlan,
+    readerKnowledge,
   ];
 
   static String label(String kind) => switch (kind) {
@@ -28,6 +32,8 @@ class TruthFileKind {
     chapterSummaries => '章节摘要',
     authorIntent => '作者意图',
     currentFocus => '当前焦点',
+    chapterPlan => '章节计划',
+    readerKnowledge => '读者认知',
     _ => kind,
   };
 }

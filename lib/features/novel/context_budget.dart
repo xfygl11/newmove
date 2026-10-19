@@ -42,6 +42,8 @@ class ContextBudget {
     TruthFileKind.currentFocus,
     TruthFileKind.characterMatrix,
     TruthFileKind.worldFacts,
+    TruthFileKind.chapterPlan,
+    TruthFileKind.readerKnowledge,
   };
 
   /// 压缩池 kind：优先级从高到低，先加入，超出预算时从低优先级整体丢弃。

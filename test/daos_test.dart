@@ -131,14 +131,14 @@ void main() {
     });
   });
 
-  group('schema v15 结构', () {
-    test('剧本表已删除 aspect_ratio 与 language 死字段', () async {
-      expect(db.schemaVersion, 15);
+  group('schema 结构', () {
+    test('剧本表已删除 language 死字段，M29 复活 aspect_ratio 多比例列', () async {
+      expect(db.schemaVersion, 16);
 
       final rows = await db.customSelect('PRAGMA table_info(scripts)').get();
       final columns = rows.map((row) => row.data['name'] as String).toSet();
 
-      expect(columns, isNot(contains('aspect_ratio')));
+      expect(columns, contains('aspect_ratio'));
       expect(columns, isNot(contains('language')));
       expect(
         columns,
@@ -356,6 +356,129 @@ void main() {
           reason: '$table 不应声明外键',
         );
       }
+    });
+
+    test('M29 剧本表新增集级钩子/悬念/调板/多比例/描述/关键词/背景乐', () async {
+      final rows = await db.customSelect('PRAGMA table_info(scripts)').get();
+      expect(
+        rows.map((r) => r.data['name']).toSet(),
+        containsAll([
+          'hook',
+          'cliff',
+          'color_palette',
+          'aspect_ratio',
+          'description',
+          'keywords',
+          'bgm_url',
+        ]),
+      );
+      // 全部可空：旧集没有这些集级元数据时不影响读取。
+      for (final col in [
+        'hook',
+        'cliff',
+        'color_palette',
+        'aspect_ratio',
+        'description',
+        'keywords',
+        'bgm_url',
+      ]) {
+        final meta = rows.where((r) => r.data['name'] == col).single;
+        expect(meta.data['notnull'], 0, reason: '$col 应可空');
+      }
+    });
+
+    test('M29 场次/节拍/资产/镜头/帧/参考/快照新增列均可空', () async {
+      final cases = <String, List<String>>{
+        'scenes': ['location_id'],
+        'beats': ['weight', 'hook_beat_id'],
+        'assets': ['is_narrative'],
+        'shots': ['sound_design', 'music_cue', 'depth_of_field', 'video_script'],
+        'shot_frames': ['is_scene_ref'],
+        'asset_refs': ['version', 'is_active'],
+        'shot_revisions': ['version_group'],
+      };
+      for (final entry in cases.entries) {
+        final rows = await db
+            .customSelect('PRAGMA table_info(${entry.key})')
+            .get();
+        final byName = {for (final r in rows) r.data['name']: r.data};
+        for (final col in entry.value) {
+          expect(byName, contains(col), reason: '${entry.key}.$col 缺失');
+          expect(
+            byName[col]!['notnull'],
+            0,
+            reason: '${entry.key}.$col 应可空（旧数据缺字段照常通过）',
+          );
+        }
+      }
+    });
+
+    test('M29 六张新表均已创建且归属列正确', () async {
+      final rows = await db.customSelect(
+        "SELECT name FROM sqlite_master WHERE type = 'table'",
+      ).get();
+      expect(
+        rows.map((r) => r.data['name'] as String),
+        containsAll([
+          'locations',
+          'story_arcs',
+          'arc_nodes',
+          'prompt_presets',
+          'import_logs',
+          'agent_bindings',
+        ]),
+      );
+    });
+
+    test('M29 地点表列集与软引用（无外键）', () async {
+      final rows = await db
+          .customSelect('PRAGMA table_info(locations)')
+          .get();
+      expect(
+        rows.map((r) => r.data['name']).toSet(),
+        containsAll([
+          'id',
+          'book_id',
+          'name',
+          'type',
+          'parent_id',
+          'description',
+          'created_at',
+        ]),
+      );
+      // 地点按 bookId 归属作品（唯一出站外键指向 novel_books）。
+      final fk = await db.customSelect('PRAGMA foreign_key_list(locations)').get();
+      expect(
+        fk.map((r) => r.data['table'] as String),
+        contains('novel_books'),
+      );
+      // Scenes.locationId 是软引用：scenes 表不声明指向 locations 的外键，
+      // 删地点不级联删场景，悬空的 locationId 由场景读取方回落。
+      final sceneFk = await db.customSelect('PRAGMA foreign_key_list(scenes)').get();
+      expect(
+        sceneFk.map((r) => r.data['table'] as String),
+        isNot(contains('locations')),
+      );
+    });
+
+    test('M29 故事弧线节点引用弧线，绑定唯一 projectId+category', () async {
+      final arcFk = await db
+          .customSelect('PRAGMA foreign_key_list(arc_nodes)')
+          .get();
+      expect(arcFk, isNotEmpty, reason: 'arc_nodes 应引用 story_arcs');
+
+      final rows = await db
+          .customSelect('PRAGMA table_info(agent_bindings)')
+          .get();
+      expect(
+        rows.map((r) => r.data['name']).toSet(),
+        containsAll(['id', 'project_id', 'category', 'agent_id', 'created_at']),
+      );
+      // unique 约束：同 projectId + category 至多一条绑定。
+      final idx = await db.customSelect(
+        'PRAGMA index_list(agent_bindings)',
+      ).get();
+      expect(idx.map((r) => r.data['name']), isNotEmpty);
     });
   });
 

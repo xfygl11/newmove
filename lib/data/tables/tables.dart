@@ -113,6 +113,20 @@ class Scripts extends Table {
   TextColumn get modelVersion => text().nullable()();
   // 剧本内容指纹（M19 T21.14）：content 变化即重算，用于判定下游产物是否失效。
   TextColumn get scriptHash => text().nullable()();
+  // M29 集级钩子：本集开场钩子（叙事承诺，落在纸面）。
+  TextColumn get hook => text().nullable()();
+  // M29 集级悬念：本集结尾悬念 / 钩子。
+  TextColumn get cliff => text().nullable()();
+  // M29 视觉调板：JSON 数组，主色 / 辅色 / 强调色，注入资产与视频提示词。
+  TextColumn get colorPalette => text().nullable()();
+  // M29 多比例支持：画幅比例（16:9 / 9:16 / 1:1），空表示沿用默认 16:9。
+  TextColumn get aspectRatio => text().nullable()();
+  // M29 集描述：本集一句话简介。
+  TextColumn get description => text().nullable()();
+  // M29 集关键词：JSON 数组，改编 prompt 强制输出。
+  TextColumn get keywords => text().nullable()();
+  // M29 集级 BGM 地址。
+  TextColumn get bgmUrl => text().nullable()();
 }
 
 /// 场。
@@ -134,6 +148,9 @@ class Scenes extends Table {
   TextColumn get dialogue => text().withDefault(const Constant('[]'))();
   // JSON 对象：{ music: [...], sfx: [...] }。
   TextColumn get sound => text().withDefault(const Constant('{}'))();
+  // M29 地点系统：本场发生地点，软引用 Locations.id（可空）。
+  // 不加 references()：地点删除时把关联场景置空，而非级联删场景。
+  IntColumn get locationId => integer().nullable()();
 }
 
 /// 原子节拍（借鉴 Toonflow A2）。
@@ -154,6 +171,10 @@ class Beats extends Table {
   IntColumn get estDurationMs => integer().withDefault(const Constant(0))();
   // JSON 数组：转折 / 峰值 / 信息增量 / 决策 / 沉默。
   TextColumn get tags => text().withDefault(const Constant('[]'))();
+  // M29 爽点表：节拍权重 minor / major。空表示未标注，读时回落 minor。
+  TextColumn get weight => text().nullable()();
+  // M29 钩子兑现：本节拍兑现的伏笔节拍 id（软引用 Beat，可空）。
+  IntColumn get hookBeatId => integer().nullable()();
 }
 
 /// 资产（角色 / 场景 / 道具）。
@@ -184,6 +205,9 @@ class Assets extends Table {
   // M19 T21.14 下游失效标记：上游剧本或本资产提示词变更后置 1，
   // 重新出图后清 0。非 0 即失效。
   IntColumn get isStale => integer().withDefault(const Constant(0))();
+  // M29 叙事道具标记：区分「推动剧情的叙事道具」与「场景陈设」，
+  // 供 OutlineGate.prop_cap 校验叙事道具上限。空表示未标记，读时回落非叙事。
+  IntColumn get isNarrative => integer().nullable()();
 }
 
 /// 镜头 / 片段（借鉴 Toonflow A3 分段）。
@@ -230,6 +254,14 @@ class Shots extends Table {
   // 无覆盖或全为默认造型时该列为空，不写空数组。
   TextColumn get costumeOverrides => text().nullable()();
   IntColumn get sceneId => integer().nullable()();
+  // M29 音效设计：JSON 对象 { ambience: [...], sfx: [...] }，落到单镜头。
+  TextColumn get soundDesign => text().nullable()();
+  // M29 音乐提示：本镜头的 BGM cue 时间点与情绪描述。
+  TextColumn get musicCue => text().nullable()();
+  // M29 景深独立列：与 lens（焦距）解耦，避免「改焦距就得改景深」的语义耦合。
+  TextColumn get depthOfField => text().nullable()();
+  // M29 视频脚本：自然语言叙述，与结构化 prompt 分离（先写脚本再转提示词）。
+  TextColumn get videoScript => text().nullable()();
   // 最终生成提示词。
   TextColumn get prompt => text().withDefault(const Constant(''))();
   TextColumn get status => text().withDefault(const Constant('待提示词'))();
@@ -261,6 +293,9 @@ class ShotFrames extends Table {
   TextColumn get performance => text().withDefault(const Constant(''))();
   // 台词原文。
   TextColumn get dialogue => text().nullable()();
+  // M29 场景参考帧模式：首尾帧模式的替代，本帧是「场景参考帧」而非「分镜图」。
+  // 空表示普通分镜帧，读时回落非场景参考帧。
+  IntColumn get isSceneRef => integer().nullable()();
 }
 
 /// 镜头-资产引用（参考图绑定）。
@@ -272,6 +307,12 @@ class AssetRefs extends Table {
   // 角色参考 / 场景参考 / 道具参考 / 仅站位。
   TextColumn get role => text()();
   IntColumn get order => integer().withDefault(const Constant(0))();
+  // M29 同槽位多版本参考图：同一镜头同一槽位可并存多版本参考图（A/B 对比选优）。
+  // 空表示第 1 版，读时回落 1。
+  IntColumn get version => integer().nullable()();
+  // M29 是否当前生效版本：同一槽位至多一条生效。空表示生效（存量数据），
+  // 读时回落 1。
+  IntColumn get isActive => integer().nullable()();
 }
 
 /// 视频生成任务（异步提交 → 轮询 → 回填；taskId 持久化支持断点续跑）。
@@ -354,6 +395,8 @@ class ShotRevisions extends Table {
   TextColumn get snapshot => text().withDefault(const Constant('{}'))();
   // 摘要，供列表页展示不必解包 snapshot。
   TextColumn get summary => text().withDefault(const Constant(''))();
+  // M29 整集分镜回滚：同一组回滚的版本组 id（空表示不属于任何整集回滚组）。
+  IntColumn get versionGroup => integer().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -512,4 +555,109 @@ class GateLogs extends Table {
   // 归属项目；跨项目校验（全局提示词）为空。
   IntColumn get projectId => integer().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// 地点系统（M29，1.2 世界观侧）：层级树 + 空间连通。
+///
+/// 借鉴 goink 的 `Location`（`parent_location_id` 树）。空间连通用父子层级
+/// 表达（`parentId` 树），不做无向边表——层级已覆盖绝大多数场景的「地点归属」，
+/// 独立 `LocationRelations` 边表的增量收益不足以抵偿维护成本（ACT 简化）。
+///
+/// `Scenes.locationId` 软引用本表，不加 `references()`：删除地点时把关联
+/// 场景置空，而非级联删场景。
+@DataClassName('Location')
+class Locations extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get bookId => integer().references(NovelBooks, #id)();
+  TextColumn get name => text().withLength(min: 1, max: 100)();
+  // 地点类型：大陆 / 国家 / 城市 / 建筑 / 室内 / 野外 / 其他。
+  TextColumn get type => text().withDefault(const Constant('其他'))();
+  // 父地点 id（层级树），顶层为 null。
+  IntColumn get parentId => integer().nullable()();
+  TextColumn get description => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// 故事弧线（M29，1.2 世界观侧）：跨章并行叙事。
+///
+/// 借鉴 goink 的 `StoryArc`（3-5 条并行，四态 active/paused/completed/abandoned，
+/// 带 `reactivate_at`）。Settler 每章定稿后推进对应 `ArcNodes.status`。
+@DataClassName('StoryArc')
+class StoryArcs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get bookId => integer().references(NovelBooks, #id)();
+  TextColumn get name => text().withLength(min: 1, max: 100)();
+  TextColumn get description => text().nullable()();
+  // 状态：active / paused / completed / abandoned。
+  TextColumn get status => text().withDefault(const Constant('active'))();
+  // 暂停时预计重新激活的章节序号。
+  IntColumn get reactivateAt => integer().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// 故事弧线节点（M29）：预估推进到哪一章、实际落在哪一章。
+@DataClassName('ArcNode')
+class ArcNodes extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get arcId => integer().references(StoryArcs, #id)();
+  // 预估推进到的章节序号。
+  IntColumn get targetSeq => integer()();
+  // 实际落地的章节 id（可空，未落时为 null）。
+  IntColumn get chapterId => integer().nullable()();
+  TextColumn get summary => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// 提示词预设包（M29，1.7 提示词治理侧）：可复用的命名覆盖包。
+///
+/// 借鉴 AIComicBuilder 的 `prompt_presets`。一组槽位覆盖打包命名，用户一键
+/// 应用到项目级或全局级覆盖，避免逐条手改提示词。
+@DataClassName('PromptPreset')
+class PromptPresets extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text().withLength(min: 1, max: 100)();
+  // JSON 对象：{ slotKey: body, ... } 多槽位一组。
+  TextColumn get slots => text().withDefault(const Constant('{}'))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// 导入日志（M29，1.8 项目侧）：跟踪文本导入的每一步。
+///
+/// 借鉴 AIComicBuilder 的 `import_logs`（`step + status + message + metadata`）。
+/// `ChapterImport` 目前一次性解析、失败直接抛错、过程不可追溯。这张表让每一步
+/// （读取 / 编码探测 / 标题提取 / 内容切片）落一行，失败后可定位到具体步骤。
+class ImportLogs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // 归属项目；全局导入（无项目上下文）为 null。
+  IntColumn get projectId => integer().nullable()();
+  // 步骤：read / decode / title / slice / commit。
+  TextColumn get step => text()();
+  // 状态：success / failed。
+  TextColumn get status => text()();
+  TextColumn get message => text().withDefault(const Constant(''))();
+  TextColumn get metadata => text().withDefault(const Constant('{}'))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// 项目 × Agent 绑定（M29，1.9 Agent 协作侧）。
+///
+/// 借鉴 AIComicBuilder 的 `agent_bindings`（`project_id + category + agent_id`
+/// 唯一）。让「项目 X 用 Agent A 出图 + Agent B 出视频」成为可能，三个
+/// `ActiveX` 的全局单例之外提供按项目覆盖的能力。覆盖了「供应商多账号轮换」
+/// 的核心需求——不同项目用不同供应商，而非同一供应商多账号轮换。
+@DataClassName('AgentBinding')
+class AgentBindings extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get projectId => integer().references(Projects, #id)();
+  // 类别：llm / image / video。
+  TextColumn get category => text()();
+  // 供应商配置 id（指向 ProviderConfigs.id）。
+  TextColumn get agentId => text()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {projectId, category},
+  ];
 }

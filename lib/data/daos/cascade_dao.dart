@@ -16,6 +16,10 @@ part 'cascade_dao.g.dart';
 /// PromptOverrides / PromptOverrideVersions / GateLogs 与 GenerationAttempts
 /// 同层：只按 projectId 归属项目、互不引用，谁先删都可以。
 /// CharacterRelations 按 bookId 归属作品，随 _deleteBookSubtree 一起清理。
+/// Locations / StoryArcs / ArcNodes 同按 bookId 归属作品；ArcNodes 引用
+/// StoryArcs（先删节点再删弧线），Locations 是软引用无外键。
+/// ImportLogs / AgentBindings 按 projectId 归属项目，随 deleteProjectCascade 清理。
+/// PromptPresets 是全局复用的命名包，不随项目/书删除。
 ///
 /// 业务层不得自行拼 `deleteByX` + 多次 `insert`，一律调用本 DAO 的复合方法；
 /// 复合方法内部开启事务，中间任一步失败整段回滚，不留中间态。
@@ -42,6 +46,11 @@ part 'cascade_dao.g.dart';
     PromptOverrideVersions,
     CharacterRelations,
     GateLogs,
+    Locations,
+    StoryArcs,
+    ArcNodes,
+    ImportLogs,
+    AgentBindings,
   ],
 )
 class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
@@ -72,6 +81,14 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
       // 质量门日志同一归属规则：清掉项目级的记录，projectId 为空的全局记录保留。
       await (delete(
         gateLogs,
+      )..where((t) => t.projectId.equals(projectId))).go();
+      // 导入日志按项目归属清理。
+      await (delete(
+        importLogs,
+      )..where((t) => t.projectId.equals(projectId))).go();
+      // 项目 × Agent 绑定随项目清理。
+      await (delete(
+        agentBindings,
       )..where((t) => t.projectId.equals(projectId))).go();
       await (delete(projects)..where((t) => t.id.equals(projectId))).go();
     });
@@ -153,6 +170,15 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
     await (delete(characterRelations)
           ..where((t) => t.bookId.equals(bookId)))
         .go();
+    // 故事弧线节点引用弧线，先删节点再删弧线。
+    final arcIds = selectOnly(storyArcs)
+      ..addColumns([storyArcs.id])
+      ..where(storyArcs.bookId.equals(bookId));
+    await (delete(arcNodes)..where((t) => t.arcId.isInQuery(arcIds))).go();
+    await (delete(storyArcs)..where((t) => t.bookId.equals(bookId))).go();
+    // 地点层级树按 bookId 归属；Scenes.locationId 是软引用（无 references），
+    // 删地点不触发外键约束，悬空的 locationId 随场景一并删除。
+    await (delete(locations)..where((t) => t.bookId.equals(bookId))).go();
     await _deleteChaptersOfBook(bookId);
     await (delete(novelBooks)..where((t) => t.id.equals(bookId))).go();
   }

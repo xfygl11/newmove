@@ -29,6 +29,11 @@ mixin _$CascadeDaoMixin on DatabaseAccessor<AppDatabase> {
   $CharacterRelationsTable get characterRelations =>
       attachedDatabase.characterRelations;
   $GateLogsTable get gateLogs => attachedDatabase.gateLogs;
+  $LocationsTable get locations => attachedDatabase.locations;
+  $StoryArcsTable get storyArcs => attachedDatabase.storyArcs;
+  $ArcNodesTable get arcNodes => attachedDatabase.arcNodes;
+  $ImportLogsTable get importLogs => attachedDatabase.importLogs;
+  $AgentBindingsTable get agentBindings => attachedDatabase.agentBindings;
   CascadeDaoManager get managers => CascadeDaoManager(this);
 }
 
@@ -98,4 +103,14 @@ class CascadeDaoManager {
       );
   $$GateLogsTableTableManager get gateLogs =>
       $$GateLogsTableTableManager(_db.attachedDatabase, _db.gateLogs);
+  $$LocationsTableTableManager get locations =>
+      $$LocationsTableTableManager(_db.attachedDatabase, _db.locations);
+  $$StoryArcsTableTableManager get storyArcs =>
+      $$StoryArcsTableTableManager(_db.attachedDatabase, _db.storyArcs);
+  $$ArcNodesTableTableManager get arcNodes =>
+      $$ArcNodesTableTableManager(_db.attachedDatabase, _db.arcNodes);
+  $$ImportLogsTableTableManager get importLogs =>
+      $$ImportLogsTableTableManager(_db.attachedDatabase, _db.importLogs);
+  $$AgentBindingsTableTableManager get agentBindings =>
+      $$AgentBindingsTableTableManager(_db.attachedDatabase, _db.agentBindings);
 }

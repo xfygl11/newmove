@@ -51,6 +51,12 @@ part 'app_database.g.dart';
     PromptOverrideVersions,
     CharacterRelations,
     GateLogs,
+    Locations,
+    StoryArcs,
+    ArcNodes,
+    PromptPresets,
+    ImportLogs,
+    AgentBindings,
   ],
   daos: [
     ProjectDao,
@@ -83,7 +89,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -196,6 +202,45 @@ class AppDatabase extends _$AppDatabase {
         // references()，删除走 CascadeDao 显式路径（T20.10 推迟的连带约束）。
         await m.createTable(characterRelations);
         await m.createTable(gateLogs);
+      }
+      if (from < 16) {
+        // M29：世界观侧 + 剧本/资产/视频/提示词/项目/Agent 全量补齐。
+        // 六张新表：地点层级、故事弧线（含节点）、提示词预设包、导入日志、
+        // 项目 × Agent 绑定。
+        await m.createTable(locations);
+        await m.createTable(storyArcs);
+        await m.createTable(arcNodes);
+        await m.createTable(promptPresets);
+        await m.createTable(importLogs);
+        await m.createTable(agentBindings);
+        // 剧本列：集级钩子/悬念、视觉调板、多比例（复活 aspectRatio）、
+        // 集描述/关键词、集级 BGM。
+        await m.addColumn(scripts, scripts.hook);
+        await m.addColumn(scripts, scripts.cliff);
+        await m.addColumn(scripts, scripts.colorPalette);
+        await m.addColumn(scripts, scripts.aspectRatio);
+        await m.addColumn(scripts, scripts.description);
+        await m.addColumn(scripts, scripts.keywords);
+        await m.addColumn(scripts, scripts.bgmUrl);
+        // 场次列：地点软引用。
+        await m.addColumn(scenes, scenes.locationId);
+        // 节拍列：权重与钩子兑现。
+        await m.addColumn(beats, beats.weight);
+        await m.addColumn(beats, beats.hookBeatId);
+        // 资产列：叙事道具标记。
+        await m.addColumn(assets, assets.isNarrative);
+        // 镜头列：音效设计、音乐提示、景深独立列、视频脚本分离。
+        await m.addColumn(shots, shots.soundDesign);
+        await m.addColumn(shots, shots.musicCue);
+        await m.addColumn(shots, shots.depthOfField);
+        await m.addColumn(shots, shots.videoScript);
+        // 帧列：场景参考帧模式。
+        await m.addColumn(shotFrames, shotFrames.isSceneRef);
+        // 参考绑定列：同槽位多版本 + 生效标记。
+        await m.addColumn(assetRefs, assetRefs.version);
+        await m.addColumn(assetRefs, assetRefs.isActive);
+        // 镜头快照列：整集分镜回滚版本组。
+        await m.addColumn(shotRevisions, shotRevisions.versionGroup);
       }
     },
     beforeOpen: (details) async {
