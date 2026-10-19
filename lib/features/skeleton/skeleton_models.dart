@@ -14,6 +14,8 @@ class SkeletonBeat {
     required this.object,
     required this.estDurationMs,
     required this.tags,
+    this.weight = 'minor',
+    this.hookBeat = '',
   });
 
   final String id;
@@ -25,6 +27,10 @@ class SkeletonBeat {
   final String object;
   final int estDurationMs;
   final List<String> tags;
+  // 爽点权重（M30）：minor 常规 / major 大爆点；空回落 minor。
+  final String weight;
+  // 钩子兑现（M30）：本节拍兑现的伏笔源节拍 E##，空串表示不兑现。
+  final String hookBeat;
 
   factory SkeletonBeat.fromJson(Map<String, dynamic> json) {
     return SkeletonBeat(
@@ -36,6 +42,10 @@ class SkeletonBeat {
       object: jsonString(json['object']),
       estDurationMs: jsonInt(json['estDurationMs']),
       tags: _stringList(json['tags']),
+      weight: jsonString(json['weight']).trim().isEmpty
+          ? 'minor'
+          : jsonString(json['weight']).trim(),
+      hookBeat: jsonString(json['hookBeat']).trim(),
     );
   }
 
@@ -48,6 +58,8 @@ class SkeletonBeat {
     'object': object,
     'estDurationMs': estDurationMs,
     'tags': tags,
+    'weight': weight,
+    'hookBeat': hookBeat,
   };
 
   static List<String> _stringList(dynamic value) {

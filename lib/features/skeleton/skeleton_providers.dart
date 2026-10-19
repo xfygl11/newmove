@@ -43,3 +43,8 @@ final skeletonCoverageProvider =
     FutureProvider.family<List<GateIssue>, int>(
   (ref, scriptId) => ref.watch(skeletonServiceProvider).listCoverageIssues(scriptId),
 );
+
+/// 某剧本的爽点表体检结果（M30）：大爆点节奏 / 首个大爆点位置 / 钩子兑现。
+final beatGateIssuesProvider = FutureProvider.family<List<GateIssue>, int>(
+  (ref, scriptId) => ref.watch(skeletonServiceProvider).listBeatIssues(scriptId),
+);

@@ -15,6 +15,12 @@
    - `object`：作用对象（道具/人/地点），无则空字符串。
    - `estDurationMs`：最低自然时长（毫秒）。
    - `tags`：五类关键标签数组，只标注不删减不重排，无则 `[]`。
+   - `weight`：爽点权重，只取 `minor`（常规节拍）或 `major`（大爆点：全片
+     关键转折、高潮、身份反转级剧变）。默认 `minor`，不要给每个转折点都标
+     `major`——一集通常只有 1–3 个大爆点，其余转折都是 `minor`。
+   - `hookBeat`：本节拍若**兑现**了此前埋下的某个伏笔（钩子），填那个伏笔
+     埋设所在节拍的 `E##`；普通节拍留空字符串。只填「埋设 → 兑现」这一层
+     兑现关系，不填无伏笔的普通剧情推进。
 4. 任何「会改变剧情状态」的句子必须能映射回某个 `E##`，否则视为新增剧情，删除。
 
 ## 五类关键标签
@@ -81,7 +87,7 @@
 {
   "globalDurationMs": 55000,
   "beats": [
-    {"id": "E01", "sceneSeq": 1, "type": "动作", "who": "角色A", "content": "拿起道具X", "object": "道具X", "estDurationMs": 2000, "tags": ["信息增量点"]}
+    {"id": "E01", "sceneSeq": 1, "type": "动作", "who": "角色A", "content": "拿起道具X", "object": "道具X", "estDurationMs": 2000, "tags": ["信息增量点"], "weight": "minor", "hookBeat": ""}
   ],
   "segments": [
     {"id": "G01", "batch": 1, "durationMs": 12000, "globalTimeRange": "00:00-00:12", "beatRefs": ["E01", "E02"], "assets": {"characters": [], "scenes": [], "props": []}}

@@ -190,6 +190,7 @@ class _SkeletonBody extends ConsumerWidget {
     final beatsAsync = ref.watch(beatsByScriptProvider(script.id));
     final shotsAsync = ref.watch(shotsByScriptProvider(script.id));
     final coverageAsync = ref.watch(skeletonCoverageProvider(script.id));
+    final beatGateAsync = ref.watch(beatGateIssuesProvider(script.id));
 
     return Column(
       children: [
@@ -203,6 +204,23 @@ class _SkeletonBody extends ConsumerWidget {
                 subjectType: GateSubjects.skeleton,
                 subjectLabel: '剧本 ${script.title} 认领覆盖体检',
                 gates: const ['认领覆盖门'],
+                issues: issues,
+                projectId: projectId,
+              ),
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: beatGateAsync.maybeWhen(
+            data: (issues) => GateIssueList(
+              title: '爽点表体检',
+              issues: issues,
+              onRecord: () => ref.read(gateLogDaoProvider).recordValidation(
+                subjectType: GateSubjects.skeleton,
+                subjectLabel: '剧本 ${script.title} 爽点表体检',
+                gates: const ['爽点表门'],
                 issues: issues,
                 projectId: projectId,
               ),

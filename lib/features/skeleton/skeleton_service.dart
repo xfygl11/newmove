@@ -14,6 +14,7 @@ import '../../data/daos/revision_dao.dart';
 import '../../data/daos/shot_dao.dart';
 import '../provider_config/provider_models.dart';
 import '../shot/segment_budget.dart';
+import 'beat_gate.dart';
 import 'skeleton_agents.dart';
 import 'skeleton_gate.dart';
 
@@ -161,6 +162,8 @@ class SkeletonService {
 
         // 记录实际落库的节拍及其场次，用于给镜头补 sceneId 与真实节拍数。
         final sceneIdByBeatRef = <String, int>{};
+        // sourceRef(E##) → 落库后节拍 id，用于第二遍回填 hookBeatId（M30）。
+        final beatIdByRef = <String, int>{};
         for (var i = 0; i < result.beats.length; i++) {
           final b = result.beats[i];
           final sceneId = sceneIdBySeq[b.sceneSeq];
@@ -169,7 +172,8 @@ class SkeletonService {
             continue;
           }
           final sourceRef = b.id.isEmpty ? 'E${i + 1}' : b.id;
-          await beatDao.insert(
+          final weight = _normalizeWeight(b.weight);
+          final beatId = await beatDao.insert(
             BeatsCompanion.insert(
               sceneId: sceneId,
               seq: i + 1,
@@ -180,10 +184,29 @@ class SkeletonService {
               sourceRef: sourceRef,
               estDurationMs: Value(b.estDurationMs),
               tags: Value(jsonEncode(b.tags)),
+              weight: Value(weight),
             ),
           );
           sceneIdByBeatRef[sourceRef] = sceneId;
+          beatIdByRef[sourceRef] = beatId;
           insertedBeats++;
+        }
+
+        // 第二遍回填 hookBeatId：兑现节拍 → 伏笔埋设节拍。软引用（无外键），
+        // 引用无法解析时留空，由 BeatGate.hookOrphan 在体检里暴露。
+        for (var i = 0; i < result.beats.length; i++) {
+          final b = result.beats[i];
+          final hookRef = b.hookBeat.trim();
+          if (hookRef.isEmpty) continue;
+          final sourceRef = b.id.isEmpty ? 'E${i + 1}' : b.id;
+          final beatId = beatIdByRef[sourceRef];
+          final hookId = beatIdByRef[hookRef];
+          if (beatId != null && hookId != null) {
+            await beatDao.updateById(
+              beatId,
+              BeatsCompanion(hookBeatId: Value(hookId)),
+            );
+          }
         }
 
         for (final seg in result.segments) {
@@ -236,7 +259,26 @@ class SkeletonService {
     );
   }
 
+  // ---- 爽点表体检（M30） ----
+
+  /// 爽点表体检：大爆点节奏、首个大爆点位置、钩子兑现引用完整性。
+  /// 纯校验，只提示不改数据。
+  Future<List<GateIssue>> listBeatIssues(int scriptId) async {
+    final beats = await beatDao.listByScript(scriptId);
+    final shots = await shotDao.listByScript(scriptId);
+    return BeatGate.validate(
+      beats: beats,
+      shots: shots,
+    );
+  }
+
   // ---- 内部辅助 ----
+
+  /// 爽点权重归一化：只认 minor / major，其余（空、未知）回落 minor。
+  static String _normalizeWeight(String weight) {
+    final w = weight.trim();
+    return w == 'major' ? 'major' : 'minor';
+  }
 
   Map<String, dynamic> _sceneToJson(Scene s) {
     return {

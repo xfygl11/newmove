@@ -418,6 +418,16 @@ lib/
         倒流（warn）、未被任何段认领（warn）。共用一个门码因为修法是同一个
         动作（改段落的 `beatRefs`）。节拍顺序走 `SkeletonGate.beatOrder`
         （按 `E##` 数字升序，无法解析的排在后面）。
+       - `BeatGate`（`lib/features/skeleton/beat_gate.dart`，骨架爽点表侧，M30）：
+         `beat_gap`（warn，相邻 major 爽点按 `E##` 节拍序号差度量，间隔 >
+         `BeatGate.maxMajorGap`（12 拍）即报警，含开头真空与结尾真空；无 major
+         或节拍 < 2 拍时整门跳过，阈值是经验默认值、函数参数可覆盖）、
+         `major_early`（warn，首个 major 爽点落在最后一个分段内——全片高潮不能
+         压到结尾才给第一个爆点；段归属由 `Shots.beatRefs` 解析，无 major 或
+         无分段时跳过）、
+         `hook_orphan`（error，`hookBeat` 引用的伏笔源节拍 `E##` 不存在；`hookBeat`
+         为空是常态——只有非空且引用悬空才报）。爽点表接线见 M30：`Beats.weight`
+         （minor/major，空回落 minor）+ `Beats.hookBeatId`（兑现节拍指向埋设节拍）。
        - `ScriptGate`（`lib/features/script/script_gate.dart`，场次侧）：
          `has_action`（warn，`Scenes.action` 为空，纯对话场次让下游分镜图只剩人物
          与台词）、

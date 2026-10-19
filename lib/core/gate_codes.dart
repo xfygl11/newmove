@@ -55,6 +55,11 @@ abstract final class GateCodes {
   // ── 骨架认领（SkeletonGate）────────────────────────────────
   static const coverage = 'coverage';
 
+  // ── 骨架爽点表（BeatGate，M30）─────────────────────────────
+  static const beatGap = 'beat_gap';
+  static const majorEarly = 'major_early';
+  static const hookOrphan = 'hook_orphan';
+
   // ── 角色画像（CharacterGate）───────────────────────────────
   static const tierMissing = 'tier_missing';
   static const tierCap = 'tier_cap';
@@ -100,6 +105,9 @@ abstract final class GateCodes {
     sceneNamedCharacter,
     styleConflict,
     coverage,
+    beatGap,
+    majorEarly,
+    hookOrphan,
     tierMissing,
     tierCap,
     evidenceUnverified,
