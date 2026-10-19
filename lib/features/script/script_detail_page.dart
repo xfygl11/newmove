@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -205,6 +207,8 @@ class _HeaderCard extends ConsumerWidget {
               scriptDao: ref.read(scriptDaoProvider),
             ),
             const Divider(height: 16),
+            _ScriptMetaDisplay(script: script),
+            const Divider(height: 16),
             _EpisodeParamEditor(
               script: script,
               scriptDao: ref.read(scriptDaoProvider),
@@ -395,6 +399,87 @@ class _ArtStyleEditorState extends State<_ArtStyleEditor> {
               ? '已恢复默认画风'
               : '已保存画风：$name',
         ),
+      ),
+    );
+  }
+}
+
+/// 集级元数据（M32）：改编 Agent 产出的钩子/悬念/描述/关键词，只读展示。
+class _ScriptMetaDisplay extends StatelessWidget {
+  const _ScriptMetaDisplay({required this.script});
+
+  final Script script;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final items = <Widget>[];
+
+    if (script.hook?.isNotEmpty == true) {
+      items.add(_MetaField(icon: Icons.lightbulb_outline, label: '开场钩子', value: script.hook!));
+    }
+    if (script.cliff?.isNotEmpty == true) {
+      items.add(_MetaField(icon: Icons.local_fire_department, label: '结尾悬念', value: script.cliff!));
+    }
+    if (script.description?.isNotEmpty == true) {
+      items.add(_MetaField(icon: Icons.description_outlined, label: '集描述', value: script.description!));
+    }
+    final keywords = _decodeKeywords(script.keywords);
+    if (keywords.isNotEmpty) {
+      items.add(_MetaField(icon: Icons.key, label: '关键词', value: keywords.join('、')));
+    }
+
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.auto_awesome_outlined,
+              size: 16,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 6),
+            Text('集级元数据（改编产出）', style: theme.textTheme.labelMedium),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...items,
+      ],
+    );
+  }
+}
+
+class _MetaField extends StatelessWidget {
+  const _MetaField({required this.icon, required this.label, required this.value});
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 14, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: '$label：', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  TextSpan(text: value),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -731,4 +816,15 @@ class _ProposalCard extends ConsumerWidget {
         .read(scriptServiceProvider)
         .setProposalAccepted(script, proposalId: proposal.id, accepted: value);
   }
+}
+
+List<String> _decodeKeywords(String? json) {
+  if (json == null || json.isEmpty) return const [];
+  try {
+    final decoded = jsonDecode(json);
+    if (decoded is List) {
+      return decoded.whereType<String>().toList();
+    }
+  } catch (_) {}
+  return const [];
 }

@@ -186,10 +186,22 @@ class AdaptationProposal {
 
 /// 一次改编的完整产物。
 class AdaptationResult {
-  const AdaptationResult({required this.scenes, required this.proposals});
+  const AdaptationResult({
+    required this.scenes,
+    required this.proposals,
+    this.hook,
+    this.cliff,
+    this.description,
+    this.keywords,
+  });
 
   final List<AdaptedScene> scenes;
   final List<AdaptationProposal> proposals;
+  // M32 集级元数据：改编 Agent 产出，落 Scripts 表独立列。
+  final String? hook;
+  final String? cliff;
+  final String? description;
+  final List<String>? keywords;
 
   factory AdaptationResult.fromJson(Map<String, dynamic> json) {
     return AdaptationResult(
@@ -207,11 +219,22 @@ class AdaptationResult {
             ),
         ];
       }(),
+      hook: jsonStringOrNull(json['hook']),
+      cliff: jsonStringOrNull(json['cliff']),
+      description: jsonStringOrNull(json['description']),
+      keywords: () {
+        final list = jsonList(json['keywords']);
+        return list.isEmpty ? null : list.map(jsonString).toList();
+      }(),
     );
   }
 
   Map<String, dynamic> toJson() => {
     'scenes': [for (final s in scenes) s.toJson()],
     'proposals': [for (final p in proposals) p.toJson()],
+    if (hook != null) 'hook': hook,
+    if (cliff != null) 'cliff': cliff,
+    if (description != null) 'description': description,
+    if (keywords != null && keywords!.isNotEmpty) 'keywords': keywords,
   };
 }

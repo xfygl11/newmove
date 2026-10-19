@@ -190,6 +190,12 @@ class ScriptService {
               version: const Value(1),
               fidelityMode: Value(fidelityMode),
               content: Value(content),
+              hook: Value(result.hook),
+              cliff: Value(result.cliff),
+              description: Value(result.description),
+              keywords: Value(
+                result.keywords != null ? jsonEncode(result.keywords!) : null,
+              ),
             ),
           );
           await _insertScenes(id, result.scenes);
@@ -223,6 +229,12 @@ class ScriptService {
               fidelityMode: fidelityMode,
               status: '草案',
               content: newContent,
+              hook: Value(result.hook),
+              cliff: Value(result.cliff),
+              description: Value(result.description),
+              keywords: Value(
+                result.keywords != null ? jsonEncode(result.keywords!) : null,
+              ),
             ),
           );
         });

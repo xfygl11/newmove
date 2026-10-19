@@ -91,6 +91,7 @@ class VideoPromptBuilder {
     String artStyle = defaultArtStyle,
     int? durationSec,
     String? bgmUrl,
+    String? colorPalette,
   }) {
     final targetSec = durationSec ?? (shot.durationMs / 1000).round();
     final buf = StringBuffer();
@@ -175,7 +176,10 @@ class VideoPromptBuilder {
       }
     }
 
-    buf.writeln('Visual direction: $artStyle');
+    final palette = colorPalette?.trim() ?? '';
+    buf.writeln(
+      palette.isNotEmpty ? 'Visual direction: $artStyle；视觉调板：$palette' : 'Visual direction: $artStyle',
+    );
     buf.writeln(_audioDirection(shot, bgmUrl: bgmUrl));
     buf.writeln(
       'Preserve: 不新增、不删除、不替换、不改顺序剧情事件；'

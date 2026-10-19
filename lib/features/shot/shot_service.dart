@@ -301,6 +301,17 @@ class ShotService {
 
     final buf = StringBuffer();
     buf.writeln('【画面风格】${effectiveArtStyle(script?.artStyle)}');
+    if (script?.description?.isNotEmpty == true) {
+      buf.writeln('【集级描述】${script!.description}');
+    }
+    final keywords = _decodeList(script?.keywords ?? '');
+    if (keywords.isNotEmpty) {
+      buf.writeln('【集级关键词】${keywords.join('、')}');
+    }
+    final palette = _decodeList(script?.colorPalette ?? '');
+    if (palette.isNotEmpty) {
+      buf.writeln('【视觉调板】${palette.join('、')}');
+    }
     buf.writeln('【可用资产清单（仅可绑定这些 stableId）】');
     buf.writeln(
       jsonEncode([
@@ -964,6 +975,7 @@ class ShotService {
     final refs = await assetRefDao.listByShot(shotId);
     final assets = await assetDao.listByScript(shot.scriptId);
     final script = await scriptDao.find(shot.scriptId);
+    final palette = _decodeList(script?.colorPalette ?? '');
     return const VideoPromptBuilder().build(
       shot: shot,
       frames: frames,
@@ -972,6 +984,7 @@ class ShotService {
       artStyle: effectiveArtStyle(script?.artStyle),
       durationSec: durationSec,
       bgmUrl: script?.bgmUrl,
+      colorPalette: palette.isNotEmpty ? palette.join('、') : null,
     );
   }
 
