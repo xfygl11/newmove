@@ -447,6 +447,10 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
         ),
         const SizedBox(height: 16),
 
+        // ---- 音频与视频脚本（M29，只读，重导更新） ----
+        _AudioScriptSection(shot: shot),
+        const SizedBox(height: 16),
+
         // ---- 操作按钮 ----
         _ActionRow(
           shot: shot,
@@ -650,6 +654,45 @@ class _VideoTabState extends ConsumerState<_VideoTab> {
             .showSnackBar(SnackBar(content: Text('替换失败：$e')));
       }
     }
+  }
+}
+
+/// 音频与视频脚本只读展示（M29）：音效设计 / 音乐提示 / 视频脚本。
+/// 三字段由 ShotDirector 产出，重导更新；空字段整行跳过，全空不占位。
+class _AudioScriptSection extends StatelessWidget {
+  const _AudioScriptSection({required this.shot});
+
+  final Shot shot;
+
+  @override
+  Widget build(BuildContext context) {
+    final sound = ShotSoundDesign.decode(shot.soundDesign);
+    final musicCue = shot.musicCue?.trim() ?? '';
+    final videoScript = shot.videoScript?.trim() ?? '';
+
+    final rows = <(String, String)>[
+      if (sound.ambience.isNotEmpty) ('环境音', sound.ambience.join('、')),
+      if (sound.sfx.isNotEmpty) ('音效', sound.sfx.join('、')),
+      if (musicCue.isNotEmpty) ('音乐提示', musicCue),
+      if (videoScript.isNotEmpty) ('视频脚本', videoScript),
+    ];
+    if (rows.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('音频与脚本', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        for (final row in rows)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              '${row.$1}：${row.$2}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+      ],
+    );
   }
 }
 
@@ -1351,7 +1394,8 @@ extension ShotCinemaParams on Shot {
   List<Widget> cinemaParamsOf(BuildContext context) {
     final all = [
       ('构图', composition),
-      ('焦距景深', lens),
+      ('焦距', lens),
+      ('景深', depthOfField),
       ('机位', cameraPosition),
       ('视线', eyeline),
       ('焦点', focus),

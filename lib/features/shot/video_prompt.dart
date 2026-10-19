@@ -90,6 +90,7 @@ class VideoPromptBuilder {
     required Map<int, Asset> assetById,
     String artStyle = defaultArtStyle,
     int? durationSec,
+    String? bgmUrl,
   }) {
     final targetSec = durationSec ?? (shot.durationMs / 1000).round();
     final buf = StringBuffer();
@@ -147,25 +148,35 @@ class VideoPromptBuilder {
     // Timeline：A9.2.1「时间块 + 连续自然语言」——每帧一个时间块，
     // 把主体/景别/角度/运镜/站位/表演/对白组织成一段成片式画面描述，
     // 不拆「镜头N | 主体 | 表演」之类的子标题（docs/03 §6.3 差距①）。
+    //
+    // M29 视频脚本分离：导演已产出整段自然语言叙述（videoScript）时，
+    // 优先以其作为 Timeline 底稿（先写脚本再转提示词）；为空时回落逐帧拼装。
+    final videoScript = shot.videoScript?.trim() ?? '';
     buf.writeln('Timeline:');
-    for (var i = 0; i < frames.length; i++) {
-      final f = frames[i];
-      buf.writeln();
-      buf.writeln('【${_normalizeTimeRange(f.timeRange, frames, i)}】');
-      buf.writeln(_naturalTimelineBlock(f));
-      if (frames.length > 1 && i < frames.length - 1) {
-        buf.writeln('（${f.timeRange} 结束，HARD CUT）');
-      }
-    }
-    if (frames.isEmpty) {
-      // 无帧数据时退回 Objective 底稿描述，保证 Timeline 非空。
+    if (videoScript.isNotEmpty) {
       buf.writeln();
       buf.writeln('【0:00-0:${targetSec.toString().padLeft(2, '0')}】');
-      buf.writeln(shot.prompt.isEmpty ? '完成本段画面事件。' : shot.prompt);
+      buf.writeln(videoScript);
+    } else {
+      for (var i = 0; i < frames.length; i++) {
+        final f = frames[i];
+        buf.writeln();
+        buf.writeln('【${_normalizeTimeRange(f.timeRange, frames, i)}】');
+        buf.writeln(_naturalTimelineBlock(f));
+        if (frames.length > 1 && i < frames.length - 1) {
+          buf.writeln('（${f.timeRange} 结束，HARD CUT）');
+        }
+      }
+      if (frames.isEmpty) {
+        // 无帧数据时退回 Objective 底稿描述，保证 Timeline 非空。
+        buf.writeln();
+        buf.writeln('【0:00-0:${targetSec.toString().padLeft(2, '0')}】');
+        buf.writeln(shot.prompt.isEmpty ? '完成本段画面事件。' : shot.prompt);
+      }
     }
 
     buf.writeln('Visual direction: $artStyle');
-    buf.writeln('Audio direction: 同期对白与环境音，不加 BGM 与后期字幕');
+    buf.writeln(_audioDirection(shot, bgmUrl: bgmUrl));
     buf.writeln(
       'Preserve: 不新增、不删除、不替换、不改顺序剧情事件；'
       '人物位置与道具持有状态保持本段开头登记',
@@ -176,6 +187,33 @@ class VideoPromptBuilder {
     );
 
     return buf.toString();
+  }
+
+  /// 音频方向：有音效/音乐/集级 BGM 时输出对应层级，全无才回落默认
+  /// 「同期对白与环境音」。M29 把音频信息从场次落到单镜头，不再写死「不加 BGM」。
+  String _audioDirection(Shot shot, {String? bgmUrl}) {
+    final parts = <String>[];
+
+    final sound = ShotSoundDesign.decode(shot.soundDesign);
+    if (sound.ambience.isNotEmpty) {
+      parts.add('环境音：${sound.ambience.join('、')}');
+    }
+    if (sound.sfx.isNotEmpty) {
+      parts.add('音效：${sound.sfx.join('、')}');
+    }
+
+    final musicCue = shot.musicCue?.trim() ?? '';
+    if (musicCue.isNotEmpty) {
+      parts.add('音乐提示：$musicCue');
+    }
+
+    final bgm = bgmUrl?.trim() ?? '';
+    if (bgm.isNotEmpty) {
+      parts.add('集级背景音乐：$bgm');
+    }
+
+    if (parts.isEmpty) return 'Audio direction: 同期对白与环境音，不加 BGM 与后期字幕';
+    return 'Audio direction: ${parts.join('；')}';
   }
 
   /// 把帧字段拼成一段连续自然语言的画面描述（A9.2.1 Timeline 写法）。
@@ -238,6 +276,8 @@ extension ShotCinemaSpec on Shot {
     final items = <String>[
       if (composition != null) '构图：$composition',
       if (lens != null) '焦距：$lens',
+      // M29 景深与焦距解耦：depthOfField 独立成行，避免「改焦距就得改景深」。
+      if (depthOfField != null) '景深：$depthOfField',
       if (cameraPosition != null) '机位：$cameraPosition',
       if (eyeline != null) '视线：$eyeline',
       if (focus != null) '焦点：$focus',

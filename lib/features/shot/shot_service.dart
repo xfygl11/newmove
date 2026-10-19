@@ -452,6 +452,11 @@ class ShotService {
                   ? null
                   : ShotCostumeOverride.encode(draft.costumeOverrides!),
             ),
+            // M29 视频/音频侧四字段：空也显式写回，重导可清掉旧值。
+            depthOfField: Value(draft.depthOfField),
+            soundDesign: Value(draft.soundDesign),
+            musicCue: Value(draft.musicCue),
+            videoScript: Value(draft.videoScript),
           ),
         );
 
@@ -966,6 +971,7 @@ class ShotService {
       assetById: {for (final a in assets) a.id: a},
       artStyle: effectiveArtStyle(script?.artStyle),
       durationSec: durationSec,
+      bgmUrl: script?.bgmUrl,
     );
   }
 

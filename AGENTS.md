@@ -655,6 +655,26 @@ lib/
     三槽位 `known`（读者已知）/ `waiting`（在等什么答案）/ `misconceived`（误认了什么）。
     悬念揭晓移出 waiting、误认澄清移出 misconceived；Settler 未输出字段时保持现状。
 
+### 视频/音频侧字段约定（M31）
+
+- **景深与焦距解耦**：`Shots.lens` 只写焦距（如「短焦肖像感」），`Shots.depthOfField`
+  独立写景深结果（如「背景轻度虚化」）。`ShotCinemaSpec` 拆「焦距」「景深」两行，
+  无景深时不输出景深行。禁止把景深塞回 `lens` 字段。
+- **音频方向分层组装**：`VideoPromptBuilder._audioDirection` 按「环境音 → 音效 →
+  音乐提示 → 集级 BGM」顺序拼接；三者（`Shots.soundDesign` / `Shots.musicCue` /
+  `Scripts.bgmUrl`）全为空时才回落默认「同期对白与环境音，不加 BGM 与后期字幕」。
+  只要有任何一项，就不再写死「不加 BGM」。集级 BGM 由 `buildVideoPrompt` 从
+  `script.bgmUrl` 透传进 `build`。
+- **音效落库 JSON 字符串**：`Shots.soundDesign` 存 `{ambience:[...], sfx:[...]}`，
+  `ShotSoundDesign.decode` 容错解码（空串/null/坏 JSON 回落空对象），全空时不存。
+  源剧情没写声音就省略音效字段，Skill 里不编造。
+- **视频脚本与结构化提示词分离**：`Shots.videoScript` 是自然语言成片描述，非空时
+  作为 `VideoPromptBuilder` Timeline 底稿（优先于逐帧拼装）；为空回落逐帧 Timeline
+  拼装。`musicCue` 是自由文本 BGM cue（如「00:00 弦乐渐入」）。
+- **重导显式写回**：`ShotService.directAndSave` 四字段（含空值）一律显式写回，
+  否则重导后上一轮的景深/音效/视频脚本残留。UI 只读展示（重导更新），编辑留待
+  后续批次。
+
 
 ---
 

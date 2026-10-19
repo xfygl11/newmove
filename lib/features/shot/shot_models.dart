@@ -136,6 +136,37 @@ class ShotCostumeOverride {
   }
 }
 
+/// 镜头级音效设计（M29）：环境音 + 音效分两层，落到单镜头。
+/// 解码自 `Shots.soundDesign` JSON 字符串，全空视为未指定。
+class ShotSoundDesign {
+  const ShotSoundDesign({this.ambience = const [], this.sfx = const []});
+
+  final List<String> ambience;
+  final List<String> sfx;
+
+  bool get isEmpty => ambience.isEmpty && sfx.isEmpty;
+
+  factory ShotSoundDesign.fromJson(Map<String, dynamic> json) {
+    return ShotSoundDesign(
+      ambience: [for (final v in jsonList(json['ambience'])) jsonString(v).trim()],
+      sfx: [for (final v in jsonList(json['sfx'])) jsonString(v).trim()],
+    );
+  }
+
+  /// 落库解码：只保留 ambience 与 sfx 的非空字符串项，全空返回空对象。
+  static ShotSoundDesign decode(String? raw) {
+    if (raw == null || raw.isEmpty) return const ShotSoundDesign();
+    Object? decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } on FormatException {
+      return const ShotSoundDesign();
+    }
+    if (decoded is! Map) return const ShotSoundDesign();
+    return ShotSoundDesign.fromJson(jsonMap(decoded));
+  }
+}
+
 /// ShotDirector 输出的一条参考绑定草案。
 class ShotRefDraft {
   const ShotRefDraft({required this.role, required this.stableId});
@@ -179,6 +210,10 @@ class ShotDraft {
     this.dialogueStartRatio,
     this.dialogueEndRatio,
     this.costumeOverrides,
+    this.depthOfField,
+    this.soundDesign,
+    this.musicCue,
+    this.videoScript,
   });
 
   final String globalSeq;
@@ -207,6 +242,19 @@ class ShotDraft {
   /// 镜头级服装覆盖（M19 T21.13）；null 表示全部沿用资产基础态造型。
   final List<ShotCostumeOverride>? costumeOverrides;
 
+  /// M29 景深独立列：与焦距 [lens] 解耦。只写景深可见结果
+  /// （「背景轻度虚化」），焦距写 [lens]，避免改焦距就得改景深。
+  final String? depthOfField;
+
+  /// M29 音效设计：JSON 字符串 `{ambience:[...], sfx:[...]}`，落到单镜头。
+  final String? soundDesign;
+
+  /// M29 音乐提示：本镜头 BGM cue 时间点与情绪描述（自由文本）。
+  final String? musicCue;
+
+  /// M29 视频脚本：自然语言叙述，与结构化 prompt 分离。
+  final String? videoScript;
+
   factory ShotDraft.fromJson(Map<String, dynamic> json) {
     final start = _ratio(json['dialogueStartRatio']);
     final end = _ratio(json['dialogueEndRatio']);
@@ -224,6 +272,10 @@ class ShotDraft {
       dialogueStartRatio: start,
       dialogueEndRatio: end,
       costumeOverrides: _costumeOverrides(json['costumeOverrides']),
+      depthOfField: _text(json['depthOfField']),
+      soundDesign: _soundDesign(json['soundDesign']),
+      musicCue: _text(json['musicCue']),
+      videoScript: _text(json['videoScript']),
       frames: [
         for (final f in jsonList(json['frames']))
           ShotFrameDraft.fromJson(jsonMap(f)),
@@ -277,6 +329,23 @@ class ShotDraft {
       out.add(override);
     }
     return out.isEmpty ? null : out;
+  }
+
+  /// 音效设计容错：输入可能是对象/数组（LLM 直出）或字符串（落库回读），
+  /// 统一编码成 JSON 字符串落库；空对象/空数组视为未指定。
+  static String? _soundDesign(Object? value) {
+    if (value == null) return null;
+    if (value is String) {
+      final text = value.trim();
+      if (text.isEmpty || _placeholders.contains(text)) return null;
+      return text;
+    }
+    if (value is Map || value is List) {
+      final encoded = jsonEncode(value);
+      if (encoded == '{}' || encoded == '[]') return null;
+      return encoded;
+    }
+    return null;
   }
 
   static const _placeholders = {'无', '未指定', '同上', '-', 'N/A', 'n/a'};
