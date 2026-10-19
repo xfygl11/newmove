@@ -675,6 +675,23 @@ lib/
   否则重导后上一轮的景深/音效/视频脚本残留。UI 只读展示（重导更新），编辑留待
   后续批次。
 
+### 集级元数据约定（M32）
+
+- **改编 Agent 产出四字段**：`AdaptationResult` 扩展 `hook`（开场钩子）/ `cliff`
+  （结尾悬念）/ `description`（一句话简介）/ `keywords`（3–8 关键词），`fromJson`
+  宽容解析（缺字段回落 null），`toJson` 非空才输出。`screen_adaptation.md` 输出格式
+  强制要求四字段，`ScriptService.adaptChapters` 落库到 `Scripts` 表独立列（`keywords`
+  序列化为 JSON 数组字符串）。新建与重新改编路径都保存，不区分版本。
+- **视觉调板注入视频提示词**：`Scripts.colorPalette`（JSON 数组字符串）经
+  `buildVideoPrompt` 解码后透传给 `VideoPromptBuilder.build` 的 `colorPalette` 参数，
+  拼进 `Visual direction` 行（「视觉调板：主色、辅色」）。空数组或 null 不输出调板行。
+- **集级元数据注入导演上下文**：`buildDirectionContext` 注入【集级描述】【集级关键词】
+  【视觉调板】三行（有值才注入），供 `ShotDirector` 把握本集整体基调。关键词与调板
+  供提示词自然融入，不强制出现；`storyboard.md` 有对应规则章节。
+- **UI 只读展示**：剧本详情页 `_HeaderCard` 新增 `_ScriptMetaDisplay` 只读展示四字段
+  （图标 + 标签 + 值），空字段整行跳过。编辑留待后续批次（需走改编 Agent 重新产出）。
+- **不改 aspectRatio**：`Scripts.aspectRatio` 仍是死列（M14 已删），M32 未复活。
+  多比例支持留待后续批次（需透传给供应商能力）。
 
 ---
 
