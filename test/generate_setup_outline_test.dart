@@ -69,6 +69,7 @@ void main() {
       revisionDao: db.chapterRevisionDao,
       agents: agents,
       attemptDao: db.generationAttemptDao,
+      storyArcDao: db.storyArcDao,
     );
   }
 

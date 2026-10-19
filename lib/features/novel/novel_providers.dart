@@ -20,6 +20,7 @@ final novelServiceProvider = Provider<NovelService>(
     revisionDao: ref.watch(chapterRevisionDaoProvider),
     agents: ref.watch(novelAgentsProvider),
     attemptDao: ref.watch(generationAttemptDaoProvider),
+    storyArcDao: ref.watch(storyArcDaoProvider),
   ),
 );
 

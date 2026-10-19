@@ -15,6 +15,7 @@ import 'features/novel/chapter_editor_page.dart';
 import 'features/novel/novel_shelf_page.dart';
 import 'features/novel/novel_setup_page.dart';
 import 'features/novel/setting_workshop_page.dart';
+import 'features/novel/world_building_page.dart';
 import 'features/project/project_page.dart';
 import 'features/provider_config/provider_config_page.dart';
 import 'features/provider_config/prompt_override_page.dart';
@@ -127,6 +128,12 @@ final GoRouter appRouter = GoRouter(
       redirect: (_, state) => requireIntParams(state, ['projectId']),
       builder: (_, state) =>
           HookManagerPage(projectId: pathId(state, 'projectId')),
+    ),
+    GoRoute(
+      path: '/novel/:projectId/world',
+      redirect: (_, state) => requireIntParams(state, ['projectId']),
+      builder: (_, state) =>
+          WorldBuildingPage(projectId: pathId(state, 'projectId')),
     ),
     // 剧本模块：小说改编为分场剧本（对齐 docs/05 4.4 流程即导航）。
     GoRoute(

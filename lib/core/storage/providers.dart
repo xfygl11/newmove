@@ -9,6 +9,7 @@ import '../../data/daos/character_relation_dao.dart';
 import '../../data/daos/cascade_dao.dart';
 import '../../data/daos/chapter_revision_dao.dart';
 import '../../data/daos/gate_log_dao.dart';
+import '../../data/daos/location_dao.dart';
 import '../../data/daos/novel_dao.dart';
 import '../../data/daos/project_dao.dart';
 import '../../data/daos/provider_dao.dart';
@@ -20,6 +21,7 @@ import '../../data/daos/script_dao.dart';
 import '../../data/daos/script_revision_dao.dart';
 import '../../data/daos/shot_dao.dart';
 import '../../data/daos/shot_frame_dao.dart';
+import '../../data/daos/story_arc_dao.dart';
 import '../../data/daos/truth_file_dao.dart';
 import '../../data/daos/video_task_dao.dart';
 import 'asset_file_store.dart';
@@ -122,6 +124,14 @@ final characterRelationDaoProvider = Provider<CharacterRelationDao>(
 
 final gateLogDaoProvider = Provider<GateLogDao>(
   (ref) => ref.watch(databaseProvider).gateLogDao,
+);
+
+final locationDaoProvider = Provider<LocationDao>(
+  (ref) => ref.watch(databaseProvider).locationDao,
+);
+
+final storyArcDaoProvider = Provider<StoryArcDao>(
+  (ref) => ref.watch(databaseProvider).storyArcDao,
 );
 
 final secureKeyStoreProvider = Provider<SecureKeyStore>(

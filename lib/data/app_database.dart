@@ -9,7 +9,9 @@ import 'daos/character_relation_dao.dart';
 import 'daos/cascade_dao.dart';
 import 'daos/gate_log_dao.dart';
 import 'daos/generation_attempt_dao.dart';
+import 'daos/location_dao.dart';
 import 'daos/prompt_override_dao.dart';
+import 'daos/story_arc_dao.dart';
 import 'daos/revision_dao.dart';
 import 'daos/chapter_revision_dao.dart';
 import 'daos/novel_dao.dart';
@@ -79,6 +81,8 @@ part 'app_database.g.dart';
     PromptOverrideDao,
     CharacterRelationDao,
     GateLogDao,
+    LocationDao,
+    StoryArcDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {

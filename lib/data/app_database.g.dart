@@ -16936,6 +16936,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this as AppDatabase,
   );
   late final GateLogDao gateLogDao = GateLogDao(this as AppDatabase);
+  late final LocationDao locationDao = LocationDao(this as AppDatabase);
+  late final StoryArcDao storyArcDao = StoryArcDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();

@@ -354,6 +354,8 @@ class SettleDelta {
     required this.authorIntent,
     required this.currentFocus,
     this.relationOps = const [],
+    this.readerKnowledge = const {},
+    this.arcOps = const [],
   });
 
   final List<Map<String, dynamic>> factUpsert;
@@ -369,6 +371,15 @@ class SettleDelta {
   /// 本章确立或改变的角色关系，落 CharacterRelations 追加历史。
   final List<Map<String, dynamic>> relationOps;
 
+  /// 读者认知三槽位（known / waiting / misconceived），Settler 输出本章后的最新认知。
+  /// 整体覆盖 reader_knowledge TruthFile，不增量合并。
+  final Map<String, dynamic> readerKnowledge;
+
+  /// 弧线推进操作（M29，1.2 世界观侧）：`{arcName, targetSeq, summary}`，
+  /// 定稿后把预估 targetSeq 的弧线节点落到本章。由 NovelService 单独处理，
+  /// 不阻塞固化。
+  final List<Map<String, dynamic>> arcOps;
+
   factory SettleDelta.fromJson(Map<String, dynamic> json) {
     final factOps = jsonMap(json['factOps']);
     final hookOps = jsonMap(json['hookOps']);
@@ -383,6 +394,10 @@ class SettleDelta {
       hookUpsert: [for (final h in jsonList(hookOps['upsert'])) jsonMap(h)],
       hookResolve: [for (final h in jsonList(hookOps['resolve'])) h.toString()],
       relationOps: [for (final r in jsonList(json['relationOps'])) jsonMap(r)],
+      readerKnowledge: json['readerKnowledge'] is Map
+          ? jsonMap(json['readerKnowledge'])
+          : const {},
+      arcOps: [for (final a in jsonList(json['arcOps'])) jsonMap(a)],
       chapterSummary: json['chapterSummary'] is Map
           ? jsonMap(json['chapterSummary'])
           : null,

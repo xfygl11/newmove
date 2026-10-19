@@ -78,6 +78,17 @@ class _StaticSettings extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 4),
+          Card(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            color: Theme.of(context).colorScheme.secondaryContainer,
+            child: ListTile(
+              leading: const Icon(Icons.public, size: 22),
+              title: const Text('世界观（地点 · 故事弧线）'),
+              subtitle: const Text('维护地点树与跨章故事弧线'),
+              trailing: const Icon(Icons.chevron_right, size: 18),
+              onTap: () => context.push('/novel/${book.projectId}/world'),
+            ),
+          ),
           _EditRow(
             label: '世界观',
             value: book.world,
@@ -335,6 +346,8 @@ class _TruthFileView extends StatelessWidget {
       TruthFileKind.chapterSummaries => _summaryCards(json),
       TruthFileKind.authorIntent ||
       TruthFileKind.currentFocus => [_textCard(jsonString(json['text']))],
+      TruthFileKind.chapterPlan => _planCards(json),
+      TruthFileKind.readerKnowledge => _readerCards(json),
       _ => [_rawCard(content)],
     };
 
@@ -419,6 +432,36 @@ class _TruthFileView extends StatelessWidget {
 
   Widget _textCard(String text) {
     return _kvCard(kind, text.isEmpty ? '（空）' : text);
+  }
+
+  /// 章节计划三档（next / near / far）。
+  List<Widget> _planCards(Map<String, dynamic> json) {
+    return [
+      _kvCard('下一章（next）', jsonString(json['next']).isEmpty
+          ? '（空）'
+          : jsonString(json['next'])),
+      _kvCard('近几章（near）', jsonString(json['near']).isEmpty
+          ? '（空）'
+          : jsonString(json['near'])),
+      _kvCard('远期（far）', jsonString(json['far']).isEmpty
+          ? '（空）'
+          : jsonString(json['far'])),
+    ];
+  }
+
+  /// 读者认知三槽位（known / waiting / misconceived）。
+  List<Widget> _readerCards(Map<String, dynamic> json) {
+    return [
+      _kvCard('读者已知', jsonString(json['known']).isEmpty
+          ? '（空）'
+          : jsonString(json['known'])),
+      _kvCard('读者在等', jsonString(json['waiting']).isEmpty
+          ? '（空）'
+          : jsonString(json['waiting'])),
+      _kvCard('读者误认', jsonString(json['misconceived']).isEmpty
+          ? '（空）'
+          : jsonString(json['misconceived'])),
+    ];
   }
 
   Widget _rawCard(String raw) {

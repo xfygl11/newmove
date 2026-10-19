@@ -25,6 +25,7 @@ void main() {
         resolver: PromptResolver(db.promptOverrideDao),
       ),
       attemptDao: db.generationAttemptDao,
+      storyArcDao: db.storyArcDao,
     );
     final projectId = await db.projectDao.insertProject(
       ProjectsCompanion.insert(name: '测试项目'),

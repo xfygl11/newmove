@@ -606,6 +606,31 @@ lib/
   （该值几乎恒为「长篇」、`未设定` 分支是死代码），作品形式由 `genreContext`
   承载——「作品类型」标签与题材类型撞名，模型会把两者当同一个东西。
 
+### 世界观侧功能约定（M29a）
+
+  > 落地位置：`lib/data/daos/location_dao.dart`、`lib/data/daos/story_arc_dao.dart`、
+  > `lib/features/novel/world_building_page.dart`。schema v16 表定义见 `tables.dart`。
+
+  - **地点系统是父子层级树，LocationRelations 无向边表有意省略**：`Locations` 表
+    `parentId` 承载「地点归属」，空间连通边不做（ACT 简化，`tables.dart` 注释已写明）。
+    `Scenes.locationId` 是**软引用**（无外键），删地点不级联删场景，悬空 `locationId`
+    由场景读取方回落。`LocationDao.deleteById` 只删自身，子地点 `parentId` 悬空不自动清。
+  - **故事弧线四态**：`StoryArcs.status` ∈ active / paused / completed / abandoned；
+    `ArcNodes.targetSeq` 是预估落点，`chapterId` 是实际落地章。`StoryArcDao.landNode`
+    按 `targetSeq` 落地写 `chapterId`，未命中静默跳过；`deleteArc` 单事务先删节点再删弧线。
+  - **弧线推进（arcOps）放 `NovelService.settleChapter`** 而非 `TruthFileStore.applyDelta`：
+    TruthFileStore 只依赖 TruthFileDao 保持纯固化；弧线推进是辅助能力，失败 `appLog`
+    留痕不阻塞固化。`arcName` 必须与 `StoryArcs.name` 精确匹配（找不到静默跳过），
+    `targetSeq` 用 `jsonIntOrNull`（未知跳过，不用 `jsonInt` 折叠成 0）。弧线清单只
+    注入「有未落地节点」的弧线给 Settler。
+  - **章节计划三档（chapter_plan）**：`TruthFileKind.chapterPlan` 存 `next` / `near` /
+    `far` 三槽位。`advanceChapterPlan` 滚动推进：写第 N 章后 next 完成出局，near→next、
+    far→near、far 清空。Planner 输出 `roadmap` 三档对象落库，首次规划 next 填本章；
+    `NovelService.planChapter` 读三档注入，`buildWritePrompt` 注入三档。
+  - **读者认知（reader_knowledge）整体覆盖不增量合并**：`TruthFileKind.readerKnowledge`
+    三槽位 `known`（读者已知）/ `waiting`（在等什么答案）/ `misconceived`（误认了什么）。
+    悬念揭晓移出 waiting、误认澄清移出 misconceived；Settler 未输出字段时保持现状。
+
 
 ---
 

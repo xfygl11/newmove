@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
 
 import '../../agent/active_llm.dart';
+import '../../core/app_log.dart';
 import '../../core/json_values.dart';
 import '../../core/text/chapter_import.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/chapter_revision_dao.dart';
 import '../../data/daos/generation_attempt_dao.dart';
 import '../../data/daos/novel_dao.dart';
+import '../../data/daos/story_arc_dao.dart';
 import '../../data/daos/truth_file_dao.dart';
 import 'novel_agents.dart';
 import 'context_budget.dart';
@@ -25,6 +27,7 @@ class NovelService {
     required this.truthDao,
     required this.revisionDao,
     required this.agents,
+    required this.storyArcDao,
     required GenerationAttemptDao attemptDao,
   }) : _attempts = AttemptRecorder(attemptDao);
 
@@ -32,6 +35,7 @@ class NovelService {
   final TruthFileDao truthDao;
   final ChapterRevisionDao revisionDao;
   final NovelAgents agents;
+  final StoryArcDao storyArcDao;
 
   /// 生成尝试台账（M18 T20.1 起必填，见 [AttemptRecorder]）。
   final AttemptRecorder _attempts;
@@ -322,11 +326,17 @@ class NovelService {
     int? chapterId,
   }) async {
     final book = await novelDao.findBook(bookId);
-    final texts = await storeFor(bookId).readAllText();
+    final store = storeFor(bookId);
+    final texts = await store.readAllText();
+    final plan = await store.readChapterPlan();
     final head = StringBuffer()
       ..writeln('【故事命题】${book?.premise ?? ''}')
       ..writeln('【世界观】${book?.world ?? ''}')
       ..writeln('【大纲】${book?.outline ?? ''}');
+    final planBlock = _chapterPlanBlock(plan);
+    if (planBlock.isNotEmpty) {
+      head.write(planBlock);
+    }
     final context = genreContext(book);
     final genreBlock = context.isEmpty ? '' : '【作品基调】\n$context';
     final budget = _budgetFor(llm)
@@ -351,6 +361,16 @@ class NovelService {
         llm: llm,
         bookId: bookId,
       );
+      // Planner 的 roadmap 三档落 chapter_plan，供后续写章注入与定稿推进。
+      final roadmap = plan['roadmap'];
+      if (roadmap is Map) {
+        final rm = roadmap.cast<String, dynamic>();
+        await store.writeChapterPlan({
+          'next': jsonString(rm['next']),
+          'near': jsonString(rm['near']),
+          'far': jsonString(rm['far']),
+        });
+      }
       await _finish(attempt, AttemptStatuses.succeeded);
       return plan;
     } catch (e) {
@@ -368,13 +388,19 @@ class NovelService {
     int? maxTokens,
   }) async {
     final book = await novelDao.findBook(bookId);
-    final texts = await storeFor(bookId).readAllText();
+    final store = storeFor(bookId);
+    final texts = await store.readAllText();
+    final planTiers = await store.readChapterPlan();
     final context = genreContext(book);
     final head = StringBuffer()
       ..writeln('【故事命题】${book?.premise ?? ''}')
       ..writeln('【世界观】${book?.world ?? ''}')
       ..writeln('【风格指南】${book?.styleGuide ?? ''}')
       ..writeln('【大纲】${book?.outline ?? ''}');
+    final planBlock = _chapterPlanBlock(planTiers);
+    if (planBlock.isNotEmpty) {
+      head.write(planBlock);
+    }
     final genreBlock = context.isEmpty ? '' : '【作品基调】\n$context';
 
     // 续写时 Writer 手上已有本章正文，上一章结尾是噪音，不注入。
@@ -544,6 +570,11 @@ class NovelService {
       ..writeln('【正文】${chapter.content ?? ''}')
       ..writeln('【章节号】${chapter.seq}')
       ..writeln('【标题】${chapter.title}');
+    // 弧线清单注入，供 Settler 按名称精确对齐 arcOps；无弧线时不输出该条块。
+    final arcBlock = await _arcListBlock(bookId);
+    if (arcBlock.isNotEmpty) {
+      head.write(arcBlock);
+    }
     // 固化需要看到现有状态才能避免重复；超预算时按分级裁剪，并在提示词里说明。
     final budget = _budgetFor(llm)
         .budgetTruthFiles(texts, fixedContext: head.toString());
@@ -557,7 +588,7 @@ class NovelService {
     }
     final prompt = StringBuffer()
       ..write(head)
-      ..writeln('【现有状态（7 类 JSON）】${jsonEncode(state)}')
+      ..writeln('【现有状态（JSON）】${jsonEncode(state)}')
       ..writeln(budget.note.isEmpty ? '' : '【预算说明】${budget.note}，请勿重复合并已有条目。')
       ..writeln('请输出固化 delta JSON。');
 
@@ -577,10 +608,49 @@ class NovelService {
         bookId: chapter.bookId,
       );
       await store.applyDelta(delta, chapter.seq);
+      // 章节定稿后推进章节计划三档（next 完成出局，near/far 顶位）。
+      await store.advanceChapterPlan();
+      // 弧线推进是辅助能力：失败只留痕不阻塞固化。
+      await _applyArcOps(bookId, delta, chapter.id);
       await _finish(attempt, AttemptStatuses.succeeded);
     } catch (e) {
       await _finish(attempt, AttemptStatuses.failed, error: e.toString());
       rethrow;
+    }
+  }
+
+  /// 落地 Settler 输出的弧线推进操作（M29，1.2 世界观侧）。
+  ///
+  /// 每条 arcOp 形如 `{arcName, targetSeq, summary}`：按名称找弧线，把
+  /// targetSeq 对应的节点落到本章。弧线名不匹配、节点不存在都不报错——
+  /// 弧线可能没覆盖到本章，静默跳过即可；真正的写入失败走 appLog 留痕。
+  Future<void> _applyArcOps(
+    int bookId,
+    SettleDelta delta,
+    int chapterId,
+  ) async {
+    for (final op in delta.arcOps) {
+      final name = jsonString(op['arcName']).trim();
+      final targetSeq = jsonIntOrNull(op['targetSeq']);
+      if (name.isEmpty || targetSeq == null) continue;
+      try {
+        final arcs = await storyArcDao.listArcsByBook(bookId);
+        StoryArc? arc;
+        for (final a in arcs) {
+          if (a.name == name) {
+            arc = a;
+            break;
+          }
+        }
+        if (arc == null) continue;
+        await storyArcDao.landNode(
+          arcId: arc.id,
+          targetSeq: targetSeq,
+          chapterId: chapterId,
+        );
+      } catch (e) {
+        appLog('arc_land', '弧线推进失败：$name @$targetSeq', error: e);
+      }
     }
   }
 
@@ -631,5 +701,42 @@ class NovelService {
   }) {
     return '【正文】$content\n【修订模式】${mode.label}\n【修订要求】$instruction\n'
         '请输出修订后的完整正文，不输出解释。';
+  }
+
+  /// 章节计划三档（next / near / far）拼成提示词条块，全空返回空串。
+  static String _chapterPlanBlock(Map<String, String> plan) {
+    final buf = StringBuffer();
+    final next = plan['next'] ?? '';
+    final near = plan['near'] ?? '';
+    final far = plan['far'] ?? '';
+    if (next.trim().isNotEmpty) {
+      buf.writeln('【下一章计划（next）】$next');
+    }
+    if (near.trim().isNotEmpty) {
+      buf.writeln('【近几章计划（near）】$near');
+    }
+    if (far.trim().isNotEmpty) {
+      buf.writeln('【远期计划（far）】$far');
+    }
+    return buf.toString();
+  }
+
+  /// 故事弧线清单条块：名称 + 未落地节点的 targetSeq，供 Settler 对齐 arcOps。
+  ///
+  /// 只输出「还有未落地节点」的弧线，已全部落地的弧线不需要 Settler 再推进。
+  Future<String> _arcListBlock(int bookId) async {
+    final arcs = await storyArcDao.listArcsByBook(bookId);
+    if (arcs.isEmpty) return '';
+    final buf = StringBuffer()..writeln('【故事弧线（按名称对齐 arcOps）】');
+    for (final arc in arcs) {
+      final nodes = await storyArcDao.listNodesByArc(arc.id);
+      final pending = [
+        for (final n in nodes)
+          if (n.chapterId == null) n.targetSeq,
+      ];
+      if (pending.isEmpty) continue;
+      buf.writeln('- ${arc.name}：待推进节点 @${pending.join(', @')}');
+    }
+    return buf.toString();
   }
 }

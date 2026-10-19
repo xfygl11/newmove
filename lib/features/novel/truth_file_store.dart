@@ -145,6 +145,7 @@ class TruthFileStore {
       if (delta.currentFocus.trim().isNotEmpty) {
         await _writeTextLocked(TruthFileKind.currentFocus, delta.currentFocus);
       }
+      await _applyReaderKnowledge(delta);
     });
   }
 
@@ -325,6 +326,62 @@ class TruthFileStore {
     await write(TruthFileKind.chapterSummaries, {
       'rows': rows,
     }, expectedRevision: row?.revision);
+  }
+
+  /// 应用读者认知（M29，1.2 世界观侧）：整体覆盖 reader_knowledge 三槽位。
+  ///
+  /// 读者认知会随剧情演进变化（悬念揭晓移出 waiting、误认被纠正），所以按
+  /// Settler 输出的「本章后最新认知」整体覆盖，不增量合并。Settler 未输出时
+  /// 保持现状——写作进度不该因漏字段被清空。
+  Future<void> _applyReaderKnowledge(SettleDelta delta) async {
+    if (delta.readerKnowledge.isEmpty) return;
+    final row = await readRow(TruthFileKind.readerKnowledge);
+    final content = <String, dynamic>{
+      'known': jsonString(delta.readerKnowledge['known']),
+      'waiting': jsonString(delta.readerKnowledge['waiting']),
+      'misconceived': jsonString(delta.readerKnowledge['misconceived']),
+    };
+    await write(TruthFileKind.readerKnowledge, content,
+        expectedRevision: row?.revision);
+  }
+
+  /// 章节计划三槽位（next / near / far），M29 1.2 世界观侧。
+  ///
+  /// goink 的 `ChapterPlan` 用 `scope ∈ {next, near, far}` 三槽位，第 N 章写作时
+  /// 全量注入。Planner 写完自动推进：next 已完成滚动出局，near 顶到 next，
+  /// far 顶到 near，far 空出待下一轮 Planner 补。
+  Future<Map<String, String>> readChapterPlan() async {
+    final content = await read(TruthFileKind.chapterPlan);
+    return {
+      'next': jsonString(content['next']),
+      'near': jsonString(content['near']),
+      'far': jsonString(content['far']),
+    };
+  }
+
+  /// 写入章节计划三档（带乐观锁）。
+  Future<void> writeChapterPlan(
+    Map<String, String> plan, {
+    int? expectedRevision,
+  }) async {
+    await write(
+      TruthFileKind.chapterPlan,
+      {'next': plan['next'] ?? '', 'near': plan['near'] ?? '', 'far': plan['far'] ?? ''},
+      expectedRevision: expectedRevision,
+    );
+  }
+
+  /// 章节定稿后推进计划：near 顶到 next、far 顶到 near、far 清空。
+  ///
+  /// 由 NovelService 在 settleChapter 后调用。三槽位推进是读改写，带乐观锁，
+  /// 冲突抛 ConcurrentWriteConflict 而非静默覆盖。
+  Future<void> advanceChapterPlan() async {
+    final row = await readRow(TruthFileKind.chapterPlan);
+    final plan = await readChapterPlan();
+    await writeChapterPlan(
+      {'next': plan['near'] ?? '', 'near': plan['far'] ?? '', 'far': ''},
+      expectedRevision: row?.revision,
+    );
   }
 
   /// 从原始行解出内容，null 或损坏时按空对象处理。
