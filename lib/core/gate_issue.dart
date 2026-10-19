@@ -17,6 +17,7 @@ abstract final class GateSubjects {
   static const shots = 'shots';
   static const script = 'script';
   static const skeleton = 'skeleton';
+  static const outline = 'outline';
 }
 
 /// 一条本地质量门结果。

@@ -47,7 +47,7 @@ void main() {
       expect(root!.name, '王城');
       expect(all.where((l) => l.parentId == rootId), hasLength(1));
 
-      await dao.updateById(rootId, LocationsCompanion(name: const Value('帝都')));
+      await dao.updateById(rootId, const LocationsCompanion(name: Value('帝都')));
       final updated = await dao.findById(rootId);
       expect(updated!.name, '帝都');
 

@@ -11,6 +11,7 @@ class TruthFileKind {
   static const String currentFocus = 'current_focus';
   static const String chapterPlan = 'chapter_plan';
   static const String readerKnowledge = 'reader_knowledge';
+  static const String outlineStructure = 'outline_structure';
 
   static const List<String> all = [
     worldFacts,
@@ -22,6 +23,7 @@ class TruthFileKind {
     currentFocus,
     chapterPlan,
     readerKnowledge,
+    outlineStructure,
   ];
 
   static String label(String kind) => switch (kind) {
@@ -34,6 +36,7 @@ class TruthFileKind {
     currentFocus => '当前焦点',
     chapterPlan => '章节计划',
     readerKnowledge => '读者认知',
+    outlineStructure => '大纲结构',
     _ => kind,
   };
 }

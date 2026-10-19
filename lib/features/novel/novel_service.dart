@@ -135,6 +135,20 @@ class NovelService {
         expectedRevision: matrixRow?.revision,
       );
 
+      // 落结构化大纲（M29b）：场景/道具清单供 OutlineGate 校验与下游资产预填。
+      // 有数据才写，空清单保持现状——重新生成不产出结构时不清空旧结构。
+      if (result.outlineScenes.isNotEmpty || result.outlineProps.isNotEmpty) {
+        final structureRow = await store.readRow(TruthFileKind.outlineStructure);
+        await store.write(
+          TruthFileKind.outlineStructure,
+          {
+            'scenes': [for (final s in result.outlineScenes) s.toJson()],
+            'props': [for (final p in result.outlineProps) p.toJson()],
+          },
+          expectedRevision: structureRow?.revision,
+        );
+      }
+
       await _finish(attempt, AttemptStatuses.succeeded);
       return result;
     } catch (e) {

@@ -67,6 +67,7 @@ const Map<String, String> gateSubjectLabels = {
   GateSubjects.shots: '分镜镜头',
   GateSubjects.script: '剧本场次',
   GateSubjects.skeleton: '骨架认领',
+  GateSubjects.outline: '大纲结构',
 };
 
 class GateLogPage extends ConsumerWidget {

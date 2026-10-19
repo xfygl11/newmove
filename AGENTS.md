@@ -438,10 +438,24 @@ lib/
           可讲的叙事，通常是关系抽取把「自己心里想」误读成「和谁有关」）、
           `relation_orphan`（warn，关系的一端引用了角色画像里没有的名字，图谱上
           会变成悬空节点）。
-          两条关系门读的是 `CharacterRelations` 的当前有效边（`currentEdges`），
-          不是 `CharacterSpec.relations` 的自由文本；关系数据为空时整门跳过。
-          引文核对的正文定位入口是 `ReviewIssue.quoteInContent` 静态助手，
-          复用私有 `_locateQuote`，不为质量门另写一套匹配逻辑。
+           两条关系门读的是 `CharacterRelations` 的当前有效边（`currentEdges`），
+           不是 `CharacterSpec.relations` 的自由文本；关系数据为空时整门跳过。
+           引文核对的正文定位入口是 `ReviewIssue.quoteInContent` 静态助手，
+           复用私有 `_locateQuote`，不为质量门另写一套匹配逻辑。
+        - `OutlineGate`（`lib/features/novel/outline_gate.dart`，大纲结构侧，M29b）：
+          `scene_cap`（warn，主场景数 > `4 + ⌈集数/10⌉` 夹 5–15；集数由调用方
+          传入，小说章节数或剧本集数都支持，对齐 shuohao-skills `novel-outline`
+          第 4 道门）、
+          `once_scene`（warn，一次性场景——只在一个章节/集出现的场景——没有
+          规避方案；规避方案是复用哪个环境资产或换什么时段天气，由 `onceAvoidance`
+          字段承载）、
+          `prop_cap`（warn，叙事道具数 > 8；对齐 shuohao `novel-art` 边界「道具
+          只收叙事道具，通常 3–8 件」，场景陈设归场景锚点、一次性手部道具用
+          镜头级提示词解决）。
+          三条门读的是 `outline_structure` TruthFile 的结构化场景/道具清单，
+          不是大纲 Markdown 正文；清单为空时整门跳过，按「缺数据照常通过」处理。
+          场景上限公式是动态的（随集数走），一次性场景门只查「有出现清单且
+          恰好一个出现点」的场景；道具门只数 `isNarrative == true` 的道具。
          - 统一结果类型 `GateIssue` / `GateSeverity` 在 `lib/core/gate_issue.dart`，
            `noteLine` 给确认框 `note` 用；与 `SegmentBudgetIssue` 同型但字段语义不同，
            不合并。

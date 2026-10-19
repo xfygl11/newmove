@@ -26,6 +26,15 @@
    关键事件：遭遇变异体袭击，本能释放治愈能力救下同伴
    结尾变化：能力暴露，引来幸存者营地注意
 
+6. 结构化场景与道具清单（outlineStructure）：从大纲里归纳「会反复出现、需要
+   保持一致的舞台」与「承载剧情的关键道具」，供下游资产出图与结构校验使用。
+   - scenes 只收主舞台场景（跨章反复出现的环境），每项标 `isPrimary`；
+     临时出现一次的场景也收入，但须填 `onceAvoidance`（复用哪个环境资产或换
+     什么时段天气）说明规避方案。`occurrences` 是该场景出现的章节号数组。
+   - props 只收叙事道具（有特写、跨章出现、承载剧情，通常 3–8 件），标
+     `isNarrative: true`；场景陈设（桌椅墙饰）与一次性手部道具不收入，前者归
+     场景锚点、后者留给镜头级提示词解决。
+
 ## 输出格式（JSON）
 
 ```json
@@ -37,8 +46,19 @@
   ],
   "styleGuide": "风格指南",
   "outline": "第 1 章 觉醒\n目标：……\n关键事件：……\n结尾变化：……\n\n第 2 章 营地\n目标：……\n关键事件：……\n结尾变化：……",
+  "outlineStructure": {
+    "scenes": [
+      {"name": "幸存者营地", "isPrimary": true, "occurrences": [1, 2, 4], "onceAvoidance": ""},
+      {"name": "废弃医院", "isPrimary": false, "occurrences": [3], "onceAvoidance": "复用营地废墟环境资产，改夜景雾天"}
+    ],
+    "props": [
+      {"name": "治愈药剂", "isNarrative": true},
+      {"name": "父亲的怀表", "isNarrative": true}
+    ]
+  },
   "proposals": ["提案1", "提案2"]
 }
 ```
 
-其中 `proposals` 列出所有补充设定，供用户确认；`outline` 为多行 Markdown 字符串。
+其中 `proposals` 列出所有补充设定，供用户确认；`outline` 为多行 Markdown 字符串；
+`outlineStructure` 为结构化场景与道具清单（scenes/props 均可为空数组）。

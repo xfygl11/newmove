@@ -62,6 +62,11 @@ abstract final class GateCodes {
   static const relationSelf = 'relation_self';
   static const relationOrphan = 'relation_orphan';
 
+  // ── 大纲结构（OutlineGate，M29b）────────────────────────────
+  static const sceneCap = 'scene_cap';
+  static const onceScene = 'once_scene';
+  static const propCap = 'prop_cap';
+
   /// 全量门码，报表页的「从没响」用它与已记录的码做差集。
   static const all = <String>[
     overLimit,
@@ -100,5 +105,8 @@ abstract final class GateCodes {
     evidenceUnverified,
     relationSelf,
     relationOrphan,
+    sceneCap,
+    onceScene,
+    propCap,
   ];
 }

@@ -259,6 +259,9 @@ void main() {
         GateCodes.evidenceUnverified,
         GateCodes.relationSelf,
         GateCodes.relationOrphan,
+        GateCodes.sceneCap,
+        GateCodes.onceScene,
+        GateCodes.propCap,
       ];
       expect(GateCodes.all, declared);
     });

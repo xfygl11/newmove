@@ -5,10 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/gate_issue.dart';
 import '../../core/json_values.dart';
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
+import '../../widgets/gate_issue_list.dart';
+import 'novel_models.dart';
 import 'novel_providers.dart';
+import 'outline_gate.dart';
 import 'truth_file_kinds.dart';
 
 /// 设定工坊：静态设定（世界观/命题/风格/大纲）编辑 + TruthFile 7 类状态查看。
@@ -51,7 +55,7 @@ class _WorkshopBody extends StatelessWidget {
       children: [
         _StaticSettings(book: book),
         const Divider(height: 1),
-        Expanded(child: _TruthFileTabs(bookId: book.id)),
+        Expanded(child: _TruthFileTabs(book: book)),
       ],
     );
   }
@@ -268,15 +272,15 @@ class _EditRowDialogState extends State<_EditRowDialog> {
   }
 }
 
-/// TruthFile 7 类 Tab 查看器。
+/// TruthFile 10 类 Tab 查看器。
 class _TruthFileTabs extends ConsumerWidget {
-  const _TruthFileTabs({required this.bookId});
+  const _TruthFileTabs({required this.book});
 
-  final int bookId;
+  final NovelBook book;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rowsAsync = ref.watch(truthFilesByBookProvider(bookId));
+    final rowsAsync = ref.watch(truthFilesByBookProvider(book.id));
     final rows = rowsAsync.value ?? const <TruthFile>[];
 
     return DefaultTabController(
@@ -298,7 +302,7 @@ class _TruthFileTabs extends ConsumerWidget {
                   _TruthFileView(
                     row: _find(rows, kind),
                     kind: kind,
-                    bookId: bookId,
+                    book: book,
                   ),
               ],
             ),
@@ -316,19 +320,19 @@ class _TruthFileTabs extends ConsumerWidget {
   }
 }
 
-class _TruthFileView extends StatelessWidget {
+class _TruthFileView extends ConsumerWidget {
   const _TruthFileView({
     required this.row,
     required this.kind,
-    required this.bookId,
+    required this.book,
   });
 
   final TruthFile? row;
   final String kind;
-  final int bookId;
+  final NovelBook book;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final content = row?.content ?? '';
     Map<String, dynamic> json;
     try {
@@ -348,6 +352,7 @@ class _TruthFileView extends StatelessWidget {
       TruthFileKind.currentFocus => [_textCard(jsonString(json['text']))],
       TruthFileKind.chapterPlan => _planCards(json),
       TruthFileKind.readerKnowledge => _readerCards(json),
+      TruthFileKind.outlineStructure => _outlineStructureCards(context, ref, json),
       _ => [_rawCard(content)],
     };
 
@@ -390,7 +395,7 @@ class _TruthFileView extends StatelessWidget {
           title: Text('角色矩阵（${chars.length} 个角色）'),
           subtitle: const Text('点按管理可增删改角色'),
           trailing: const Icon(Icons.chevron_right, size: 18),
-          onTap: () => context.push('/novel/$bookId/characters'),
+          onTap: () => context.push('/novel/${book.id}/characters'),
         ),
       ),
       for (final c in chars)
@@ -417,7 +422,7 @@ class _TruthFileView extends StatelessWidget {
           title: Text('伏笔池（${hooks.length} 条）'),
           subtitle: const Text('点按管理可登记/回收伏笔'),
           trailing: const Icon(Icons.chevron_right, size: 18),
-          onTap: () => context.push('/novel/$bookId/hooks'),
+          onTap: () => context.push('/novel/${book.id}/hooks'),
         ),
       ),
       for (final h in hooks)
@@ -464,6 +469,68 @@ class _TruthFileView extends StatelessWidget {
     ];
   }
 
+  /// 大纲结构（场景清单 + 叙事道具表）+ 大纲体检门面板（M29b）。
+  List<Widget> _outlineStructureCards(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> json,
+  ) {
+    final scenes = [
+      for (final s in jsonList(json['scenes'])) OutlineScene.fromJson(jsonMap(s)),
+    ];
+    final props = [
+      for (final p in jsonList(json['props'])) OutlineProp.fromJson(jsonMap(p)),
+    ];
+
+    final issues = OutlineGate.validate(
+      scenes: scenes,
+      props: props,
+      episodeCount: _chapterCountOf(book.outline),
+    );
+
+    return [
+      if (scenes.isEmpty && props.isEmpty)
+        const _OutlineEmptyHint()
+      else ...[
+        GateIssueList(
+          issues: issues,
+          title: '大纲体检',
+          showEmpty: true,
+          onRecord: () => ref.read(gateLogDaoProvider).recordValidation(
+            subjectType: GateSubjects.outline,
+            subjectLabel: '大纲结构 · 体检',
+            gates: const ['大纲结构门'],
+            issues: issues,
+            projectId: book.projectId,
+          ),
+        ),
+        _kvCard(
+          '场景（${scenes.length} 个，主场景 ${scenes.where((s) => s.isPrimary).length} 个）',
+          scenes.isEmpty ? '（空）' : '',
+        ),
+        for (final s in scenes)
+          _kvCard(
+            '${s.isPrimary ? '★ ' : ''}${s.name}',
+            '出现：${s.occurrences.isEmpty ? '未填' : s.occurrences.join('、')}'
+            '${s.onceAvoidance.trim().isEmpty ? '' : '\n规避：${s.onceAvoidance}'}',
+          ),
+        _kvCard(
+          '叙事道具（${props.where((p) => p.isNarrative).length} 件）',
+          props.isEmpty ? '（空）' : '',
+        ),
+        for (final p in props)
+          if (p.isNarrative) _kvCard(p.name, '叙事道具'),
+      ],
+    ];
+  }
+
+  /// 从大纲 Markdown 解析章节数（匹配「第 N 章」标题行，不重复计数）。
+  static int _chapterCountOf(String? outline) {
+    if (outline == null || outline.trim().isEmpty) return 0;
+    final re = RegExp(r'^#{0,6}\s*第\s*\d+\s*章', multiLine: true);
+    return re.allMatches(outline).length;
+  }
+
   Widget _rawCard(String raw) {
     return _kvCard(kind, raw.isEmpty ? '（空）' : raw);
   }
@@ -503,6 +570,25 @@ class _TruthFileView extends StatelessWidget {
               Text(subtitle),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 大纲结构为空时的提示：结构化清单由 Planner 在设定生成时产出。
+class _OutlineEmptyHint extends StatelessWidget {
+  const _OutlineEmptyHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Text(
+          '暂无结构化大纲，重新生成设定时由 Planner 产出场景与叙事道具清单',
+          style: Theme.of(context).textTheme.bodySmall,
+          textAlign: TextAlign.center,
         ),
       ),
     );

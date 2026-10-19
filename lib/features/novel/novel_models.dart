@@ -12,6 +12,8 @@ class SetupResult {
     required this.styleGuide,
     required this.outline,
     required this.proposals,
+    this.outlineScenes = const [],
+    this.outlineProps = const [],
   });
 
   final String premise;
@@ -21,7 +23,16 @@ class SetupResult {
   final String outline;
   final List<String> proposals;
 
+  /// 结构化场景清单（M29b），供 OutlineGate 校验与下游美术资产预填。
+  final List<OutlineScene> outlineScenes;
+
+  /// 结构化叙事道具表（M29b），`isNarrative` 区分叙事道具与场景陈设。
+  final List<OutlineProp> outlineProps;
+
   factory SetupResult.fromJson(Map<String, dynamic> json) {
+    final structure = json['outlineStructure'] is Map
+        ? jsonMap(json['outlineStructure'])
+        : const <String, dynamic>{};
     return SetupResult(
       premise: jsonString(json['premise']),
       world: jsonString(json['world']),
@@ -32,8 +43,85 @@ class SetupResult {
       styleGuide: jsonString(json['styleGuide']),
       outline: jsonString(json['outline']),
       proposals: [for (final p in jsonList(json['proposals'])) p.toString()],
+      outlineScenes: [
+        for (final s in jsonList(structure['scenes']))
+          OutlineScene.fromJson(jsonMap(s)),
+      ],
+      outlineProps: [
+        for (final p in jsonList(structure['props']))
+          OutlineProp.fromJson(jsonMap(p)),
+      ],
     );
   }
+}
+
+/// 大纲结构化场景（M29b）。
+///
+/// 对齐 shuohao `novel-outline` 的资产清单：主场景清单是 `OutlineGate.scene_cap`
+/// 与 `once_scene` 的数据源，也是下游美术资产（Locations）的预填骨架。
+class OutlineScene {
+  const OutlineScene({
+    required this.name,
+    this.isPrimary = false,
+    this.occurrences = const [],
+    this.onceAvoidance = '',
+  });
+
+  final String name;
+
+  /// 是否主场景（参与 `scene_cap` 上限计数）。
+  final bool isPrimary;
+
+  /// 出现点清单：章节号或集号（int），供 `once_scene` 判定一次性场景。
+  final List<int> occurrences;
+
+  /// 一次性场景的规避方案：复用哪个环境资产或换什么时段天气。
+  /// 场景只出现一次且此字段为空时触发 `once_scene`。
+  final String onceAvoidance;
+
+  factory OutlineScene.fromJson(Map<String, dynamic> json) {
+    return OutlineScene(
+      name: jsonString(json['name']),
+      isPrimary: jsonBool(json['isPrimary']),
+      occurrences: [
+        for (final o in jsonList(json['occurrences']))
+          if (o is int)
+            o
+          else if (o is num)
+            o.toInt()
+          else if (o is String)
+            int.tryParse(o.trim()),
+      ].whereType<int>().toList(),
+      onceAvoidance: jsonString(json['onceAvoidance']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'isPrimary': isPrimary,
+    'occurrences': occurrences,
+    'onceAvoidance': onceAvoidance,
+  };
+}
+
+/// 大纲结构化道具（M29b）。
+///
+/// `isNarrative` 区分叙事道具（有特写、跨集出现、承载剧情）与场景陈设
+/// （归场景锚点）；只有叙事道具参与 `OutlineGate.prop_cap` 上限计数。
+class OutlineProp {
+  const OutlineProp({required this.name, this.isNarrative = false});
+
+  final String name;
+  final bool isNarrative;
+
+  factory OutlineProp.fromJson(Map<String, dynamic> json) {
+    return OutlineProp(
+      name: jsonString(json['name']),
+      isNarrative: jsonBool(json['isNarrative']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {'name': name, 'isNarrative': isNarrative};
 }
 
 /// 角色分档闭集词表（M23 T24.1）。
