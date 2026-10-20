@@ -133,7 +133,7 @@ void main() {
 
   group('schema 结构', () {
     test('剧本表已删除 language 死字段，M29 复活 aspect_ratio 多比例列', () async {
-      expect(db.schemaVersion, 16);
+      expect(db.schemaVersion, 18);
 
       final rows = await db.customSelect('PRAGMA table_info(scripts)').get();
       final columns = rows.map((row) => row.data['name'] as String).toSet();
