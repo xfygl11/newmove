@@ -753,6 +753,19 @@ lib/
 - **递增 id**：`RevisionDao.nextVersionGroup` 取当前最大值 +1，无记录时返回 1。
 - **降级不变**：`saveShot` 带 `versionGroup` 时仍降级旧 `current`，语义不变。
 
+### 同槽位多版本参考图约定（M38）
+
+- **version / isActive 字段**：`AssetRefs.version` 与 `isActive`（均 nullable int）
+  已在 schema v16 落地。`version` 空表示第 1 版；`isActive` 空表示生效（存量数据）。
+- **同槽位多版本**：同一镜头同一 `role` 槽位可并存多版本参考图（A/B 对比选优），
+  通过 `listByShotAndRole` 查询全部版本。
+- **生效版本查询**：`listActiveByShot` 只返回 `isActive=1` 或 `isActive=null` 的引用
+  （空视为生效，兼容存量数据）。
+- **切换生效**：`setActive(id)` 在事务里把同槽位其他版本设为 `isActive=0`，
+  当前版本设为 `isActive=1`，确保同槽位至多一条生效。
+- **版本号递增**：`nextVersion(shotId, role)` 取同槽位当前最大值 +1，无记录返回 1。
+  不同 `role` 独立计数。
+
 ---
 
 ## 5. 数据与状态约定
