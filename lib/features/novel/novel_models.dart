@@ -102,6 +102,19 @@ class OutlineScene {
     'occurrences': occurrences,
     'onceAvoidance': onceAvoidance,
   };
+
+  OutlineScene copyWith({
+    String? name,
+    bool? isPrimary,
+    List<int>? occurrences,
+    String? onceAvoidance,
+  }) =>
+      OutlineScene(
+        name: name ?? this.name,
+        isPrimary: isPrimary ?? this.isPrimary,
+        occurrences: occurrences ?? this.occurrences,
+        onceAvoidance: onceAvoidance ?? this.onceAvoidance,
+      );
 }
 
 /// 大纲结构化道具（M29b）。
@@ -122,6 +135,11 @@ class OutlineProp {
   }
 
   Map<String, dynamic> toJson() => {'name': name, 'isNarrative': isNarrative};
+
+  OutlineProp copyWith({String? name, bool? isNarrative}) => OutlineProp(
+    name: name ?? this.name,
+    isNarrative: isNarrative ?? this.isNarrative,
+  );
 }
 
 /// 角色分档闭集词表（M23 T24.1）。
