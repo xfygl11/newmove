@@ -786,6 +786,19 @@ lib/
 - **一次出两版**：`AssetService.generate` 应支持生成两版图片，写入同一行的
   `resultAPath` / `resultBPath`，用户二选一后更新 `preferred`。
 
+### 供应商多账号约定（M41）
+
+- **ProviderAccounts 表**：`configId`（外键指向 ProviderConfigs.id）/ `label` /
+  `keyRef`（SecureKeyStore 引用）/ `isActive`（1=启用，0=禁用）。
+  `configId + label` 唯一约束。
+- **ProviderAccountDao**：`listByConfig` 按配置查询（按标签升序）、
+  `listActiveByConfig` 只返回启用账号、`findByConfigAndLabel` 按配置和标签查询、
+  `insert` / `updateRow` / `deleteById` / `deleteByConfig` / `setActive`。
+- **模板 + 实例分离**：`ProviderConfigs` 存供应商模板（Base URL / 协议 / 模型列表），
+  `ProviderAccounts` 存账号实例（API Key / 启用状态）。同一供应商可绑定多个账号。
+- **isActive 切换**：`setActive` 在事务里把同配置其他账号设为禁用，当前账号设为启用，
+  确保同配置至多一个启用账号。
+
 ---
 
 ## 5. 数据与状态约定

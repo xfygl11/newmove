@@ -16,6 +16,7 @@ import 'daos/location_dao.dart';
 import 'daos/prompt_ab_test_dao.dart';
 import 'daos/prompt_override_dao.dart';
 import 'daos/prompt_preset_dao.dart';
+import 'daos/provider_account_dao.dart';
 import 'daos/story_arc_dao.dart';
 import 'daos/revision_dao.dart';
 import 'daos/novel_dao.dart';
@@ -64,6 +65,7 @@ part 'app_database.g.dart';
     ImportLogs,
     AgentBindings,
     PromptAbTests,
+    ProviderAccounts,
   ],
   daos: [
     ProjectDao,
@@ -92,6 +94,7 @@ part 'app_database.g.dart';
     LocationDao,
     StoryArcDao,
     PromptAbTestDao,
+    ProviderAccountDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -102,7 +105,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -258,6 +261,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 17) {
         // M40：提示词 A/B 测试表。一次出两版，用户二选一。
         await m.createTable(promptAbTests);
+      }
+      if (from < 18) {
+        // M41：供应商账号实例表。同一供应商可绑定多个账号。
+        await m.createTable(providerAccounts);
       }
     },
     beforeOpen: (details) async {

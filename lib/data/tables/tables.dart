@@ -338,6 +338,8 @@ class VideoTasks extends Table {
 
 /// 模型供应商配置（API Key 不入库，存安全存储）。
 @DataClassName('ProviderConfig')
+/// 供应商配置模板（M41 前为单表，M41 后拆为模板 + 账号实例）。
+@DataClassName('ProviderConfig')
 class ProviderConfigs extends Table {
   // 由用户/系统指定的稳定 id，如 deepseek。
   TextColumn get id => text()();
@@ -356,6 +358,30 @@ class ProviderConfigs extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+}
+
+/// 供应商账号实例（M41，1.8 项目侧）。
+///
+/// 借鉴 AIComicBuilder 的「配置模板 + 账号实例」两表结构。同一供应商可绑定
+/// 多个账号，按项目轮换或按任务轮换。`SecureKeyStore` 存多 Key。
+@DataClassName('ProviderAccount')
+class ProviderAccounts extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // 关联配置模板 id。
+  TextColumn get configId => text().references(ProviderConfigs, #id)();
+  // 账号显示名。
+  TextColumn get label => text().withLength(min: 1, max: 100)();
+  // API Key 在 SecureKeyStore 中的引用 id（如 deepseek:account1）。
+  TextColumn get keyRef => text()();
+  // 是否启用。
+  IntColumn get isActive => integer().withDefault(const Constant(1))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {configId, label},
+  ];
 }
 
 /// 章节版本快照：每次修订前保存旧内容，支持回溯。
