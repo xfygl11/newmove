@@ -731,6 +731,17 @@ lib/
 - **服务注册**：`importLogDaoProvider` + `importLogServiceProvider` 在
   `core/storage/providers.dart`。
 
+### 场景参考帧约定（M36）
+
+- **isSceneRef 字段**：`ShotFrames.isSceneRef`（nullable int，1=场景参考帧，0/null=
+  普通分镜帧）已在 schema v16 落地。`ShotFrameDraft` 增补 `isSceneRef` 布尔字段
+  （默认 false），`fromJson` 用 `jsonBool` 解析（缺字段回落 false）。
+- **落库**：`ShotService` 插入帧时传 `isSceneRef: Value(f.isSceneRef ? 1 : 0)`，
+  非空帧一律写 0 或 1，不写 null。
+- **场景参考帧模式**：借鉴 AIComicBuilder 的 `0005_add_scene_ref_frame`，首尾帧
+  模式的替代——某些帧是「场景参考」而非「分镜图」，供视频生成时参考场景风格。
+  当前仅接线字段，UI 与视频生成侧的差异化处理留待后续批次。
+
 ---
 
 ## 5. 数据与状态约定

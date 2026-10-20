@@ -52,6 +52,7 @@ class ShotFrameDraft {
     required this.blocking,
     required this.performance,
     required this.dialogue,
+    this.isSceneRef = false,
   });
 
   final int seq;
@@ -63,6 +64,8 @@ class ShotFrameDraft {
   final String blocking;
   final String performance;
   final String? dialogue;
+  // M36 场景参考帧模式：本帧是「场景参考帧」而非「分镜图」。
+  final bool isSceneRef;
 
   factory ShotFrameDraft.fromJson(Map<String, dynamic> json) {
     return ShotFrameDraft(
@@ -75,6 +78,7 @@ class ShotFrameDraft {
       blocking: jsonString(json['blocking']).trim(),
       performance: jsonString(json['performance']).trim(),
       dialogue: jsonStringOrNull(json['dialogue'])?.trim(),
+      isSceneRef: jsonBool(json['isSceneRef']),
     );
   }
 

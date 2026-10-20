@@ -2,7 +2,6 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newmove/data/app_database.dart';
 import 'package:newmove/data/daos/import_log_dao.dart';
-import 'package:newmove/data/tables/tables.dart';
 import 'package:newmove/features/novel/import_log_service.dart';
 
 void main() {

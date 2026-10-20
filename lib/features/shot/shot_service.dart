@@ -486,6 +486,7 @@ class ShotService {
               blocking: Value(f.blocking),
               performance: Value(f.performance),
               dialogue: Value(f.dialogue),
+              isSceneRef: Value(f.isSceneRef ? 1 : 0),
             ),
           );
           frameCount++;
