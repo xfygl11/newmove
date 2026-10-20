@@ -708,6 +708,17 @@ lib/
 - **_decodeSlots 容错解码**：坏 JSON / 非 Map 回落空对象，不抛异常。
 - **UI 路由**：`/settings/presets/:projectId`，与 PromptOverridePage 同级。
 
+### 项目 × Agent 绑定约定（M34）
+
+- **绑定表唯一约束**：`AgentBindings` 表 `projectId + category` 唯一，一个项目每类
+  供应商只能绑定一个。`category` 取值 `llm` / `image` / `video`。
+- **解析优先级**：`AgentBindingService.resolveLlm/resolveImage/resolveVideo` 先查
+  绑定，有绑定用绑定，无绑定回落全局 `ActiveX`。`projectId` 为空时直接走全局。
+- **复用现有基础设施**：`AgentBindingService` 复用 `ProviderModelCodec`（解析模型）/
+  `Protocols`（协议校验）/ `SecureKeyStore`（读 Key），不另起一套。
+- **Provider 注册**：`agentBindingDaoProvider` + `agentBindingServiceProvider` 在
+  `core/storage/providers.dart`，与 `promptPresetDaoProvider` 同级。
+
 ---
 
 ## 5. 数据与状态约定

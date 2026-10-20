@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
 import '../../core/status_constants.dart';
+import 'daos/agent_binding_dao.dart';
 import 'daos/asset_dao.dart';
 import 'daos/asset_ref_dao.dart';
 import 'daos/beat_dao.dart';
@@ -81,6 +82,7 @@ part 'app_database.g.dart';
     GenerationAttemptDao,
     PromptOverrideDao,
     PromptPresetDao,
+    AgentBindingDao,
     CharacterRelationDao,
     GateLogDao,
     LocationDao,

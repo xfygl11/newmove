@@ -16935,6 +16935,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final PromptPresetDao promptPresetDao = PromptPresetDao(
     this as AppDatabase,
   );
+  late final AgentBindingDao agentBindingDao = AgentBindingDao(
+    this as AppDatabase,
+  );
   late final CharacterRelationDao characterRelationDao = CharacterRelationDao(
     this as AppDatabase,
   );

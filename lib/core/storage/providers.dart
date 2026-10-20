@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../agent/prompt_resolver.dart';
 import '../../data/app_database.dart';
+import '../../data/daos/agent_binding_dao.dart';
 import '../../data/daos/asset_dao.dart';
+import '../../features/provider_config/agent_binding_service.dart';
 import '../../data/daos/asset_ref_dao.dart';
 import '../../data/daos/beat_dao.dart';
 import '../../data/daos/character_relation_dao.dart';
@@ -117,6 +119,18 @@ final promptOverrideDaoProvider = Provider<PromptOverrideDao>(
 
 final promptPresetDaoProvider = Provider<PromptPresetDao>(
   (ref) => ref.watch(databaseProvider).promptPresetDao,
+);
+
+final agentBindingDaoProvider = Provider<AgentBindingDao>(
+  (ref) => ref.watch(databaseProvider).agentBindingDao,
+);
+
+final agentBindingServiceProvider = Provider<AgentBindingService>(
+  (ref) => AgentBindingService(
+    bindingDao: ref.watch(agentBindingDaoProvider),
+    providerDao: ref.watch(providerDaoProvider),
+    keyStore: ref.watch(secureKeyStoreProvider),
+  ),
 );
 
 final promptResolverProvider = Provider<PromptResolver>(
