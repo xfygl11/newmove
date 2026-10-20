@@ -129,28 +129,24 @@ class ShotService {
       'frames': [
         for (final f in frames)
           {
-            {
-              'seq': f.seq,
-              'timeRange': f.timeRange,
-              'subject': f.subject,
-              'shotSize': f.shotSize,
-              'angle': f.angle,
-              'camera': f.camera,
-              'blocking': f.blocking,
-              'performance': f.performance,
-              'dialogue': f.dialogue,
-            },
+            'seq': f.seq,
+            'timeRange': f.timeRange,
+            'subject': f.subject,
+            'shotSize': f.shotSize,
+            'angle': f.angle,
+            'camera': f.camera,
+            'blocking': f.blocking,
+            'performance': f.performance,
+            'dialogue': f.dialogue,
           },
       ],
       'refs': [
         for (final r in refs)
           {
-            {
-              'assetId': r.assetId,
-              'name': assets[r.assetId]?.name,
-              'role': r.role,
-              'order': r.order,
-            },
+            'assetId': r.assetId,
+            'name': assets[r.assetId]?.name,
+            'role': r.role,
+            'order': r.order,
           },
       ],
     });
@@ -1151,14 +1147,14 @@ class ShotService {
     }
   }
 
+  /// 进行中的视频轮询取消令牌：按 taskId 索引，[cancelVideoTask] 用它中断在途请求。
+  final Map<int, GenerationCancelToken> _videoCancelTokens = {};
+
   /// 轮询一次视频任务；完成时回填产物路径与镜头状态。
   ///
   /// 去重锁下沉到本方法：同一任务的并发轮询共享同一个 Future，任务中心与镜头
   /// 详情页同时触发时不会重复下载覆盖产物。
   /// 单次请求超时见 [pollTimeout]，整个任务（含下载）上限见 [pollAllTimeout]。
-  /// 进行中的视频轮询取消令牌：按 taskId 索引，[cancelVideoTask] 用它中断在途请求。
-  final Map<int, GenerationCancelToken> _videoCancelTokens = {};
-
   Future<VideoTask> pollVideoTask(int videoTaskId) {
     // 先去重：任务已在轮询中时复用既有 Future，避免并发重入时新 token
     // 覆盖在途旧 token 导致 cancelVideoTask 持旧引用、无法中断真实请求。
