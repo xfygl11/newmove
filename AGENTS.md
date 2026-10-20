@@ -807,6 +807,17 @@ lib/
 - **构造函数用 initializing formals**：`required this._director` 等，避免冗余赋值。
 - **导出桶文件**：`lib/agent/team.dart` 导出 `team/team.dart` 与 `team/storyboard_team.dart`。
 
+### 视频提示词门约定（M45）
+
+- **VideoPromptGate 四门**（`lib/features/shot/video_prompt_gate.dart`）：
+  `timeline_empty`（warn，Timeline 块为空）、
+  `duration_mismatch`（warn，声明时长与实际不一致）、
+  `reference_empty`（warn，无参考图绑定）、
+  `missing_dialogue`（warn，认领节拍台词未在 Timeline 出现）。
+- **台词匹配**：`missingDialogue` 检查节拍台词前 20 字是否出现在 Timeline 部分
+  （去空白后比较），容忍截断与改写。
+- **纯函数**：`VideoPromptGate.validate` 不写库、只提示不阻塞，与 `ScriptGate` 同范式。
+
 ---
 
 ## 5. 数据与状态约定

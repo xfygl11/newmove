@@ -55,6 +55,12 @@ abstract final class GateCodes {
   // ── 骨架认领（SkeletonGate）────────────────────────────────
   static const coverage = 'coverage';
 
+  // ── 视频提示词（VideoPromptGate，M45）─────────────────────────
+  static const timelineEmpty = 'timeline_empty';
+  static const durationMismatch = 'duration_mismatch';
+  static const referenceEmpty = 'reference_empty';
+  static const missingDialogue = 'missing_dialogue';
+
   // ── 骨架爽点表（BeatGate，M30）─────────────────────────────
   static const beatGap = 'beat_gap';
   static const majorEarly = 'major_early';
@@ -105,6 +111,10 @@ abstract final class GateCodes {
     sceneNamedCharacter,
     styleConflict,
     coverage,
+    timelineEmpty,
+    durationMismatch,
+    referenceEmpty,
+    missingDialogue,
     beatGap,
     majorEarly,
     hookOrphan,
