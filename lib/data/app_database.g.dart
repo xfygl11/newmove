@@ -17380,6 +17380,454 @@ class PromptAbTestsCompanion extends UpdateCompanion<PromptAbTest> {
   }
 }
 
+class $ProviderAccountsTable extends ProviderAccounts
+    with TableInfo<$ProviderAccountsTable, ProviderAccount> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ProviderAccountsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _configIdMeta = const VerificationMeta(
+    'configId',
+  );
+  @override
+  late final GeneratedColumn<String> configId = GeneratedColumn<String>(
+    'config_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES provider_configs (id)',
+    ),
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _keyRefMeta = const VerificationMeta('keyRef');
+  @override
+  late final GeneratedColumn<String> keyRef = GeneratedColumn<String>(
+    'key_ref',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<int> isActive = GeneratedColumn<int>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    configId,
+    label,
+    keyRef,
+    isActive,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'provider_accounts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ProviderAccount> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('config_id')) {
+      context.handle(
+        _configIdMeta,
+        configId.isAcceptableOrUnknown(data['config_id']!, _configIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_configIdMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('key_ref')) {
+      context.handle(
+        _keyRefMeta,
+        keyRef.isAcceptableOrUnknown(data['key_ref']!, _keyRefMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keyRefMeta);
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {configId, label},
+  ];
+  @override
+  ProviderAccount map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ProviderAccount(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      configId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}config_id'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      keyRef: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key_ref'],
+      )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}is_active'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ProviderAccountsTable createAlias(String alias) {
+    return $ProviderAccountsTable(attachedDatabase, alias);
+  }
+}
+
+class ProviderAccount extends DataClass implements Insertable<ProviderAccount> {
+  final int id;
+  final String configId;
+  final String label;
+  final String keyRef;
+  final int isActive;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const ProviderAccount({
+    required this.id,
+    required this.configId,
+    required this.label,
+    required this.keyRef,
+    required this.isActive,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['config_id'] = Variable<String>(configId);
+    map['label'] = Variable<String>(label);
+    map['key_ref'] = Variable<String>(keyRef);
+    map['is_active'] = Variable<int>(isActive);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ProviderAccountsCompanion toCompanion(bool nullToAbsent) {
+    return ProviderAccountsCompanion(
+      id: Value(id),
+      configId: Value(configId),
+      label: Value(label),
+      keyRef: Value(keyRef),
+      isActive: Value(isActive),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ProviderAccount.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ProviderAccount(
+      id: serializer.fromJson<int>(json['id']),
+      configId: serializer.fromJson<String>(json['configId']),
+      label: serializer.fromJson<String>(json['label']),
+      keyRef: serializer.fromJson<String>(json['keyRef']),
+      isActive: serializer.fromJson<int>(json['isActive']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'configId': serializer.toJson<String>(configId),
+      'label': serializer.toJson<String>(label),
+      'keyRef': serializer.toJson<String>(keyRef),
+      'isActive': serializer.toJson<int>(isActive),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ProviderAccount copyWith({
+    int? id,
+    String? configId,
+    String? label,
+    String? keyRef,
+    int? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => ProviderAccount(
+    id: id ?? this.id,
+    configId: configId ?? this.configId,
+    label: label ?? this.label,
+    keyRef: keyRef ?? this.keyRef,
+    isActive: isActive ?? this.isActive,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ProviderAccount copyWithCompanion(ProviderAccountsCompanion data) {
+    return ProviderAccount(
+      id: data.id.present ? data.id.value : this.id,
+      configId: data.configId.present ? data.configId.value : this.configId,
+      label: data.label.present ? data.label.value : this.label,
+      keyRef: data.keyRef.present ? data.keyRef.value : this.keyRef,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProviderAccount(')
+          ..write('id: $id, ')
+          ..write('configId: $configId, ')
+          ..write('label: $label, ')
+          ..write('keyRef: $keyRef, ')
+          ..write('isActive: $isActive, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, configId, label, keyRef, isActive, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProviderAccount &&
+          other.id == this.id &&
+          other.configId == this.configId &&
+          other.label == this.label &&
+          other.keyRef == this.keyRef &&
+          other.isActive == this.isActive &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ProviderAccountsCompanion extends UpdateCompanion<ProviderAccount> {
+  final Value<int> id;
+  final Value<String> configId;
+  final Value<String> label;
+  final Value<String> keyRef;
+  final Value<int> isActive;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const ProviderAccountsCompanion({
+    this.id = const Value.absent(),
+    this.configId = const Value.absent(),
+    this.label = const Value.absent(),
+    this.keyRef = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  ProviderAccountsCompanion.insert({
+    this.id = const Value.absent(),
+    required String configId,
+    required String label,
+    required String keyRef,
+    this.isActive = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : configId = Value(configId),
+       label = Value(label),
+       keyRef = Value(keyRef);
+  static Insertable<ProviderAccount> custom({
+    Expression<int>? id,
+    Expression<String>? configId,
+    Expression<String>? label,
+    Expression<String>? keyRef,
+    Expression<int>? isActive,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (configId != null) 'config_id': configId,
+      if (label != null) 'label': label,
+      if (keyRef != null) 'key_ref': keyRef,
+      if (isActive != null) 'is_active': isActive,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  ProviderAccountsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? configId,
+    Value<String>? label,
+    Value<String>? keyRef,
+    Value<int>? isActive,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return ProviderAccountsCompanion(
+      id: id ?? this.id,
+      configId: configId ?? this.configId,
+      label: label ?? this.label,
+      keyRef: keyRef ?? this.keyRef,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (configId.present) {
+      map['config_id'] = Variable<String>(configId.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (keyRef.present) {
+      map['key_ref'] = Variable<String>(keyRef.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<int>(isActive.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProviderAccountsCompanion(')
+          ..write('id: $id, ')
+          ..write('configId: $configId, ')
+          ..write('label: $label, ')
+          ..write('keyRef: $keyRef, ')
+          ..write('isActive: $isActive, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -17423,6 +17871,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ImportLogsTable importLogs = $ImportLogsTable(this);
   late final $AgentBindingsTable agentBindings = $AgentBindingsTable(this);
   late final $PromptAbTestsTable promptAbTests = $PromptAbTestsTable(this);
+  late final $ProviderAccountsTable providerAccounts = $ProviderAccountsTable(
+    this,
+  );
   late final ProjectDao projectDao = ProjectDao(this as AppDatabase);
   late final NovelDao novelDao = NovelDao(this as AppDatabase);
   late final CascadeDao cascadeDao = CascadeDao(this as AppDatabase);
@@ -17465,6 +17916,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final PromptAbTestDao promptAbTestDao = PromptAbTestDao(
     this as AppDatabase,
   );
+  late final ProviderAccountDao providerAccountDao = ProviderAccountDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -17499,6 +17953,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     importLogs,
     agentBindings,
     promptAbTests,
+    providerAccounts,
   ];
 }
 
@@ -25752,6 +26207,36 @@ typedef $$ProviderConfigsTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
+final class $$ProviderConfigsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $ProviderConfigsTable, ProviderConfig> {
+  $$ProviderConfigsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<$ProviderAccountsTable, List<ProviderAccount>>
+  _providerAccountsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.providerAccounts,
+    aliasName: 'provider_configs__id__provider_accounts__config_id',
+  );
+
+  $$ProviderAccountsTableProcessedTableManager get providerAccountsRefs {
+    final manager = $$ProviderAccountsTableTableManager(
+      $_db,
+      $_db.providerAccounts,
+    ).filter((f) => f.configId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _providerAccountsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
 class $$ProviderConfigsTableFilterComposer
     extends Composer<_$AppDatabase, $ProviderConfigsTable> {
   $$ProviderConfigsTableFilterComposer({
@@ -25805,6 +26290,31 @@ class $$ProviderConfigsTableFilterComposer
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  Expression<bool> providerAccountsRefs(
+    Expression<bool> Function($$ProviderAccountsTableFilterComposer f) f,
+  ) {
+    final $$ProviderAccountsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.providerAccounts,
+      getReferencedColumn: (t) => t.configId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProviderAccountsTableFilterComposer(
+            $db: $db,
+            $table: $db.providerAccounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ProviderConfigsTableOrderingComposer
@@ -25897,6 +26407,31 @@ class $$ProviderConfigsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  Expression<T> providerAccountsRefs<T extends Object>(
+    Expression<T> Function($$ProviderAccountsTableAnnotationComposer a) f,
+  ) {
+    final $$ProviderAccountsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.providerAccounts,
+      getReferencedColumn: (t) => t.configId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProviderAccountsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.providerAccounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ProviderConfigsTableTableManager
@@ -25910,16 +26445,9 @@ class $$ProviderConfigsTableTableManager
           $$ProviderConfigsTableAnnotationComposer,
           $$ProviderConfigsTableCreateCompanionBuilder,
           $$ProviderConfigsTableUpdateCompanionBuilder,
-          (
-            ProviderConfig,
-            BaseReferences<
-              _$AppDatabase,
-              $ProviderConfigsTable,
-              ProviderConfig
-            >,
-          ),
+          (ProviderConfig, $$ProviderConfigsTableReferences),
           ProviderConfig,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool providerAccountsRefs})
         > {
   $$ProviderConfigsTableTableManager(
     _$AppDatabase db,
@@ -25986,15 +26514,42 @@ class $$ProviderConfigsTableTableManager
               .map(
                 (e) => (
                   e.readTable<$ProviderConfigsTable, ProviderConfig>(table),
-                  BaseReferences<
-                    _$AppDatabase,
-                    $ProviderConfigsTable,
-                    ProviderConfig
-                  >(db, table, e),
+                  $$ProviderConfigsTableReferences(db, table, e),
                 ),
               )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({providerAccountsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (providerAccountsRefs) db.providerAccounts,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (providerAccountsRefs)
+                    await $_getPrefetchedData<
+                      ProviderConfig,
+                      $ProviderConfigsTable,
+                      ProviderAccount
+                    >(
+                      currentTable: table,
+                      referencedTable: $$ProviderConfigsTableReferences
+                          ._providerAccountsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$ProviderConfigsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).providerAccountsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.configId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
         ),
       );
 }
@@ -26009,12 +26564,9 @@ typedef $$ProviderConfigsTableProcessedTableManager =
       $$ProviderConfigsTableAnnotationComposer,
       $$ProviderConfigsTableCreateCompanionBuilder,
       $$ProviderConfigsTableUpdateCompanionBuilder,
-      (
-        ProviderConfig,
-        BaseReferences<_$AppDatabase, $ProviderConfigsTable, ProviderConfig>,
-      ),
+      (ProviderConfig, $$ProviderConfigsTableReferences),
       ProviderConfig,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool providerAccountsRefs})
     >;
 typedef $$ShotRevisionsTableCreateCompanionBuilder =
     ShotRevisionsCompanion Function({
@@ -30482,6 +31034,361 @@ typedef $$PromptAbTestsTableProcessedTableManager =
       PromptAbTest,
       PrefetchHooks Function({bool assetId})
     >;
+typedef $$ProviderAccountsTableCreateCompanionBuilder =
+    ProviderAccountsCompanion Function({
+      Value<int> id,
+      required String configId,
+      required String label,
+      required String keyRef,
+      Value<int> isActive,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+typedef $$ProviderAccountsTableUpdateCompanionBuilder =
+    ProviderAccountsCompanion Function({
+      Value<int> id,
+      Value<String> configId,
+      Value<String> label,
+      Value<String> keyRef,
+      Value<int> isActive,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+final class $$ProviderAccountsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $ProviderAccountsTable, ProviderAccount> {
+  $$ProviderAccountsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ProviderConfigsTable _configIdTable(_$AppDatabase db) => db
+      .providerConfigs
+      .createAlias('provider_accounts__config_id__provider_configs__id');
+
+  $$ProviderConfigsTableProcessedTableManager get configId {
+    final $_column = $_itemColumn<String>('config_id')!;
+
+    final manager = $$ProviderConfigsTableTableManager(
+      $_db,
+      $_db.providerConfigs,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_configIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ProviderAccountsTableFilterComposer
+    extends Composer<_$AppDatabase, $ProviderAccountsTable> {
+  $$ProviderAccountsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get keyRef => $composableBuilder(
+    column: $table.keyRef,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ProviderConfigsTableFilterComposer get configId {
+    final $$ProviderConfigsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.configId,
+      referencedTable: $db.providerConfigs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProviderConfigsTableFilterComposer(
+            $db: $db,
+            $table: $db.providerConfigs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ProviderAccountsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ProviderAccountsTable> {
+  $$ProviderAccountsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get keyRef => $composableBuilder(
+    column: $table.keyRef,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ProviderConfigsTableOrderingComposer get configId {
+    final $$ProviderConfigsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.configId,
+      referencedTable: $db.providerConfigs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProviderConfigsTableOrderingComposer(
+            $db: $db,
+            $table: $db.providerConfigs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ProviderAccountsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ProviderAccountsTable> {
+  $$ProviderAccountsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<String> get keyRef =>
+      $composableBuilder(column: $table.keyRef, builder: (column) => column);
+
+  GeneratedColumn<int> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$ProviderConfigsTableAnnotationComposer get configId {
+    final $$ProviderConfigsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.configId,
+      referencedTable: $db.providerConfigs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProviderConfigsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.providerConfigs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ProviderAccountsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ProviderAccountsTable,
+          ProviderAccount,
+          $$ProviderAccountsTableFilterComposer,
+          $$ProviderAccountsTableOrderingComposer,
+          $$ProviderAccountsTableAnnotationComposer,
+          $$ProviderAccountsTableCreateCompanionBuilder,
+          $$ProviderAccountsTableUpdateCompanionBuilder,
+          (ProviderAccount, $$ProviderAccountsTableReferences),
+          ProviderAccount,
+          PrefetchHooks Function({bool configId})
+        > {
+  $$ProviderAccountsTableTableManager(
+    _$AppDatabase db,
+    $ProviderAccountsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ProviderAccountsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ProviderAccountsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ProviderAccountsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> configId = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<String> keyRef = const Value.absent(),
+                Value<int> isActive = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => ProviderAccountsCompanion(
+                id: id,
+                configId: configId,
+                label: label,
+                keyRef: keyRef,
+                isActive: isActive,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String configId,
+                required String label,
+                required String keyRef,
+                Value<int> isActive = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => ProviderAccountsCompanion.insert(
+                id: id,
+                configId: configId,
+                label: label,
+                keyRef: keyRef,
+                isActive: isActive,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ProviderAccountsTable, ProviderAccount>(table),
+                  $$ProviderAccountsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({configId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (configId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.configId,
+                        referencedTable: $$ProviderAccountsTableReferences
+                            ._configIdTable(db),
+                        referencedColumn: $$ProviderAccountsTableReferences
+                            ._configIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ProviderAccountsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ProviderAccountsTable,
+      ProviderAccount,
+      $$ProviderAccountsTableFilterComposer,
+      $$ProviderAccountsTableOrderingComposer,
+      $$ProviderAccountsTableAnnotationComposer,
+      $$ProviderAccountsTableCreateCompanionBuilder,
+      $$ProviderAccountsTableUpdateCompanionBuilder,
+      (ProviderAccount, $$ProviderAccountsTableReferences),
+      ProviderAccount,
+      PrefetchHooks Function({bool configId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -30547,4 +31454,6 @@ class $AppDatabaseManager {
       $$AgentBindingsTableTableManager(_db, _db.agentBindings);
   $$PromptAbTestsTableTableManager get promptAbTests =>
       $$PromptAbTestsTableTableManager(_db, _db.promptAbTests);
+  $$ProviderAccountsTableTableManager get providerAccounts =>
+      $$ProviderAccountsTableTableManager(_db, _db.providerAccounts);
 }
