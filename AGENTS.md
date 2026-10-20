@@ -719,6 +719,18 @@ lib/
 - **Provider 注册**：`agentBindingDaoProvider` + `agentBindingServiceProvider` 在
   `core/storage/providers.dart`，与 `promptPresetDaoProvider` 同级。
 
+### 导入日志约定（M35）
+
+- **步骤枚举**：`step` 取值 `read` / `decode` / `title` / `slice` / `commit`，
+  对应 ChapterImport 的五个步骤（读取 / 文本清洗 / 标题提取 / 内容切片 / 落库）。
+- **状态**：`status` 取值 `success` / `failed`，失败时 `message` 记录错误原因。
+- **metadata**：JSON 对象，按步骤存不同信息（title 步骤存 `{'title': ...}`，
+  slice 步骤存 `{'wordCount': ...}`，commit 步骤存 `{'chapterId': ...}`）。
+- **projectId 可空**：全局导入（无项目上下文）的日志 `projectId` 为 null，
+  按 `listGlobal` 查询。
+- **服务注册**：`importLogDaoProvider` + `importLogServiceProvider` 在
+  `core/storage/providers.dart`。
+
 ---
 
 ## 5. 数据与状态约定

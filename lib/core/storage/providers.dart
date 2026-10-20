@@ -4,13 +4,14 @@ import '../../agent/prompt_resolver.dart';
 import '../../data/app_database.dart';
 import '../../data/daos/agent_binding_dao.dart';
 import '../../data/daos/asset_dao.dart';
-import '../../features/provider_config/agent_binding_service.dart';
 import '../../data/daos/asset_ref_dao.dart';
 import '../../data/daos/beat_dao.dart';
 import '../../data/daos/character_relation_dao.dart';
 import '../../data/daos/cascade_dao.dart';
 import '../../data/daos/chapter_revision_dao.dart';
 import '../../data/daos/gate_log_dao.dart';
+import '../../data/daos/generation_attempt_dao.dart';
+import '../../data/daos/import_log_dao.dart';
 import '../../data/daos/location_dao.dart';
 import '../../data/daos/novel_dao.dart';
 import '../../data/daos/project_dao.dart';
@@ -18,7 +19,6 @@ import '../../data/daos/provider_dao.dart';
 import '../../data/daos/prompt_override_dao.dart';
 import '../../data/daos/prompt_preset_dao.dart';
 import '../../data/daos/revision_dao.dart';
-import '../../data/daos/generation_attempt_dao.dart';
 import '../../data/daos/scene_dao.dart';
 import '../../data/daos/script_dao.dart';
 import '../../data/daos/script_revision_dao.dart';
@@ -27,6 +27,8 @@ import '../../data/daos/shot_frame_dao.dart';
 import '../../data/daos/story_arc_dao.dart';
 import '../../data/daos/truth_file_dao.dart';
 import '../../data/daos/video_task_dao.dart';
+import '../../features/novel/import_log_service.dart';
+import '../../features/provider_config/agent_binding_service.dart';
 import 'asset_file_store.dart';
 import 'backup_service.dart';
 import 'secure_key_store.dart';
@@ -131,6 +133,14 @@ final agentBindingServiceProvider = Provider<AgentBindingService>(
     providerDao: ref.watch(providerDaoProvider),
     keyStore: ref.watch(secureKeyStoreProvider),
   ),
+);
+
+final importLogDaoProvider = Provider<ImportLogDao>(
+  (ref) => ref.watch(databaseProvider).importLogDao,
+);
+
+final importLogServiceProvider = Provider<ImportLogService>(
+  (ref) => ImportLogService(logDao: ref.watch(importLogDaoProvider)),
 );
 
 final promptResolverProvider = Provider<PromptResolver>(
