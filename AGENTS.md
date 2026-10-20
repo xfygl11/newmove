@@ -799,6 +799,14 @@ lib/
 - **isActive 切换**：`setActive` 在事务里把同配置其他账号设为禁用，当前账号设为启用，
   确保同配置至多一个启用账号。
 
+### 团队 Agent 约定（M42）
+
+- **AgentTeam 抽象基类**：`members`（成员名称列表）/ `knowledge`（共享领域知识）。
+- **StoryboardTeam**：组合 `ShotAgents`（导演）/ `ScriptAgents`（写手）/ `NovelAgents`（审校），
+  暴露 `direct` / `adapt` / `review` 三个方法。
+- **构造函数用 initializing formals**：`required this._director` 等，避免冗余赋值。
+- **导出桶文件**：`lib/agent/team.dart` 导出 `team/team.dart` 与 `team/storyboard_team.dart`。
+
 ---
 
 ## 5. 数据与状态约定
