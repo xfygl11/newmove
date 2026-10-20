@@ -318,6 +318,21 @@ class ScriptService {
     return revisionDao.listByScript(scriptId);
   }
 
+  /// M39：获取剧本的有效画幅比例（空表示沿用默认 16:9）。
+  Future<String> effectiveAspectRatio(int scriptId) async {
+    final script = await scriptDao.find(scriptId);
+    final raw = script?.aspectRatio;
+    if (raw == null || raw.trim().isEmpty) return '16:9';
+    return raw.trim();
+  }
+
+  /// M39：更新剧本画幅比例。
+  Future<void> updateAspectRatio(int scriptId, String ratio) async {
+    final script = await scriptDao.find(scriptId);
+    if (script == null) throw StateError('剧本不存在：$scriptId');
+    await scriptDao.updateRow(script.copyWith(aspectRatio: Value(ratio)));
+  }
+
   // ---- 内部辅助 ----
 
   /// 仅插入场次；删除旧场次由调用方在事务内走 [CascadeDao.deleteScenesCascade]。

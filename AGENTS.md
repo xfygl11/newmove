@@ -766,6 +766,17 @@ lib/
 - **版本号递增**：`nextVersion(shotId, role)` 取同槽位当前最大值 +1，无记录返回 1。
   不同 `role` 独立计数。
 
+### 多比例支持约定（M39）
+
+- **aspectRatio 字段**：`Scripts.aspectRatio`（nullable text）已在 schema v16 落地。
+  空表示沿用默认 16:9。
+- **有效比例读取**：`ScriptService.effectiveAspectRatio(scriptId)` 返回剧本有效画幅
+  比例（空/空白返回默认 '16:9'，有值 trim 后返回）。不存在剧本返回默认。
+- **比例更新**：`ScriptService.updateAspectRatio(scriptId, ratio)` 更新剧本画幅比例。
+  不存在剧本抛 `StateError`。
+- **UI 接线**：剧本详情页应提供画幅比例选择器（16:9 / 9:16 / 1:1），提交视频生成
+  参数时以 `effectiveAspectRatio` 为默认值。
+
 ---
 
 ## 5. 数据与状态约定
