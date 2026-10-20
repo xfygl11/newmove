@@ -26,7 +26,7 @@ class OutlineGate {
   /// 叙事道具数量上限（shuohao novel-art「通常 3–8 件」）。
   static const int maxNarrativeProps = 8;
 
-  /// 三条门一起跑。[episodeCount] 是章节/集总数，为 0 时跳过场景上限门。
+  /// 四条门一起跑。[episodeCount] 是章节/集总数，为 0 时跳过场景上限门。
   static List<GateIssue> validate({
     required List<OutlineScene> scenes,
     required List<OutlineProp> props,
@@ -36,6 +36,9 @@ class OutlineGate {
       ...sceneCap(scenes, episodeCount),
       ...onceScene(scenes),
       ...propCap(props),
+      ...crowdPlan(scenes),
+      ...noDialogue(scenes),
+      ...riskFlag(scenes),
     ];
   }
 
@@ -88,5 +91,85 @@ class OutlineGate {
         message: '叙事道具 ${narrative.length} 件，超过上限 $maxNarrativeProps',
       ),
     ];
+  }
+
+  /// 三人以上同框场景必须标拆解方案（crowd-plan）。
+  ///
+  /// 场景梗概 description 中出现「三人以上」「多人」「一群人」等关键词时，
+  /// 必须在 description 或 onceAvoidance 中标明「拆解」方案。
+  static List<GateIssue> crowdPlan(List<OutlineScene> scenes) {
+    const crowdKeywords = ['三人', '四人', '五人', '多人', '一群人', '一群'];
+    const splitKeywords = ['拆解', '拆分', '分镜'];
+    final issues = <GateIssue>[];
+    for (final s in scenes) {
+      final desc = s.description;
+      if (desc.trim().isEmpty) continue;
+      final hasCrowd = crowdKeywords.any((k) => desc.contains(k));
+      if (!hasCrowd) continue;
+      final hasSplit = splitKeywords.any((k) => desc.contains(k) || s.onceAvoidance.contains(k));
+      if (!hasSplit) {
+        issues.add(
+          GateIssue(
+            code: 'crowd_plan',
+            severity: GateSeverity.warn,
+            locator: s.name.trim().isEmpty ? '（未命名场景）' : s.name.trim(),
+            message: '多人同框场景（含「${crowdKeywords.firstWhere((k) => desc.contains(k))}」）未标拆解方案',
+          ),
+        );
+      }
+    }
+    return issues;
+  }
+
+  /// 场景梗概必须用叙述体，禁止直接写台词（no-dialogue）。
+  ///
+  /// description 中出现对话引号「」或英文引号 "" 时报警——台词应进剧本对话字段。
+  static List<GateIssue> noDialogue(List<OutlineScene> scenes) {
+    final issues = <GateIssue>[];
+    for (final s in scenes) {
+      final desc = s.description;
+      if (desc.trim().isEmpty) continue;
+      final hasQuotes = desc.contains('「') || desc.contains('」') || desc.contains('"') || desc.contains('"') || desc.contains('"');
+      if (hasQuotes) {
+        issues.add(
+          GateIssue(
+            code: 'no_dialogue',
+            severity: GateSeverity.warn,
+            locator: s.name.trim().isEmpty ? '（未命名场景）' : s.name.trim(),
+            message: '场景梗概含台词引号，应改用叙述体描述',
+          ),
+        );
+      }
+    }
+    return issues;
+  }
+
+  /// 风险关键词扫描：预览生成难点（risk-flag）。
+  ///
+  /// description 中出现高风险视觉元素（裸体、血腥、暴力、复杂特效等）时提示。
+  static List<GateIssue> riskFlag(List<OutlineScene> scenes) {
+    const riskKeywords = [
+      '裸体', '裸露', '性爱', '亲密',
+      '血腥', '死亡', '杀戮', '暴力',
+      '爆炸', '火焰', '特效',
+      '魔法', '变身', '飞行',
+    ];
+    final issues = <GateIssue>[];
+    for (final s in scenes) {
+      final desc = s.description;
+      if (desc.trim().isEmpty) continue;
+      final matched = riskKeywords.where((k) => desc.contains(k)).toList();
+      if (matched.isNotEmpty) {
+        issues.add(
+          GateIssue(
+            code: 'risk_flag',
+            severity: GateSeverity.warn,
+            locator: s.name.trim().isEmpty ? '（未命名场景）' : s.name.trim(),
+            message: '含高风险视觉元素：${matched.join('、')}，AI 生成可能不稳定',
+          ),
+        );
+      }
+    }
+    return issues;
   }
 }

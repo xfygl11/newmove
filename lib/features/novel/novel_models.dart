@@ -65,6 +65,7 @@ class OutlineScene {
     this.isPrimary = false,
     this.occurrences = const [],
     this.onceAvoidance = '',
+    this.description = '',
   });
 
   final String name;
@@ -78,6 +79,9 @@ class OutlineScene {
   /// 一次性场景的规避方案：复用哪个环境资产或换什么时段天气。
   /// 场景只出现一次且此字段为空时触发 `once_scene`。
   final String onceAvoidance;
+
+  /// 场景梗概描述，供 crowd_plan / no_dialogue / risk_flag 门校验。
+  final String description;
 
   factory OutlineScene.fromJson(Map<String, dynamic> json) {
     return OutlineScene(
@@ -93,6 +97,7 @@ class OutlineScene {
             int.tryParse(o.trim()),
       ].whereType<int>().toList(),
       onceAvoidance: jsonString(json['onceAvoidance']),
+      description: jsonString(json['description']),
     );
   }
 
@@ -101,6 +106,7 @@ class OutlineScene {
     'isPrimary': isPrimary,
     'occurrences': occurrences,
     'onceAvoidance': onceAvoidance,
+    'description': description,
   };
 
   OutlineScene copyWith({
@@ -108,12 +114,14 @@ class OutlineScene {
     bool? isPrimary,
     List<int>? occurrences,
     String? onceAvoidance,
+    String? description,
   }) =>
       OutlineScene(
         name: name ?? this.name,
         isPrimary: isPrimary ?? this.isPrimary,
         occurrences: occurrences ?? this.occurrences,
         onceAvoidance: onceAvoidance ?? this.onceAvoidance,
+        description: description ?? this.description,
       );
 }
 

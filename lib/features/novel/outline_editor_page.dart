@@ -483,6 +483,7 @@ class _SceneSection extends StatefulWidget {
 class _SceneSectionState extends State<_SceneSection> {
   late final List<TextEditingController> _nameControllers;
   late final List<TextEditingController> _avoidanceControllers;
+  late final List<TextEditingController> _descriptionControllers;
 
   @override
   void initState() {
@@ -505,11 +506,14 @@ class _SceneSectionState extends State<_SceneSection> {
         _nameControllers.removeAt(i);
         _avoidanceControllers[i].dispose();
         _avoidanceControllers.removeAt(i);
+        _descriptionControllers[i].dispose();
+        _descriptionControllers.removeAt(i);
       }
     } else if (currentCount < newCount) {
       for (var i = currentCount; i < newCount; i++) {
         _nameControllers.add(TextEditingController());
         _avoidanceControllers.add(TextEditingController());
+        _descriptionControllers.add(TextEditingController());
       }
     }
   }
@@ -520,6 +524,9 @@ class _SceneSectionState extends State<_SceneSection> {
       c.dispose();
     }
     for (final c in _avoidanceControllers) {
+      c.dispose();
+    }
+    for (final c in _descriptionControllers) {
       c.dispose();
     }
     super.dispose();
@@ -557,9 +564,11 @@ class _SceneSectionState extends State<_SceneSection> {
                 scene: scenes[i],
                 nameController: _nameControllers[i],
                 avoidanceController: _avoidanceControllers[i],
+                descriptionController: _descriptionControllers[i],
                 onNameChanged: (name) => widget.onUpdate(i, scenes[i].copyWith(name: name)),
                 onPrimaryChanged: (isPrimary) => widget.onUpdate(i, scenes[i].copyWith(isPrimary: isPrimary)),
                 onAvoidanceChanged: (avoidance) => widget.onUpdate(i, scenes[i].copyWith(onceAvoidance: avoidance)),
+                onDescriptionChanged: (description) => widget.onUpdate(i, scenes[i].copyWith(description: description)),
                 onRemove: () => widget.onRemove(i),
               ),
           ],
@@ -574,18 +583,22 @@ class _SceneCard extends StatelessWidget {
     required this.scene,
     required this.nameController,
     required this.avoidanceController,
+    required this.descriptionController,
     required this.onNameChanged,
     required this.onPrimaryChanged,
     required this.onAvoidanceChanged,
+    required this.onDescriptionChanged,
     required this.onRemove,
   });
 
   final OutlineScene scene;
   final TextEditingController nameController;
   final TextEditingController avoidanceController;
+  final TextEditingController descriptionController;
   final ValueChanged<String> onNameChanged;
   final ValueChanged<bool> onPrimaryChanged;
   final ValueChanged<String> onAvoidanceChanged;
+  final ValueChanged<String> onDescriptionChanged;
   final VoidCallback onRemove;
 
   @override
@@ -641,6 +654,18 @@ class _SceneCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 4),
+          TextField(
+            controller: descriptionController,
+            onChanged: onDescriptionChanged,
+            maxLines: 3,
+            minLines: 1,
+            decoration: const InputDecoration(
+              hintText: '场景梗概（叙述体，多人同框标拆解方案）',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
           ),
         ],
       ),

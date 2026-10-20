@@ -269,6 +269,9 @@ void main() {
         GateCodes.sceneCap,
         GateCodes.onceScene,
         GateCodes.propCap,
+        GateCodes.crowdPlan,
+        GateCodes.noDialogue,
+        GateCodes.riskFlag,
       ];
       expect(GateCodes.all, declared);
     });

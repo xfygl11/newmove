@@ -77,6 +77,9 @@ abstract final class GateCodes {
   static const sceneCap = 'scene_cap';
   static const onceScene = 'once_scene';
   static const propCap = 'prop_cap';
+  static const crowdPlan = 'crowd_plan';
+  static const noDialogue = 'no_dialogue';
+  static const riskFlag = 'risk_flag';
 
   /// 全量门码，报表页的「从没响」用它与已记录的码做差集。
   static const all = <String>[
@@ -126,5 +129,8 @@ abstract final class GateCodes {
     sceneCap,
     onceScene,
     propCap,
+    crowdPlan,
+    noDialogue,
+    riskFlag,
   ];
 }
