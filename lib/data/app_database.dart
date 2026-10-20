@@ -13,6 +13,7 @@ import 'daos/gate_log_dao.dart';
 import 'daos/generation_attempt_dao.dart';
 import 'daos/import_log_dao.dart';
 import 'daos/location_dao.dart';
+import 'daos/prompt_ab_test_dao.dart';
 import 'daos/prompt_override_dao.dart';
 import 'daos/prompt_preset_dao.dart';
 import 'daos/story_arc_dao.dart';
@@ -62,6 +63,7 @@ part 'app_database.g.dart';
     PromptPresets,
     ImportLogs,
     AgentBindings,
+    PromptAbTests,
   ],
   daos: [
     ProjectDao,
@@ -89,6 +91,7 @@ part 'app_database.g.dart';
     ImportLogDao,
     LocationDao,
     StoryArcDao,
+    PromptAbTestDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -99,7 +102,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -251,6 +254,10 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(assetRefs, assetRefs.isActive);
         // 镜头快照列：整集分镜回滚版本组。
         await m.addColumn(shotRevisions, shotRevisions.versionGroup);
+      }
+      if (from < 17) {
+        // M40：提示词 A/B 测试表。一次出两版，用户二选一。
+        await m.createTable(promptAbTests);
       }
     },
     beforeOpen: (details) async {

@@ -777,6 +777,15 @@ lib/
 - **UI 接线**：剧本详情页应提供画幅比例选择器（16:9 / 9:16 / 1:1），提交视频生成
   参数时以 `effectiveAspectRatio` 为默认值。
 
+### 提示词 A/B 测试约定（M40）
+
+- **PromptAbTests 表**：`assetId`（外键指向 Assets）/ `promptA` / `promptB` /
+  `resultAPath` / `resultBPath` / `preferred`（'a' / 'b' / null，null 表示未选择）。
+- **PromptAbTestDao**：`listByAsset` 按资产查询（按时间倒序）、`listPreferred` 按偏好
+  查询、`insert` / `updateRow` / `deleteById` / `deleteByAsset`。
+- **一次出两版**：`AssetService.generate` 应支持生成两版图片，写入同一行的
+  `resultAPath` / `resultBPath`，用户二选一后更新 `preferred`。
+
 ---
 
 ## 5. 数据与状态约定

@@ -16864,6 +16864,522 @@ class AgentBindingsCompanion extends UpdateCompanion<AgentBinding> {
   }
 }
 
+class $PromptAbTestsTable extends PromptAbTests
+    with TableInfo<$PromptAbTestsTable, PromptAbTest> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PromptAbTestsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _assetIdMeta = const VerificationMeta(
+    'assetId',
+  );
+  @override
+  late final GeneratedColumn<int> assetId = GeneratedColumn<int>(
+    'asset_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES assets (id)',
+    ),
+  );
+  static const VerificationMeta _promptAMeta = const VerificationMeta(
+    'promptA',
+  );
+  @override
+  late final GeneratedColumn<String> promptA = GeneratedColumn<String>(
+    'prompt_a',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _promptBMeta = const VerificationMeta(
+    'promptB',
+  );
+  @override
+  late final GeneratedColumn<String> promptB = GeneratedColumn<String>(
+    'prompt_b',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _resultAPathMeta = const VerificationMeta(
+    'resultAPath',
+  );
+  @override
+  late final GeneratedColumn<String> resultAPath = GeneratedColumn<String>(
+    'result_a_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _resultBPathMeta = const VerificationMeta(
+    'resultBPath',
+  );
+  @override
+  late final GeneratedColumn<String> resultBPath = GeneratedColumn<String>(
+    'result_b_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _preferredMeta = const VerificationMeta(
+    'preferred',
+  );
+  @override
+  late final GeneratedColumn<String> preferred = GeneratedColumn<String>(
+    'preferred',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    assetId,
+    promptA,
+    promptB,
+    resultAPath,
+    resultBPath,
+    preferred,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'prompt_ab_tests';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PromptAbTest> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('asset_id')) {
+      context.handle(
+        _assetIdMeta,
+        assetId.isAcceptableOrUnknown(data['asset_id']!, _assetIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_assetIdMeta);
+    }
+    if (data.containsKey('prompt_a')) {
+      context.handle(
+        _promptAMeta,
+        promptA.isAcceptableOrUnknown(data['prompt_a']!, _promptAMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_promptAMeta);
+    }
+    if (data.containsKey('prompt_b')) {
+      context.handle(
+        _promptBMeta,
+        promptB.isAcceptableOrUnknown(data['prompt_b']!, _promptBMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_promptBMeta);
+    }
+    if (data.containsKey('result_a_path')) {
+      context.handle(
+        _resultAPathMeta,
+        resultAPath.isAcceptableOrUnknown(
+          data['result_a_path']!,
+          _resultAPathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('result_b_path')) {
+      context.handle(
+        _resultBPathMeta,
+        resultBPath.isAcceptableOrUnknown(
+          data['result_b_path']!,
+          _resultBPathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('preferred')) {
+      context.handle(
+        _preferredMeta,
+        preferred.isAcceptableOrUnknown(data['preferred']!, _preferredMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PromptAbTest map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PromptAbTest(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      assetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}asset_id'],
+      )!,
+      promptA: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}prompt_a'],
+      )!,
+      promptB: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}prompt_b'],
+      )!,
+      resultAPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}result_a_path'],
+      ),
+      resultBPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}result_b_path'],
+      ),
+      preferred: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}preferred'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PromptAbTestsTable createAlias(String alias) {
+    return $PromptAbTestsTable(attachedDatabase, alias);
+  }
+}
+
+class PromptAbTest extends DataClass implements Insertable<PromptAbTest> {
+  final int id;
+  final int assetId;
+  final String promptA;
+  final String promptB;
+  final String? resultAPath;
+  final String? resultBPath;
+  final String? preferred;
+  final DateTime createdAt;
+  const PromptAbTest({
+    required this.id,
+    required this.assetId,
+    required this.promptA,
+    required this.promptB,
+    this.resultAPath,
+    this.resultBPath,
+    this.preferred,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['asset_id'] = Variable<int>(assetId);
+    map['prompt_a'] = Variable<String>(promptA);
+    map['prompt_b'] = Variable<String>(promptB);
+    if (!nullToAbsent || resultAPath != null) {
+      map['result_a_path'] = Variable<String>(resultAPath);
+    }
+    if (!nullToAbsent || resultBPath != null) {
+      map['result_b_path'] = Variable<String>(resultBPath);
+    }
+    if (!nullToAbsent || preferred != null) {
+      map['preferred'] = Variable<String>(preferred);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  PromptAbTestsCompanion toCompanion(bool nullToAbsent) {
+    return PromptAbTestsCompanion(
+      id: Value(id),
+      assetId: Value(assetId),
+      promptA: Value(promptA),
+      promptB: Value(promptB),
+      resultAPath: resultAPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resultAPath),
+      resultBPath: resultBPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resultBPath),
+      preferred: preferred == null && nullToAbsent
+          ? const Value.absent()
+          : Value(preferred),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory PromptAbTest.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PromptAbTest(
+      id: serializer.fromJson<int>(json['id']),
+      assetId: serializer.fromJson<int>(json['assetId']),
+      promptA: serializer.fromJson<String>(json['promptA']),
+      promptB: serializer.fromJson<String>(json['promptB']),
+      resultAPath: serializer.fromJson<String?>(json['resultAPath']),
+      resultBPath: serializer.fromJson<String?>(json['resultBPath']),
+      preferred: serializer.fromJson<String?>(json['preferred']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'assetId': serializer.toJson<int>(assetId),
+      'promptA': serializer.toJson<String>(promptA),
+      'promptB': serializer.toJson<String>(promptB),
+      'resultAPath': serializer.toJson<String?>(resultAPath),
+      'resultBPath': serializer.toJson<String?>(resultBPath),
+      'preferred': serializer.toJson<String?>(preferred),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  PromptAbTest copyWith({
+    int? id,
+    int? assetId,
+    String? promptA,
+    String? promptB,
+    Value<String?> resultAPath = const Value.absent(),
+    Value<String?> resultBPath = const Value.absent(),
+    Value<String?> preferred = const Value.absent(),
+    DateTime? createdAt,
+  }) => PromptAbTest(
+    id: id ?? this.id,
+    assetId: assetId ?? this.assetId,
+    promptA: promptA ?? this.promptA,
+    promptB: promptB ?? this.promptB,
+    resultAPath: resultAPath.present ? resultAPath.value : this.resultAPath,
+    resultBPath: resultBPath.present ? resultBPath.value : this.resultBPath,
+    preferred: preferred.present ? preferred.value : this.preferred,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  PromptAbTest copyWithCompanion(PromptAbTestsCompanion data) {
+    return PromptAbTest(
+      id: data.id.present ? data.id.value : this.id,
+      assetId: data.assetId.present ? data.assetId.value : this.assetId,
+      promptA: data.promptA.present ? data.promptA.value : this.promptA,
+      promptB: data.promptB.present ? data.promptB.value : this.promptB,
+      resultAPath: data.resultAPath.present
+          ? data.resultAPath.value
+          : this.resultAPath,
+      resultBPath: data.resultBPath.present
+          ? data.resultBPath.value
+          : this.resultBPath,
+      preferred: data.preferred.present ? data.preferred.value : this.preferred,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PromptAbTest(')
+          ..write('id: $id, ')
+          ..write('assetId: $assetId, ')
+          ..write('promptA: $promptA, ')
+          ..write('promptB: $promptB, ')
+          ..write('resultAPath: $resultAPath, ')
+          ..write('resultBPath: $resultBPath, ')
+          ..write('preferred: $preferred, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    assetId,
+    promptA,
+    promptB,
+    resultAPath,
+    resultBPath,
+    preferred,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PromptAbTest &&
+          other.id == this.id &&
+          other.assetId == this.assetId &&
+          other.promptA == this.promptA &&
+          other.promptB == this.promptB &&
+          other.resultAPath == this.resultAPath &&
+          other.resultBPath == this.resultBPath &&
+          other.preferred == this.preferred &&
+          other.createdAt == this.createdAt);
+}
+
+class PromptAbTestsCompanion extends UpdateCompanion<PromptAbTest> {
+  final Value<int> id;
+  final Value<int> assetId;
+  final Value<String> promptA;
+  final Value<String> promptB;
+  final Value<String?> resultAPath;
+  final Value<String?> resultBPath;
+  final Value<String?> preferred;
+  final Value<DateTime> createdAt;
+  const PromptAbTestsCompanion({
+    this.id = const Value.absent(),
+    this.assetId = const Value.absent(),
+    this.promptA = const Value.absent(),
+    this.promptB = const Value.absent(),
+    this.resultAPath = const Value.absent(),
+    this.resultBPath = const Value.absent(),
+    this.preferred = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  PromptAbTestsCompanion.insert({
+    this.id = const Value.absent(),
+    required int assetId,
+    required String promptA,
+    required String promptB,
+    this.resultAPath = const Value.absent(),
+    this.resultBPath = const Value.absent(),
+    this.preferred = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : assetId = Value(assetId),
+       promptA = Value(promptA),
+       promptB = Value(promptB);
+  static Insertable<PromptAbTest> custom({
+    Expression<int>? id,
+    Expression<int>? assetId,
+    Expression<String>? promptA,
+    Expression<String>? promptB,
+    Expression<String>? resultAPath,
+    Expression<String>? resultBPath,
+    Expression<String>? preferred,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (assetId != null) 'asset_id': assetId,
+      if (promptA != null) 'prompt_a': promptA,
+      if (promptB != null) 'prompt_b': promptB,
+      if (resultAPath != null) 'result_a_path': resultAPath,
+      if (resultBPath != null) 'result_b_path': resultBPath,
+      if (preferred != null) 'preferred': preferred,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  PromptAbTestsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? assetId,
+    Value<String>? promptA,
+    Value<String>? promptB,
+    Value<String?>? resultAPath,
+    Value<String?>? resultBPath,
+    Value<String?>? preferred,
+    Value<DateTime>? createdAt,
+  }) {
+    return PromptAbTestsCompanion(
+      id: id ?? this.id,
+      assetId: assetId ?? this.assetId,
+      promptA: promptA ?? this.promptA,
+      promptB: promptB ?? this.promptB,
+      resultAPath: resultAPath ?? this.resultAPath,
+      resultBPath: resultBPath ?? this.resultBPath,
+      preferred: preferred ?? this.preferred,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (assetId.present) {
+      map['asset_id'] = Variable<int>(assetId.value);
+    }
+    if (promptA.present) {
+      map['prompt_a'] = Variable<String>(promptA.value);
+    }
+    if (promptB.present) {
+      map['prompt_b'] = Variable<String>(promptB.value);
+    }
+    if (resultAPath.present) {
+      map['result_a_path'] = Variable<String>(resultAPath.value);
+    }
+    if (resultBPath.present) {
+      map['result_b_path'] = Variable<String>(resultBPath.value);
+    }
+    if (preferred.present) {
+      map['preferred'] = Variable<String>(preferred.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PromptAbTestsCompanion(')
+          ..write('id: $id, ')
+          ..write('assetId: $assetId, ')
+          ..write('promptA: $promptA, ')
+          ..write('promptB: $promptB, ')
+          ..write('resultAPath: $resultAPath, ')
+          ..write('resultBPath: $resultBPath, ')
+          ..write('preferred: $preferred, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -16906,6 +17422,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PromptPresetsTable promptPresets = $PromptPresetsTable(this);
   late final $ImportLogsTable importLogs = $ImportLogsTable(this);
   late final $AgentBindingsTable agentBindings = $AgentBindingsTable(this);
+  late final $PromptAbTestsTable promptAbTests = $PromptAbTestsTable(this);
   late final ProjectDao projectDao = ProjectDao(this as AppDatabase);
   late final NovelDao novelDao = NovelDao(this as AppDatabase);
   late final CascadeDao cascadeDao = CascadeDao(this as AppDatabase);
@@ -16945,6 +17462,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final ImportLogDao importLogDao = ImportLogDao(this as AppDatabase);
   late final LocationDao locationDao = LocationDao(this as AppDatabase);
   late final StoryArcDao storyArcDao = StoryArcDao(this as AppDatabase);
+  late final PromptAbTestDao promptAbTestDao = PromptAbTestDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -16978,6 +17498,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     promptPresets,
     importLogs,
     agentBindings,
+    promptAbTests,
   ];
 }
 
@@ -22026,6 +22547,24 @@ final class $$AssetsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$PromptAbTestsTable, List<PromptAbTest>>
+  _promptAbTestsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.promptAbTests,
+    aliasName: 'assets__id__prompt_ab_tests__asset_id',
+  );
+
+  $$PromptAbTestsTableProcessedTableManager get promptAbTestsRefs {
+    final manager = $$PromptAbTestsTableTableManager(
+      $_db,
+      $_db.promptAbTests,
+    ).filter((f) => f.assetId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_promptAbTestsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$AssetsTableFilterComposer
@@ -22176,6 +22715,31 @@ class $$AssetsTableFilterComposer
           }) => $$AssetRevisionsTableFilterComposer(
             $db: $db,
             $table: $db.assetRevisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> promptAbTestsRefs(
+    Expression<bool> Function($$PromptAbTestsTableFilterComposer f) f,
+  ) {
+    final $$PromptAbTestsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.promptAbTests,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PromptAbTestsTableFilterComposer(
+            $db: $db,
+            $table: $db.promptAbTests,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -22428,6 +22992,31 @@ class $$AssetsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> promptAbTestsRefs<T extends Object>(
+    Expression<T> Function($$PromptAbTestsTableAnnotationComposer a) f,
+  ) {
+    final $$PromptAbTestsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.promptAbTests,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PromptAbTestsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.promptAbTests,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$AssetsTableTableManager
@@ -22447,6 +23036,7 @@ class $$AssetsTableTableManager
             bool scriptId,
             bool assetRefsRefs,
             bool assetRevisionsRefs,
+            bool promptAbTestsRefs,
           })
         > {
   $$AssetsTableTableManager(_$AppDatabase db, $AssetsTable table)
@@ -22545,12 +23135,14 @@ class $$AssetsTableTableManager
                 scriptId = false,
                 assetRefsRefs = false,
                 assetRevisionsRefs = false,
+                promptAbTestsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (assetRefsRefs) db.assetRefs,
                     if (assetRevisionsRefs) db.assetRevisions,
+                    if (promptAbTestsRefs) db.promptAbTests,
                   ],
                   addJoins:
                       <
@@ -22626,6 +23218,27 @@ class $$AssetsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (promptAbTestsRefs)
+                        await $_getPrefetchedData<
+                          Asset,
+                          $AssetsTable,
+                          PromptAbTest
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AssetsTableReferences
+                              ._promptAbTestsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AssetsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).promptAbTestsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.assetId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -22650,6 +23263,7 @@ typedef $$AssetsTableProcessedTableManager =
         bool scriptId,
         bool assetRefsRefs,
         bool assetRevisionsRefs,
+        bool promptAbTestsRefs,
       })
     >;
 typedef $$ShotsTableCreateCompanionBuilder = ShotsCompanion Function({
@@ -29494,6 +30108,380 @@ typedef $$AgentBindingsTableProcessedTableManager =
       AgentBinding,
       PrefetchHooks Function({bool projectId})
     >;
+typedef $$PromptAbTestsTableCreateCompanionBuilder =
+    PromptAbTestsCompanion Function({
+      Value<int> id,
+      required int assetId,
+      required String promptA,
+      required String promptB,
+      Value<String?> resultAPath,
+      Value<String?> resultBPath,
+      Value<String?> preferred,
+      Value<DateTime> createdAt,
+    });
+typedef $$PromptAbTestsTableUpdateCompanionBuilder =
+    PromptAbTestsCompanion Function({
+      Value<int> id,
+      Value<int> assetId,
+      Value<String> promptA,
+      Value<String> promptB,
+      Value<String?> resultAPath,
+      Value<String?> resultBPath,
+      Value<String?> preferred,
+      Value<DateTime> createdAt,
+    });
+
+final class $$PromptAbTestsTableReferences
+    extends BaseReferences<_$AppDatabase, $PromptAbTestsTable, PromptAbTest> {
+  $$PromptAbTestsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $AssetsTable _assetIdTable(_$AppDatabase db) =>
+      db.assets.createAlias('prompt_ab_tests__asset_id__assets__id');
+
+  $$AssetsTableProcessedTableManager get assetId {
+    final $_column = $_itemColumn<int>('asset_id')!;
+
+    final manager = $$AssetsTableTableManager(
+      $_db,
+      $_db.assets,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_assetIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PromptAbTestsTableFilterComposer
+    extends Composer<_$AppDatabase, $PromptAbTestsTable> {
+  $$PromptAbTestsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get promptA => $composableBuilder(
+    column: $table.promptA,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get promptB => $composableBuilder(
+    column: $table.promptB,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get resultAPath => $composableBuilder(
+    column: $table.resultAPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get resultBPath => $composableBuilder(
+    column: $table.resultBPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get preferred => $composableBuilder(
+    column: $table.preferred,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$AssetsTableFilterComposer get assetId {
+    final $$AssetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetsTableFilterComposer(
+            $db: $db,
+            $table: $db.assets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PromptAbTestsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PromptAbTestsTable> {
+  $$PromptAbTestsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get promptA => $composableBuilder(
+    column: $table.promptA,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get promptB => $composableBuilder(
+    column: $table.promptB,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get resultAPath => $composableBuilder(
+    column: $table.resultAPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get resultBPath => $composableBuilder(
+    column: $table.resultBPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get preferred => $composableBuilder(
+    column: $table.preferred,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$AssetsTableOrderingComposer get assetId {
+    final $$AssetsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetsTableOrderingComposer(
+            $db: $db,
+            $table: $db.assets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PromptAbTestsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PromptAbTestsTable> {
+  $$PromptAbTestsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get promptA =>
+      $composableBuilder(column: $table.promptA, builder: (column) => column);
+
+  GeneratedColumn<String> get promptB =>
+      $composableBuilder(column: $table.promptB, builder: (column) => column);
+
+  GeneratedColumn<String> get resultAPath => $composableBuilder(
+    column: $table.resultAPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get resultBPath => $composableBuilder(
+    column: $table.resultBPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get preferred =>
+      $composableBuilder(column: $table.preferred, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$AssetsTableAnnotationComposer get assetId {
+    final $$AssetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.assets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PromptAbTestsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PromptAbTestsTable,
+          PromptAbTest,
+          $$PromptAbTestsTableFilterComposer,
+          $$PromptAbTestsTableOrderingComposer,
+          $$PromptAbTestsTableAnnotationComposer,
+          $$PromptAbTestsTableCreateCompanionBuilder,
+          $$PromptAbTestsTableUpdateCompanionBuilder,
+          (PromptAbTest, $$PromptAbTestsTableReferences),
+          PromptAbTest,
+          PrefetchHooks Function({bool assetId})
+        > {
+  $$PromptAbTestsTableTableManager(_$AppDatabase db, $PromptAbTestsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PromptAbTestsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PromptAbTestsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PromptAbTestsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> assetId = const Value.absent(),
+                Value<String> promptA = const Value.absent(),
+                Value<String> promptB = const Value.absent(),
+                Value<String?> resultAPath = const Value.absent(),
+                Value<String?> resultBPath = const Value.absent(),
+                Value<String?> preferred = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => PromptAbTestsCompanion(
+                id: id,
+                assetId: assetId,
+                promptA: promptA,
+                promptB: promptB,
+                resultAPath: resultAPath,
+                resultBPath: resultBPath,
+                preferred: preferred,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int assetId,
+                required String promptA,
+                required String promptB,
+                Value<String?> resultAPath = const Value.absent(),
+                Value<String?> resultBPath = const Value.absent(),
+                Value<String?> preferred = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => PromptAbTestsCompanion.insert(
+                id: id,
+                assetId: assetId,
+                promptA: promptA,
+                promptB: promptB,
+                resultAPath: resultAPath,
+                resultBPath: resultBPath,
+                preferred: preferred,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PromptAbTestsTable, PromptAbTest>(table),
+                  $$PromptAbTestsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({assetId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (assetId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.assetId,
+                        referencedTable: $$PromptAbTestsTableReferences
+                            ._assetIdTable(db),
+                        referencedColumn: $$PromptAbTestsTableReferences
+                            ._assetIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PromptAbTestsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PromptAbTestsTable,
+      PromptAbTest,
+      $$PromptAbTestsTableFilterComposer,
+      $$PromptAbTestsTableOrderingComposer,
+      $$PromptAbTestsTableAnnotationComposer,
+      $$PromptAbTestsTableCreateCompanionBuilder,
+      $$PromptAbTestsTableUpdateCompanionBuilder,
+      (PromptAbTest, $$PromptAbTestsTableReferences),
+      PromptAbTest,
+      PrefetchHooks Function({bool assetId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -29557,4 +30545,6 @@ class $AppDatabaseManager {
       $$ImportLogsTableTableManager(_db, _db.importLogs);
   $$AgentBindingsTableTableManager get agentBindings =>
       $$AgentBindingsTableTableManager(_db, _db.agentBindings);
+  $$PromptAbTestsTableTableManager get promptAbTests =>
+      $$PromptAbTestsTableTableManager(_db, _db.promptAbTests);
 }

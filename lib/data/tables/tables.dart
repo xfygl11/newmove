@@ -661,3 +661,25 @@ class AgentBindings extends Table {
     {projectId, category},
   ];
 }
+
+/// 提示词 A/B 测试（M40，1.7 提示词治理侧）。
+///
+/// 借鉴 AIComicBuilder 的 `prompt_ab_tests`（`variant_a` / `variant_b` /
+/// `result_a_url` / `result_b_url` / `preferred`）。一次出两版，用户二选一。
+@DataClassName('PromptAbTest')
+class PromptAbTests extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // 关联资产 id。
+  IntColumn get assetId => integer().references(Assets, #id)();
+  // A 版提示词。
+  TextColumn get promptA => text()();
+  // B 版提示词。
+  TextColumn get promptB => text()();
+  // A 版结果图路径。
+  TextColumn get resultAPath => text().nullable()();
+  // B 版结果图路径。
+  TextColumn get resultBPath => text().nullable()();
+  // 用户偏好：a / b，null 表示未选择。
+  TextColumn get preferred => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
