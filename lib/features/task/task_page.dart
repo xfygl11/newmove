@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../agent/active_video.dart';
+import '../../core/app_log.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/status_constants.dart';
 import '../../core/storage/providers.dart';
@@ -31,6 +32,7 @@ class _TaskPageState extends ConsumerState<TaskPage>
     with WidgetsBindingObserver {
   Timer? _pollTimer;
   bool _polling = false;
+  ProviderSubscription<AppSettings>? _settingsListener;
 
   @override
   void initState() {
@@ -40,7 +42,7 @@ class _TaskPageState extends ConsumerState<TaskPage>
     _pollAllActive();
     _rescheduleTimer();
     // 设置变化时重排定时器（pollIntervalSec 变更后下一周期生效）。
-    ref.listenManual(appSettingsProvider, (prev, next) {
+    _settingsListener = ref.listenManual(appSettingsProvider, (prev, next) {
       if (prev?.pollIntervalSec != next.pollIntervalSec) {
         _rescheduleTimer();
       }
@@ -61,6 +63,7 @@ class _TaskPageState extends ConsumerState<TaskPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _pollTimer?.cancel();
+    _settingsListener?.close();
     super.dispose();
   }
 
@@ -130,8 +133,9 @@ class _TaskPageState extends ConsumerState<TaskPage>
   Future<void> _pollOne(ShotService service, VideoTask task) async {
     try {
       await service.pollVideoTask(task.id);
-    } catch (_) {
-      // 单任务轮询异常忽略，下个周期重试。
+    } catch (e) {
+      // 单任务轮询异常留痕，下个周期重试（任务已删等不可恢复错误下周期自然消失）。
+      appLog('task_poll', 'task=${task.id} 轮询异常', error: e);
     }
   }
 

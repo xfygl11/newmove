@@ -591,15 +591,14 @@ class ShotService {
       );
       return (await shotDao.find(shotId))!;
     } on DioException catch (e) {
-      if (e.type == DioExceptionType.cancel) {
-        cancelToken?.cancel();
-      }
+      final isCancelled = e.type == DioExceptionType.cancel;
+      if (isCancelled) cancelToken?.cancel();
       await _finishAttempt(
         id: attemptId,
-        status: AttemptStatuses.cancelled,
-        error: '已取消',
+        status: isCancelled ? AttemptStatuses.cancelled : AttemptStatuses.failed,
+        error: isCancelled ? '已取消' : '网络请求失败：${e.type.name}',
       );
-      // 失败回滚到「待分镜图」，保留提示词便于重试。
+      // 失败或取消回滚到「待分镜图」，保留提示词便于重试。
       await shotDao.updateById(
         shotId,
         const ShotsCompanion(status: Value(ShotStatuses.awaitingImage)),
@@ -1286,12 +1285,16 @@ class ShotService {
       );
       return (await videoTaskDao.find(task.id))!;
     } on DioException catch (e) {
+      // 取消：Dio 请求已被中断，重读 task 获取最新状态。
+      if (e.type == DioExceptionType.cancel) {
+        final current = await videoTaskDao.find(task.id);
+        return current ?? task;
+      }
       // 供应商明确报错（非网络层）标记失败，其余网络异常保持生成中待重试。
       final isNetwork =
           e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.sendTimeout ||
-          e.type == DioExceptionType.receiveTimeout ||
-          e.type == DioExceptionType.cancel;
+          e.type == DioExceptionType.receiveTimeout;
       if (isNetwork) return task;
       return await _markVideoFailed(task, '供应商返回错误：${_describeError(e)}');
     } on TimeoutException {
@@ -1321,10 +1324,14 @@ class ShotService {
         updatedAt: Value(DateTime.now()),
       ),
     );
-    await shotDao.updateById(
-      task.shotId,
-      const ShotsCompanion(status: Value(ShotStatuses.confirmed)),
-    );
+    // 镜头已 videoDone 时不回滚，避免覆盖用户确认后的状态。
+    final shot = await shotDao.find(task.shotId);
+    if (shot != null && shot.status != ShotStatuses.videoDone) {
+      await shotDao.updateById(
+        task.shotId,
+        const ShotsCompanion(status: Value(ShotStatuses.confirmed)),
+      );
+    }
     return (await videoTaskDao.find(task.id))!;
   }
 
