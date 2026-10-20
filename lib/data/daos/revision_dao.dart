@@ -16,11 +16,14 @@ class RevisionDao extends DatabaseAccessor<AppDatabase>
   RevisionDao(super.db);
 
   /// 保存镜头产物快照，把先前同 kind 的 `current` 降级。
+  ///
+  /// [versionGroup] 为整集回滚组 id（M37），同一组的多条快照可整体回滚。
   Future<void> saveShot({
     required int shotId,
     required String kind,
     required String snapshot,
     String summary = '',
+    int? versionGroup,
   }) {
     return db.transaction(() async {
       await _demoteShot(shotId, kind);
@@ -36,6 +39,7 @@ class RevisionDao extends DatabaseAccessor<AppDatabase>
           state: const Value('current'),
           snapshot: Value(snapshot),
           summary: Value(summary),
+          versionGroup: Value(versionGroup),
         ),
       );
     });
@@ -102,6 +106,25 @@ class RevisionDao extends DatabaseAccessor<AppDatabase>
           ..where((t) => t.shotId.equals(shotId))
           ..orderBy([(t) => OrderingTerm.desc(t.revision)]))
         .get();
+  }
+
+  /// 按整集回滚组 id 查询快照（M37）。
+  Future<List<ShotRevision>> listByVersionGroup(int versionGroup) {
+    return (select(shotRevisions)
+          ..where((t) => t.versionGroup.equals(versionGroup))
+          ..orderBy([(t) => OrderingTerm.asc(t.shotId), (t) => OrderingTerm.asc(t.revision)]))
+        .get();
+  }
+
+  /// 获取下一个可用的 versionGroup id（取当前最大值 +1，M37）。
+  Future<int> nextVersionGroup() async {
+    final rows = await (select(shotRevisions)
+          ..where((t) => t.versionGroup.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.versionGroup)])
+          ..limit(1))
+        .get();
+    if (rows.isEmpty) return 1;
+    return (rows.single.versionGroup ?? 0) + 1;
   }
 
   Future<List<AssetRevision>> listAssets(int assetId) {

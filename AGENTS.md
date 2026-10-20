@@ -738,9 +738,20 @@ lib/
   （默认 false），`fromJson` 用 `jsonBool` 解析（缺字段回落 false）。
 - **落库**：`ShotService` 插入帧时传 `isSceneRef: Value(f.isSceneRef ? 1 : 0)`，
   非空帧一律写 0 或 1，不写 null。
-- **场景参考帧模式**：借鉴 AIComicBuilder 的 `0005_add_scene_ref_frame`，首尾帧
-  模式的替代——某些帧是「场景参考」而非「分镜图」，供视频生成时参考场景风格。
-  当前仅接线字段，UI 与视频生成侧的差异化处理留待后续批次。
+ - **场景参考帧模式**：借鉴 AIComicBuilder 的 `0005_add_scene_ref_frame`，首尾帧
+   模式的替代——某些帧是「场景参考」而非「分镜图」，供视频生成时参考场景风格。
+   当前仅接线字段，UI 与视频生成侧的差异化处理留待后续批次。
+
+### 整集分镜回滚约定（M37）
+
+- **versionGroup 字段**：`ShotRevisions.versionGroup`（nullable int）已在 schema v16
+  落地。同一整集回滚组的多条快照共享同一 `versionGroup`，可整体回滚。
+- **saveShot 可选参数**：`RevisionDao.saveShot` 增补可选 `versionGroup` 参数，落库时
+  传 `Value(versionGroup)`。不传时落 null，表示不属于任何整集回滚组。
+- **按组查询**：`RevisionDao.listByVersionGroup` 按 `versionGroup` 查同组快照，
+  按 `shotId` 升序 + `revision` 升序排列。
+- **递增 id**：`RevisionDao.nextVersionGroup` 取当前最大值 +1，无记录时返回 1。
+- **降级不变**：`saveShot` 带 `versionGroup` 时仍降级旧 `current`，语义不变。
 
 ---
 
