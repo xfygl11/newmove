@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -371,7 +372,10 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
             ? null
             : ChapterMaintainGate.similarity(existing, added),
       );
-      if (issue != null) await _showMaintainSheet(issue);
+      if (issue != null) {
+        final book = await ref.read(novelDaoProvider).findBook(chapter.bookId);
+        if (book != null && mounted) await _showMaintainSheet(issue, book.projectId);
+      }
     } catch (e) {
       _toast('写作失败：$e');
     } finally {
@@ -467,12 +471,22 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
 
   /// M19 T21.15 四项目维护清单：逐项勾选，全部勾完才能关闭。
   /// 只提示不阻塞——用户未勾完也能关闭，但会有明确的未完成提示。
-  Future<void> _showMaintainSheet(ChapterMaintainIssue issue) async {
+  ///
+  /// 每个项目右侧有「核对」按钮，点击跳转到对应管理页面，用户核对完回来勾选。
+  Future<void> _showMaintainSheet(ChapterMaintainIssue issue, int projectId) async {
     final checked = <int>{};
 
     void toggle(int i) => setState(() {
           if (!checked.add(i)) checked.remove(i);
         });
+
+    // 每个清单项对应的导航路由。
+    const routes = [
+      '/novel/%d/characters', // 角色状态
+      '/novel/%d/world', // 场景状态
+      '/novel/%d/hooks', // 伏笔进展
+      '/novel/%d/world', // 道具状态（道具在世界观页面管理）
+    ];
 
     await showModalBottomSheet<void>(
       context: context,
@@ -495,7 +509,7 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'AI 写出的正文可能已改动人物与状态信息，定稿前逐项核对。',
+                    'AI 写出的正文可能已改动人物与状态信息，定稿前逐项核对。点击「核对」跳转对应页面。',
                     style: Theme.of(ctx).textTheme.bodySmall,
                   ),
                   if (issue.rewriteSuggested) ...[
@@ -515,6 +529,13 @@ class _ChapterEditorPageState extends ConsumerState<ChapterEditorPage>
                         onChanged: (_) => toggle(i),
                       ),
                       title: Text(maintainChecklist[i]),
+                      trailing: TextButton(
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          context.go(routes[i].replaceFirst('%d', '$projectId'));
+                        },
+                        child: const Text('核对'),
+                      ),
                       shape: RoundedRectangleBorder(
                         side: BorderSide(
                           color: Theme.of(ctx).dividerColor,
