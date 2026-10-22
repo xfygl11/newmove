@@ -27,6 +27,19 @@ class NovelDao extends DatabaseAccessor<AppDatabase> with _$NovelDaoMixin {
         .get();
   }
 
+  /// 列出所有书籍（跨项目），供书架页面使用。
+  Future<List<NovelBook>> listAllBooks() {
+    return (select(novelBooks)
+          ..orderBy([(t) => OrderingTerm.desc(t.id)]))
+        .get();
+  }
+
+  Stream<List<NovelBook>> watchAllBooks() {
+    return (select(novelBooks)
+          ..orderBy([(t) => OrderingTerm.desc(t.id)]))
+        .watch();
+  }
+
   Stream<NovelBook?> watchBookByProject(int projectId) {
     return (select(
       novelBooks,
@@ -37,6 +50,12 @@ class NovelDao extends DatabaseAccessor<AppDatabase> with _$NovelDaoMixin {
     return (select(
       novelBooks,
     )..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
+  Stream<NovelBook?> watchBookById(int id) {
+    return (select(
+      novelBooks,
+    )..where((t) => t.id.equals(id))).watchSingleOrNull();
   }
 
   Future<int> insertBook(NovelBooksCompanion entry) {

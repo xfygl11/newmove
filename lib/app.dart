@@ -8,12 +8,14 @@ import 'core/settings/app_settings.dart';
 import 'core/theme/app_themes.dart';
 import 'features/asset/asset_detail_page.dart';
 import 'features/asset/asset_gallery_page.dart';
+import 'features/novel/bookshelf_page.dart';
 import 'features/novel/character_manager_page.dart';
 import 'features/novel/hook_manager_page.dart';
 import 'features/novel/outline_editor_page.dart';
 import 'features/novel/chapter_editor_page.dart';
 import 'features/novel/novel_shelf_page.dart';
 import 'features/novel/novel_setup_page.dart';
+import 'features/novel/reader_page.dart';
 import 'features/novel/setting_workshop_page.dart';
 import 'features/novel/world_building_page.dart';
 import 'features/project/project_page.dart';
@@ -58,6 +60,11 @@ final GoRouter appRouter = GoRouter(
       branches: [
         StatefulShellBranch(
           routes: [GoRoute(path: '/', builder: (_, _) => const ProjectPage())],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/shelf', builder: (_, _) => const BookshelfPage()),
+          ],
         ),
         StatefulShellBranch(
           routes: [
@@ -142,6 +149,13 @@ final GoRouter appRouter = GoRouter(
       redirect: (_, state) => requireIntParams(state, ['projectId']),
       builder: (_, state) =>
           WorldBuildingPage(projectId: pathId(state, 'projectId')),
+    ),
+    // 阅读器：从书架进入，按章节翻页阅读。
+    GoRoute(
+      path: '/shelf/:bookId/reader',
+      redirect: (_, state) => requireIntParams(state, ['bookId']),
+      builder: (_, state) =>
+          ReaderPage(bookId: pathId(state, 'bookId')),
     ),
     // 剧本模块：小说改编为分场剧本（对齐 docs/05 4.4 流程即导航）。
     GoRoute(
@@ -322,6 +336,11 @@ class AppShell extends StatelessWidget {
             icon: Icon(Icons.folder_outlined),
             selectedIcon: Icon(Icons.folder),
             label: '项目',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book),
+            label: '书架',
           ),
           NavigationDestination(
             icon: Icon(Icons.task_outlined),
