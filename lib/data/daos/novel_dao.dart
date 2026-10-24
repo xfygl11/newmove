@@ -58,6 +58,31 @@ class NovelDao extends DatabaseAccessor<AppDatabase> with _$NovelDaoMixin {
     )..where((t) => t.id.equals(id))).watchSingleOrNull();
   }
 
+  /// 获取书籍详情：章节总数和总字数。
+  Future<({int chapterCount, int wordCount})> getBookStats(int bookId) async {
+    final chapters = await listChapters(bookId);
+    return (
+      chapterCount: chapters.length,
+      wordCount: chapters.fold(0, (sum, c) => sum + c.wordCount),
+    );
+  }
+
+  /// 按项目分组列出书籍。
+  Future<Map<int, List<NovelBook>>> listBooksGroupedByProject() async {
+    final allBooks = await listAllBooks();
+    final grouped = <int, List<NovelBook>>{};
+    for (final book in allBooks) {
+      grouped.putIfAbsent(book.projectId, () => []).add(book);
+    }
+    return grouped;
+  }
+
+  /// 删除书籍及其所有章节。
+  Future<void> deleteBook(int id) async {
+    await (delete(chapters)..where((t) => t.bookId.equals(id))).go();
+    await (delete(novelBooks)..where((t) => t.id.equals(id))).go();
+  }
+
   Future<int> insertBook(NovelBooksCompanion entry) {
     return into(novelBooks).insert(entry);
   }

@@ -18,6 +18,7 @@ import '../../data/daos/project_dao.dart';
 import '../../data/daos/provider_dao.dart';
 import '../../data/daos/prompt_override_dao.dart';
 import '../../data/daos/prompt_preset_dao.dart';
+import '../../data/daos/reading_progress_dao.dart';
 import '../../data/daos/revision_dao.dart';
 import '../../data/daos/scene_dao.dart';
 import '../../data/daos/script_dao.dart';
@@ -179,4 +180,8 @@ final videoFileStoreProvider = Provider<VideoFileStore>(
 
 final backupServiceProvider = Provider<BackupService>(
   (ref) => BackupService(db: ref.watch(databaseProvider)),
+);
+
+final readingProgressDaoProvider = Provider<ReadingProgressDao>(
+  (ref) => ref.watch(databaseProvider).readingProgressDao,
 );

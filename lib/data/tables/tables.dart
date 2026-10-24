@@ -709,3 +709,15 @@ class PromptAbTests extends Table {
   TextColumn get preferred => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
+
+/// 阅读进度：记录每本书的阅读位置，供阅读器恢复进度。
+@DataClassName('ReadingProgress')
+class ReadingProgresses extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get bookId => integer().references(NovelBooks, #id)();
+  // 当前阅读章节序号（1 基）。
+  IntColumn get chapterSeq => integer().withDefault(const Constant(1))();
+  // 当前章节 id。
+  IntColumn get chapterId => integer().nullable()();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}

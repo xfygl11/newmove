@@ -29,6 +29,7 @@ import 'daos/shot_dao.dart';
 import 'daos/shot_frame_dao.dart';
 import 'daos/truth_file_dao.dart';
 import 'daos/video_task_dao.dart';
+import 'daos/reading_progress_dao.dart';
 import 'tables/tables.dart';
 
 part 'app_database.g.dart';
@@ -66,6 +67,7 @@ part 'app_database.g.dart';
     AgentBindings,
     PromptAbTests,
     ProviderAccounts,
+    ReadingProgresses,
   ],
   daos: [
     ProjectDao,
@@ -95,6 +97,7 @@ part 'app_database.g.dart';
     StoryArcDao,
     PromptAbTestDao,
     ProviderAccountDao,
+    ReadingProgressDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -105,7 +108,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(driftDatabase(name: 'newmove'));
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -265,6 +268,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 18) {
         // M41：供应商账号实例表。同一供应商可绑定多个账号。
         await m.createTable(providerAccounts);
+      }
+      if (from < 19) {
+        // 书架阅读器：阅读进度表，记录每本书的阅读位置。
+        await m.createTable(readingProgresses);
       }
     },
     beforeOpen: (details) async {
