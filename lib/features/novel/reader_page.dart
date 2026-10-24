@@ -415,6 +415,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                     ),
                     const SizedBox(width: 16),
                     Text(
+                      // ignore: unnecessary_brace_in_string_interps
                       '${_chapterWordCount}字',
                       style: themeConfig.titleStyle,
                     ),

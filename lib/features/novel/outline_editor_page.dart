@@ -481,9 +481,9 @@ class _SceneSection extends StatefulWidget {
 }
 
 class _SceneSectionState extends State<_SceneSection> {
-  late List<TextEditingController> _nameControllers = [];
-  late List<TextEditingController> _avoidanceControllers = [];
-  late List<TextEditingController> _descriptionControllers = [];
+  final List<TextEditingController> _nameControllers = [];
+  final List<TextEditingController> _avoidanceControllers = [];
+  final List<TextEditingController> _descriptionControllers = [];
 
   @override
   void initState() {
@@ -692,7 +692,7 @@ class _PropSection extends StatefulWidget {
 }
 
 class _PropSectionState extends State<_PropSection> {
-  late List<TextEditingController> _nameControllers = [];
+  final List<TextEditingController> _nameControllers = [];
 
   @override
   void initState() {

@@ -254,7 +254,7 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '阅读进度: 第${currentChapter}章 / 共$totalChapters章',
+                        '阅读进度: 第$currentChapter 章 / 共$totalChapters 章',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
