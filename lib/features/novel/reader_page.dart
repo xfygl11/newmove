@@ -115,6 +115,8 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   void _saveProgress(int chapterSeq) {
     _saveProgressTimer?.cancel();
     _saveProgressTimer = Timer(const Duration(seconds: 2), () async {
+      // M13：长耗时回调期间用户可能已离开页面，先检查 mounted。
+      if (!mounted) return;
       final progressDao = ref.read(readingProgressDaoProvider);
       final chaptersAsync = ref.read(chaptersByBookProvider(widget.bookId));
       final chapters = chaptersAsync.value ?? [];
