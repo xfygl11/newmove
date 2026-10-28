@@ -284,6 +284,24 @@ void main() {
       expect(context, contains('拔剑'));
       expect(context, contains('G01'));
     });
+
+    test('注入集级视觉调板', () async {
+      final script = (await db.scriptDao.find(scriptId))!;
+      await db.scriptDao.updateRow(
+        script.copyWith(colorPalette: Value(jsonEncode(['靛蓝', '琥珀金']))),
+      );
+
+      final context = await service.buildSkeletonContext(scriptId);
+
+      expect(context, contains('【视觉调板】'));
+      expect(context, contains('靛蓝、琥珀金'));
+    });
+
+    test('无视觉调板时不输出调板行', () async {
+      final context = await service.buildSkeletonContext(scriptId);
+
+      expect(context, isNot(contains('【视觉调板】')));
+    });
   });
 
   group('AssetService 生成与状态流转', () {

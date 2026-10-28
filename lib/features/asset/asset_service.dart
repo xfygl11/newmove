@@ -65,6 +65,11 @@ class AssetService {
     // 风格必须出现在这里：资产 prompt 的「已确认风格」占位符全靠它填，
     // 缺失时 LLM 只能自由发挥，跨资产画风会飘。
     buf.writeln('【画面风格】${effectiveArtStyle(script?.artStyle)}');
+    // M32：集级视觉调板注入资产提取上下文，让资产配色服从集级调板。
+    final palette = _decodeStringList(script?.colorPalette ?? '');
+    if (palette.isNotEmpty) {
+      buf.writeln('【视觉调板】${palette.join('、')}');
+    }
     buf.writeln('【原子节拍】');
     buf.writeln(
       jsonEncode([
@@ -537,6 +542,17 @@ class AssetService {
     } on FormatException {
       return const [];
     }
+  }
+
+  /// 宽容解析 JSON 数组为字符串列表（M32 视觉调板）。
+  List<String> _decodeStringList(String value) {
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is List) return [for (final v in decoded) v.toString()];
+    } on FormatException {
+      // 落库内容异常时按空处理。
+    }
+    return const [];
   }
 
   dynamic _decodeMap(String value) {
