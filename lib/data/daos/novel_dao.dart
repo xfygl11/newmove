@@ -67,6 +67,24 @@ class NovelDao extends DatabaseAccessor<AppDatabase> with _$NovelDaoMixin {
     );
   }
 
+  /// 一次聚合查询获取全部书籍的章节数与总字数（书架页加载用）。
+  /// 避免 N 本书 N 次串行查询；空书（无章节）按 0/0 计。
+  Future<Map<int, ({int chapterCount, int wordCount})>> getAllBookStats() async {
+    final countExpr = chapters.id.count();
+    final wordExpr = chapters.wordCount.sum();
+    final query = selectOnly(chapters)
+      ..addColumns([chapters.bookId, countExpr, wordExpr])
+      ..groupBy([chapters.bookId]);
+    final rows = await query.get();
+    return {
+      for (final row in rows)
+        row.read(chapters.bookId)!: (
+          chapterCount: row.read(countExpr) ?? 0,
+          wordCount: row.read(wordExpr) ?? 0,
+        ),
+    };
+  }
+
   /// 按项目分组列出书籍。
   Future<Map<int, List<NovelBook>>> listBooksGroupedByProject() async {
     final allBooks = await listAllBooks();

@@ -131,6 +131,48 @@ void main() {
     });
   });
 
+  group('NovelDao 聚合统计', () {
+    test('getAllBookStats 一次查询返回全部书统计', () async {
+      final pid = await db.projectDao.insertProject(
+        ProjectsCompanion.insert(name: 't'),
+      );
+      final bookA = await db.novelDao.insertBook(
+        NovelBooksCompanion.insert(projectId: pid, title: 'A'),
+      );
+      final bookB = await db.novelDao.insertBook(
+        NovelBooksCompanion.insert(projectId: pid, title: 'B'),
+      );
+
+      for (var i = 0; i < 3; i++) {
+        await db.novelDao.insertChapter(
+          ChaptersCompanion.insert(
+            bookId: bookA,
+            seq: i + 1,
+            title: 'A$i',
+            content: Value('内容'),
+            wordCount: Value(100),
+          ),
+        );
+      }
+      await db.novelDao.insertChapter(
+        ChaptersCompanion.insert(
+          bookId: bookB,
+          seq: 1,
+          title: 'B0',
+          content: Value('内容'),
+          wordCount: Value(50),
+        ),
+      );
+
+      final stats = await db.novelDao.getAllBookStats();
+
+      expect(stats[bookA], (chapterCount: 3, wordCount: 300));
+      expect(stats[bookB], (chapterCount: 1, wordCount: 50));
+      // 无章节的书不出现（书架页按 0/0 回落）。
+      expect(stats, hasLength(2));
+    });
+  });
+
   group('schema 结构', () {
     test('剧本表已删除 language 死字段，M29 复活 aspect_ratio 多比例列', () async {
       expect(db.schemaVersion, 19);

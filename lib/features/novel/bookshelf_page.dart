@@ -91,16 +91,16 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage> {
   Future<void> _loadStatsAndProgress() async {
     final dao = ref.read(novelDaoProvider);
     final progressDao = ref.read(readingProgressDaoProvider);
-    final books = await dao.listAllBooks();
     final progressMap = await progressDao.findAll();
-    final stats = <int, _BookStats>{};
-    for (final book in books) {
-      final s = await dao.getBookStats(book.id);
-      stats[book.id] = _BookStats(
-        chapterCount: s.chapterCount,
-        wordCount: s.wordCount,
-      );
-    }
+    // 一次聚合查询获取所有书统计，避免 N 本书 N 次串行查询。
+    final statsMap = await dao.getAllBookStats();
+    final stats = <int, _BookStats>{
+      for (final entry in statsMap.entries)
+        entry.key: _BookStats(
+          chapterCount: entry.value.chapterCount,
+          wordCount: entry.value.wordCount,
+        ),
+    };
     if (mounted) {
       setState(() {
         _statsCache = stats;
