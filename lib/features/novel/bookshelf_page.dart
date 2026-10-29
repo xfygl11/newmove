@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/storage/providers.dart';
 import '../../data/app_database.dart';
+import '../project/project_providers.dart';
+import 'novel_providers.dart';
 
 /// 书籍状态徽章。
 class BookStatusBadge extends StatelessWidget {
@@ -291,11 +293,7 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage> {
 
   @override
   Widget build(BuildContext context) {
-    final booksAsync = ref.watch(
-      StreamProvider<List<NovelBook>>(
-        (ref) => ref.watch(novelDaoProvider).watchAllBooks(),
-      ),
-    );
+    final booksAsync = ref.watch(allBooksProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -363,15 +361,15 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage> {
 
           if (_groupByProject) {
             final grouped = _groupBooksByProject(filteredBooks);
-            final projectDao = ref.read(projectDaoProvider);
-            final projectsFuture = projectDao.listAll();
+            final projectListAsync = ref.watch(projectListProvider);
 
-            return FutureBuilder<Map<int, Project>>(
-              future: projectsFuture.then((projects) => {
-                for (final p in projects) p.id: p,
-              }),
-              builder: (context, snapshot) {
-                final projectMap = snapshot.data ?? {};
+            return projectListAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('加载失败：$e')),
+              data: (projects) {
+                final projectMap = {
+                  for (final p in projects) p.id: p,
+                };
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: grouped.length + 1,

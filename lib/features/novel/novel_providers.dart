@@ -29,6 +29,11 @@ final novelBookByProjectProvider = StreamProvider.family<NovelBook?, int>(
   (ref, projectId) => ref.watch(novelDaoProvider).watchBookByProject(projectId),
 );
 
+/// 全部书籍（跨项目，按 id 倒序），书架页数据源。
+final allBooksProvider = StreamProvider<List<NovelBook>>(
+  (ref) => ref.watch(novelDaoProvider).watchAllBooks(),
+);
+
 /// 书的章节列表（序号升序）。
 final chaptersByBookProvider = StreamProvider.family<List<Chapter>, int>(
   (ref, bookId) => ref.watch(novelDaoProvider).watchChapters(bookId),
