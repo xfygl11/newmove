@@ -44,6 +44,11 @@ final chapterProvider = StreamProvider.family<Chapter?, int>(
   (ref, chapterId) => ref.watch(novelDaoProvider).watchChapter(chapterId),
 );
 
+/// 单本书实时监听（阅读器标题用）。
+final bookByIdProvider = StreamProvider.family<NovelBook?, int>(
+  (ref, bookId) => ref.watch(novelDaoProvider).watchBookById(bookId),
+);
+
 /// 某书的 7 类 TruthFile 实时监听。
 final truthFilesByBookProvider = StreamProvider.family<List<TruthFile>, int>(
   (ref, bookId) => ref.watch(truthFileDaoProvider).watchByBook(bookId),

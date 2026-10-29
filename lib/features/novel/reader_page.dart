@@ -312,11 +312,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   @override
   Widget build(BuildContext context) {
     final chaptersAsync = ref.watch(chaptersByBookProvider(widget.bookId));
-    final bookAsync = ref.watch(
-      StreamProvider<NovelBook?>(
-        (ref) => ref.watch(novelDaoProvider).watchBookById(widget.bookId),
-      ),
-    );
+    final bookAsync = ref.watch(bookByIdProvider(widget.bookId));
 
     final themeConfig = _ReaderThemeConfig.of(_theme);
 
