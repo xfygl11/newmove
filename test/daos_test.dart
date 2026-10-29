@@ -149,8 +149,8 @@ void main() {
             bookId: bookA,
             seq: i + 1,
             title: 'A$i',
-            content: Value('内容'),
-            wordCount: Value(100),
+            content: const Value('内容'),
+            wordCount: const Value(100),
           ),
         );
       }
@@ -159,8 +159,8 @@ void main() {
           bookId: bookB,
           seq: 1,
           title: 'B0',
-          content: Value('内容'),
-          wordCount: Value(50),
+          content: const Value('内容'),
+          wordCount: const Value(50),
         ),
       );
 
