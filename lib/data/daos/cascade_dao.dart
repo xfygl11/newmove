@@ -126,8 +126,13 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
   /// 必须一并删 `assetRevisions`：该表有指向 Assets 的外键，而库已开
   /// `PRAGMA foreign_keys=ON`，只删 assets 会让任何出过图的资产
   /// `deleteAssetCascade` 直接抛约束冲突。台账无外键但按逻辑归属一并清理。
+  /// 挂在被删资产下的变体先解绑（置空 variantOf），避免孤儿引用。
   Future<void> deleteAssetCascade(int assetId) async {
     await attachedDatabase.transaction(() async {
+      // 先把子变体的父指针解绑（variantOf 是软引用，无外键约束）。
+      await (update(assets)..where((t) => t.variantOf.equals(assetId))).write(
+        const AssetsCompanion(variantOf: Value(null)),
+      );
       await (delete(
         assetRevisions,
       )..where((t) => t.assetId.equals(assetId))).go();

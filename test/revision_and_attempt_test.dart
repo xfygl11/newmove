@@ -510,7 +510,7 @@ void main() {
       expect((await db.assetDao.listVariants(assetId)).length, 1);
     });
 
-    test('删除父资产时子变体解绑而非成为孤儿', () async {
+    test('级联删除父资产时子变体解绑而非成为孤儿', () async {
       final variant = await db.assetDao.insert(
         AssetsCompanion.insert(
           scriptId: scriptId,
@@ -520,7 +520,7 @@ void main() {
           variantOf: Value(assetId),
         ),
       );
-      await db.assetDao.deleteById(assetId);
+      await db.cascadeDao.deleteAssetCascade(assetId);
 
       final orphan = await db.assetDao.find(variant);
       expect(orphan, isNotNull);

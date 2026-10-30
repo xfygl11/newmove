@@ -117,20 +117,6 @@ class AssetDao extends DatabaseAccessor<AppDatabase> with _$AssetDaoMixin {
     return (update(assets)..where((t) => t.id.equals(id))).write(entry);
   }
 
-  /// 删除资产：先把挂在它下面的变体解绑（置空 variantOf），避免孤儿引用。
-  Future<int> deleteById(int id) async {
-    await attachedDatabase.transaction(() async {
-      await (update(assets)..where((t) => t.variantOf.equals(id))).write(
-        const AssetsCompanion(variantOf: Value(null)),
-      );
-    });
-    return (delete(assets)..where((t) => t.id.equals(id))).go();
-  }
-
-  Future<int> deleteByScript(int scriptId) {
-    return (delete(assets)..where((t) => t.scriptId.equals(scriptId))).go();
-  }
-
   /// 上游剧本场次变更后标记本剧本全部资产失效（M19 T21.14）。
   /// 只动未失效的行，重复调用幂等。
   Future<int> markStaleByScript(int scriptId) {

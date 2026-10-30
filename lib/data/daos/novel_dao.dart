@@ -111,10 +111,6 @@ class NovelDao extends DatabaseAccessor<AppDatabase> with _$NovelDaoMixin {
     return update(chapters).replace(row);
   }
 
-  Future<int> deleteChapter(int id) {
-    return (delete(chapters)..where((t) => t.id.equals(id))).go();
-  }
-
   /// 当前书的最大章节序号（下一章 = maxSeq + 1）。
   Future<int> maxSeq(int bookId) async {
     final max = chapters.seq.max();
