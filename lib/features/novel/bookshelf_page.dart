@@ -151,10 +151,8 @@ class _BookshelfPageState extends ConsumerState<BookshelfPage> {
                   ),
                 );
                 if (confirmed == true && mounted) {
-                  final dao = ref.read(novelDaoProvider);
-                  final progressDao = ref.read(readingProgressDaoProvider);
-                  await dao.deleteBook(book.id);
-                  await progressDao.deleteByBook(book.id);
+                  final cascadeDao = ref.read(cascadeDaoProvider);
+                  await cascadeDao.deleteBookCascade(book.id);
                   await _loadStatsAndProgress();
                 }
               },

@@ -69,12 +69,6 @@ class NovelDao extends DatabaseAccessor<AppDatabase> with _$NovelDaoMixin {
     };
   }
 
-  /// 删除书籍及其所有章节。
-  Future<void> deleteBook(int id) async {
-    await (delete(chapters)..where((t) => t.bookId.equals(id))).go();
-    await (delete(novelBooks)..where((t) => t.id.equals(id))).go();
-  }
-
   Future<int> insertBook(NovelBooksCompanion entry) {
     return into(novelBooks).insert(entry);
   }

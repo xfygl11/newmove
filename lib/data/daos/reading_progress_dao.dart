@@ -51,9 +51,4 @@ class ReadingProgressDao extends DatabaseAccessor<AppDatabase>
     }
     return result;
   }
-
-  /// 删除某本书的阅读进度。
-  Future<int> deleteByBook(int bookId) {
-    return (delete(readingProgresses)..where((t) => t.bookId.equals(bookId))).go();
-  }
 }

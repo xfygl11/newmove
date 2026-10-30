@@ -51,6 +51,7 @@ part 'cascade_dao.g.dart';
     ArcNodes,
     ImportLogs,
     AgentBindings,
+    ReadingProgresses,
   ],
 )
 class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
@@ -180,6 +181,9 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
     // 删地点不触发外键约束，悬空的 locationId 随场景一并删除。
     await (delete(locations)..where((t) => t.bookId.equals(bookId))).go();
     await _deleteChaptersOfBook(bookId);
+    // 阅读进度按 bookId 归属，有外键指向 NovelBooks，删书前必须清掉。
+    await (delete(readingProgresses)..where((t) => t.bookId.equals(bookId)))
+        .go();
     await (delete(novelBooks)..where((t) => t.id.equals(bookId))).go();
   }
 

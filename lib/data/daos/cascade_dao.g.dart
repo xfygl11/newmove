@@ -34,6 +34,8 @@ mixin _$CascadeDaoMixin on DatabaseAccessor<AppDatabase> {
   $ArcNodesTable get arcNodes => attachedDatabase.arcNodes;
   $ImportLogsTable get importLogs => attachedDatabase.importLogs;
   $AgentBindingsTable get agentBindings => attachedDatabase.agentBindings;
+  $ReadingProgressesTable get readingProgresses =>
+      attachedDatabase.readingProgresses;
   CascadeDaoManager get managers => CascadeDaoManager(this);
 }
 
@@ -113,4 +115,9 @@ class CascadeDaoManager {
       $$ImportLogsTableTableManager(_db.attachedDatabase, _db.importLogs);
   $$AgentBindingsTableTableManager get agentBindings =>
       $$AgentBindingsTableTableManager(_db.attachedDatabase, _db.agentBindings);
+  $$ReadingProgressesTableTableManager get readingProgresses =>
+      $$ReadingProgressesTableTableManager(
+        _db.attachedDatabase,
+        _db.readingProgresses,
+      );
 }

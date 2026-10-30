@@ -325,6 +325,8 @@ void main() {
 
     test('删除整本书清理剧本链路', () async {
       final chain = await seedFullChain();
+      // 阅读进度按 bookId 归属，有外键指向 NovelBooks，删除书必须一并清理。
+      await db.readingProgressDao.save(chain.book, 1, chain.chapter);
 
       await db.cascadeDao.deleteBookCascade(chain.book);
 
@@ -337,6 +339,7 @@ void main() {
       expect((await db.select(db.beats).get()).length, 0);
       expect((await db.select(db.shots).get()).length, 0);
       expect((await db.select(db.assets).get()).length, 0);
+      expect((await db.select(db.readingProgresses).get()).length, 0);
       expect((await db.select(db.projects).get()).length, 1);
     });
   });
