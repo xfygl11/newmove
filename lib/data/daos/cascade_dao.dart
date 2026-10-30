@@ -271,9 +271,16 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
     final assetIds = selectOnly(assets)
       ..addColumns([assets.id])
       ..where(assets.scriptId.equals(scriptId));
+    // 先解绑本剧本内资产间的变体父子（variantOf 是软引用，无外键约束），
+    // 避免删父资产后子变体的 variantOf 悬空。
+    await (update(assets)..where((t) => t.variantOf.isInQuery(assetIds)))
+        .write(const AssetsCompanion(variantOf: Value(null)));
     await (delete(assetRevisions)..where(
           (t) => t.assetId.isInQuery(assetIds),
         ))
+        .go();
+    // A/B 测试（M40）有外键指向 Assets，删剧本前必须清掉。
+    await (delete(promptAbTests)..where((t) => t.assetId.isInQuery(assetIds)))
         .go();
     // 资产级台账（subjectId=assetId）须在删 assets 之前清理：删后再查 assets
     // 子查询恒空，台账会永远残留。asset_extract（subjectId=scriptId）由
