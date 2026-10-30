@@ -312,13 +312,22 @@ void main() {
       expect((await db.select(db.assets).get()).length, 1);
     });
 
-    test('删除资产时连带清理参考引用，保留镜头', () async {
+    test('删除资产时连带清理参考引用与 A/B 测试，保留镜头', () async {
       final chain = await seedFullChain();
+      // A/B 测试（M40）有外键指向 Assets，删资产必须一并清理。
+      await db.into(db.promptAbTests).insert(
+            PromptAbTestsCompanion.insert(
+              assetId: chain.asset,
+              promptA: 'A 版提示词',
+              promptB: 'B 版提示词',
+            ),
+          );
 
       await db.cascadeDao.deleteAssetCascade(chain.asset);
 
       expect((await db.select(db.assets).get()).length, 0);
       expect((await db.select(db.assetRefs).get()).length, 0);
+      expect((await db.select(db.promptAbTests).get()).length, 0);
       expect((await db.select(db.shots).get()).length, 1);
       expect((await db.select(db.shotFrames).get()).length, 1);
     });

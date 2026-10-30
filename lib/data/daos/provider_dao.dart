@@ -6,7 +6,10 @@ import '../tables/tables.dart';
 part 'provider_dao.g.dart';
 
 /// 模型供应商配置数据访问对象（API Key 不在此表，见安全存储层）。
-@DriftAccessor(tables: [ProviderConfigs])
+///
+/// `deleteById` 需一并清理 ProviderAccounts（M41 多账号），故注解同时
+/// 声明两张表以访问 `providerAccounts`。
+@DriftAccessor(tables: [ProviderConfigs, ProviderAccounts])
 class ProviderDao extends DatabaseAccessor<AppDatabase>
     with _$ProviderDaoMixin {
   ProviderDao(super.db);
@@ -43,7 +46,15 @@ class ProviderDao extends DatabaseAccessor<AppDatabase>
     return into(providerConfigs).insertOnConflictUpdate(entry);
   }
 
-  Future<int> deleteById(String id) {
-    return (delete(providerConfigs)..where((t) => t.id.equals(id))).go();
+  /// 删除供应商配置及其账号实例。
+  ///
+  /// ProviderAccounts 有外键引用 ProviderConfigs，只删配置会让任何配置过
+  /// 多账号的删除抛外键约束失败（M41 多账号）。账号按 configId 归属一并清理。
+  Future<void> deleteById(String id) async {
+    await attachedDatabase.transaction(() async {
+      await (delete(providerAccounts)..where((t) => t.configId.equals(id)))
+          .go();
+      await (delete(providerConfigs)..where((t) => t.id.equals(id))).go();
+    });
   }
 }

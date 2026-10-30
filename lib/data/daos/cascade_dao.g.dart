@@ -36,6 +36,7 @@ mixin _$CascadeDaoMixin on DatabaseAccessor<AppDatabase> {
   $AgentBindingsTable get agentBindings => attachedDatabase.agentBindings;
   $ReadingProgressesTable get readingProgresses =>
       attachedDatabase.readingProgresses;
+  $PromptAbTestsTable get promptAbTests => attachedDatabase.promptAbTests;
   CascadeDaoManager get managers => CascadeDaoManager(this);
 }
 
@@ -120,4 +121,6 @@ class CascadeDaoManager {
         _db.attachedDatabase,
         _db.readingProgresses,
       );
+  $$PromptAbTestsTableTableManager get promptAbTests =>
+      $$PromptAbTestsTableTableManager(_db.attachedDatabase, _db.promptAbTests);
 }

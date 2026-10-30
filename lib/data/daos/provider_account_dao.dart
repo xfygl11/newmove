@@ -60,11 +60,6 @@ class ProviderAccountDao extends DatabaseAccessor<AppDatabase>
     return (delete(providerAccounts)..where((t) => t.id.equals(id))).go();
   }
 
-  Future<int> deleteByConfig(String configId) {
-    return (delete(providerAccounts)..where((t) => t.configId.equals(configId)))
-        .go();
-  }
-
   /// 设置账号为启用状态。
   Future<void> setActive(int id) async {
     final account = await find(id);

@@ -187,7 +187,7 @@ void main() {
       expect(account, isNull);
     });
 
-    test('deleteByConfig 按配置删除', () async {
+    test('删除配置连带清理账号实例', () async {
       await db.providerAccountDao.insert(
         ProviderAccountsCompanion.insert(
           configId: configId,
@@ -203,10 +203,12 @@ void main() {
         ),
       );
 
-      await db.providerAccountDao.deleteByConfig(configId);
+      // ProviderAccounts 有外键引用 ProviderConfigs，deleteById 必须
+      // 先清账号再删配置，否则外键约束失败。
+      await db.providerDao.deleteById(configId);
 
-      final list = await db.providerAccountDao.listByConfig(configId);
-      expect(list, isEmpty);
+      expect(await db.providerDao.findById(configId), isNull);
+      expect(await db.providerAccountDao.listByConfig(configId), isEmpty);
     });
 
     test('同一配置不同标签唯一', () async {

@@ -52,6 +52,7 @@ part 'cascade_dao.g.dart';
     ImportLogs,
     AgentBindings,
     ReadingProgresses,
+    PromptAbTests,
   ],
 )
 class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
@@ -120,7 +121,7 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
     await attachedDatabase.transaction(() => _deleteShotSubtree(shotId));
   }
 
-  /// 删除资产及其参考引用 / 版本快照 / 生成台账。
+  /// 删除资产及其参考引用 / 版本快照 / 生成台账 / A/B 测试。
   ///
   /// 必须一并删 `assetRevisions`：该表有指向 Assets 的外键，而库已开
   /// `PRAGMA foreign_keys=ON`，只删 assets 会让任何出过图的资产
@@ -131,6 +132,9 @@ class CascadeDao extends DatabaseAccessor<AppDatabase> with _$CascadeDaoMixin {
         assetRevisions,
       )..where((t) => t.assetId.equals(assetId))).go();
       await (delete(assetRefs)..where((t) => t.assetId.equals(assetId))).go();
+      // A/B 测试（M40）有外键指向 Assets，删资产前必须清掉。
+      await (delete(promptAbTests)..where((t) => t.assetId.equals(assetId)))
+          .go();
       await (delete(generationAttempts)..where(
             (t) =>
                 t.subjectId.equals(assetId) &
