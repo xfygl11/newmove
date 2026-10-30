@@ -44,13 +44,12 @@ void main() {
       expect(list.first.name, '新项目');
     });
 
-    test('删除项目', () async {
+    test('级联删除项目', () async {
       final id = await db.projectDao.insertProject(
         ProjectsCompanion.insert(name: '待删除'),
       );
-      final affected = await db.projectDao.deleteProject(id);
+      await db.cascadeDao.deleteProjectCascade(id);
 
-      expect(affected, 1);
       expect(await db.projectDao.listAll(), isEmpty);
     });
   });
